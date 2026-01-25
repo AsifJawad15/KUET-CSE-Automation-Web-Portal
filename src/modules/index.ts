@@ -1,9 +1,11 @@
 // Main page exports
-export { TVDisplayPage } from './TVDisplay';
-export { FacultyInfoPage } from './FacultyInfo';
-export { RoomAllocationPage } from './RoomAllocation';
-export { CourseAllocationPage } from './CourseAllocation';
-export { SchedulePage } from './Schedule';
-export { AddStudentPage } from './AddStudent';
 export { AddFacultyPage } from './AddFaculty';
+export { AddStudentPage } from './AddStudent';
+export { CourseAllocationPage } from './CourseAllocation';
+export { DashboardOverview } from './Dashboard';
+export { FacultyInfoPage } from './FacultyInfo';
 export { ResultPage } from './Result';
+export { RoomAllocationPage } from './RoomAllocation';
+export { SchedulePage } from './Schedule';
+export { TVDisplayPage } from './TVDisplay';
+

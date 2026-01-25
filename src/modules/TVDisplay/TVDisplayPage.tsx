@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from 'react';
+import SpotlightCard from '@/components/ui/SpotlightCard';
 import { sampleAnnouncements } from '@/data/sampleData';
 import { Announcement } from '@/types';
+import { motion } from 'framer-motion';
+import { useState } from 'react';
 
 export default function TVDisplayPage() {
   const [announcements, setAnnouncements] = useState<Announcement[]>(sampleAnnouncements);
@@ -69,23 +71,23 @@ export default function TVDisplayPage() {
 
   const getPriorityBadge = (priority: string) => {
     const styles = {
-      high: 'bg-red-500 text-white',
-      medium: 'bg-amber-500 text-white',
-      low: 'bg-emerald-500 text-white',
+      high: 'bg-red-500/20 text-red-400 border border-red-500/30',
+      medium: 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
+      low: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
     };
-    return styles[priority as keyof typeof styles] || 'bg-gray-500 text-white';
+    return styles[priority as keyof typeof styles] || 'bg-gray-500/20 text-gray-400';
   };
 
   const getTypeBadge = (type: string) => {
     const styles: Record<string, string> = {
-      'class-test': 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
-      'assignment': 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
-      'notice': 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
-      'event': 'bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300',
-      'lab-test': 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300',
-      'quiz': 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
+      'class-test': 'bg-[#8400ff]/20 text-[#a855f7] border border-[#8400ff]/30',
+      'assignment': 'bg-blue-500/20 text-blue-400 border border-blue-500/30',
+      'notice': 'bg-white/10 text-white/70 border border-white/20',
+      'event': 'bg-pink-500/20 text-pink-400 border border-pink-500/30',
+      'lab-test': 'bg-[#00e5ff]/20 text-[#00e5ff] border border-[#00e5ff]/30',
+      'quiz': 'bg-orange-500/20 text-orange-400 border border-orange-500/30',
     };
-    return styles[type] || 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
+    return styles[type] || 'bg-white/10 text-white/70 border border-white/20';
   };
 
   const formatType = (type: string) => {
@@ -95,166 +97,174 @@ export default function TVDisplayPage() {
   return (
     <div className="h-full">
       {/* Page Header */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+      <SpotlightCard className="rounded-2xl border border-[#392e4e] p-6 mb-6" spotlightColor="rgba(132, 0, 255, 0.15)">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">TV Display Management</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            <h1 className="text-2xl font-bold text-white">TV Display Management</h1>
+            <p className="text-sm text-white/60 mt-1">
               Manage announcements displayed on department TV screens
             </p>
           </div>
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => setShowForm(true)}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors shadow-sm"
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#8400ff] to-[#a855f7] hover:from-[#9933ff] hover:to-[#b366ff] text-white font-medium rounded-lg transition-all shadow-lg shadow-[#8400ff]/25"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
             New Announcement
-          </button>
+          </motion.button>
         </div>
         
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-[#392e4e]">
           <div className="text-center">
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{announcements.length}</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Total</p>
+            <p className="text-2xl font-bold text-white">{announcements.length}</p>
+            <p className="text-xs text-white/50">Total</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold text-emerald-600">{announcements.filter(a => a.isActive).length}</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Active</p>
+            <p className="text-2xl font-bold text-[#00e5ff]">{announcements.filter(a => a.isActive).length}</p>
+            <p className="text-xs text-white/50">Active</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold text-red-600">{announcements.filter(a => a.priority === 'high').length}</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">High Priority</p>
+            <p className="text-2xl font-bold text-red-400">{announcements.filter(a => a.priority === 'high').length}</p>
+            <p className="text-xs text-white/50">High Priority</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold text-blue-600">{announcements.filter(a => a.scheduledDate).length}</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Scheduled</p>
+            <p className="text-2xl font-bold text-[#8400ff]">{announcements.filter(a => a.scheduledDate).length}</p>
+            <p className="text-xs text-white/50">Scheduled</p>
           </div>
         </div>
-      </div>
+      </SpotlightCard>
 
       {/* Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-[#0d0d1a] rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-[#392e4e]"
+          >
+            <div className="p-6 border-b border-[#392e4e]">
+              <h2 className="text-xl font-bold text-white">
                 {editingId ? 'Edit Announcement' : 'Create New Announcement'}
               </h2>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Title *</label>
+                <label className="block text-sm font-medium text-white/70 mb-2">Title *</label>
                 <input
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   placeholder="Enter announcement title"
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full px-4 py-3 border border-[#392e4e] rounded-lg bg-white/5 text-white placeholder-white/40 focus:ring-2 focus:ring-[#8400ff] focus:border-transparent transition-all"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Content *</label>
+                <label className="block text-sm font-medium text-white/70 mb-2">Content *</label>
                 <textarea
                   value={formData.content}
                   onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                   placeholder="Enter announcement details"
                   rows={4}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+                  className="w-full px-4 py-3 border border-[#392e4e] rounded-lg bg-white/5 text-white placeholder-white/40 focus:ring-2 focus:ring-[#8400ff] focus:border-transparent transition-all resize-none"
                   required
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Type</label>
+                  <label className="block text-sm font-medium text-white/70 mb-2">Type</label>
                   <select
                     value={formData.type}
                     onChange={(e) => setFormData({ ...formData, type: e.target.value as Announcement['type'] })}
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="w-full px-4 py-3 border border-[#392e4e] rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-[#8400ff] focus:border-transparent transition-all"
                   >
-                    <option value="notice">Notice</option>
-                    <option value="class-test">Class Test</option>
-                    <option value="assignment">Assignment</option>
-                    <option value="lab-test">Lab Test</option>
-                    <option value="quiz">Quiz</option>
-                    <option value="event">Event</option>
-                    <option value="other">Other</option>
+                    <option value="notice" className="bg-[#0d0d1a]">Notice</option>
+                    <option value="class-test" className="bg-[#0d0d1a]">Class Test</option>
+                    <option value="assignment" className="bg-[#0d0d1a]">Assignment</option>
+                    <option value="lab-test" className="bg-[#0d0d1a]">Lab Test</option>
+                    <option value="quiz" className="bg-[#0d0d1a]">Quiz</option>
+                    <option value="event" className="bg-[#0d0d1a]">Event</option>
+                    <option value="other" className="bg-[#0d0d1a]">Other</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Priority</label>
+                  <label className="block text-sm font-medium text-white/70 mb-2">Priority</label>
                   <select
                     value={formData.priority}
                     onChange={(e) => setFormData({ ...formData, priority: e.target.value as Announcement['priority'] })}
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="w-full px-4 py-3 border border-[#392e4e] rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-[#8400ff] focus:border-transparent transition-all"
                   >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
+                    <option value="low" className="bg-[#0d0d1a]">Low</option>
+                    <option value="medium" className="bg-[#0d0d1a]">Medium</option>
+                    <option value="high" className="bg-[#0d0d1a]">High</option>
                   </select>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Course Code</label>
+                  <label className="block text-sm font-medium text-white/70 mb-2">Course Code</label>
                   <input
                     type="text"
                     value={formData.courseCode}
                     onChange={(e) => setFormData({ ...formData, courseCode: e.target.value })}
                     placeholder="e.g., CSE 3201"
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="w-full px-4 py-3 border border-[#392e4e] rounded-lg bg-white/5 text-white placeholder-white/40 focus:ring-2 focus:ring-[#8400ff] focus:border-transparent transition-all"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Scheduled Date</label>
+                  <label className="block text-sm font-medium text-white/70 mb-2">Scheduled Date</label>
                   <input
                     type="date"
                     value={formData.scheduledDate}
                     onChange={(e) => setFormData({ ...formData, scheduledDate: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="w-full px-4 py-3 border border-[#392e4e] rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-[#8400ff] focus:border-transparent transition-all"
                   />
                 </div>
               </div>
-              <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex gap-3 pt-4 border-t border-[#392e4e]">
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium transition-colors"
+                  className="flex-1 px-4 py-3 border border-[#392e4e] rounded-lg text-white/70 hover:bg-white/5 font-medium transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-[#8400ff] to-[#a855f7] text-white rounded-lg hover:from-[#9933ff] hover:to-[#b366ff] font-medium transition-all"
                 >
                   {editingId ? 'Update' : 'Create'}
                 </button>
               </div>
             </form>
-          </div>
+          </motion.div>
         </div>
       )}
 
       {/* Announcements List */}
       <div className="space-y-4">
         {announcements.length === 0 ? (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center">
-            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <SpotlightCard className="rounded-2xl border border-[#392e4e] p-12 text-center" spotlightColor="rgba(132, 0, 255, 0.1)">
+            <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
               </svg>
             </div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Announcements</h3>
-            <p className="text-gray-500 dark:text-gray-400">Create your first announcement to display on department TVs</p>
-          </div>
+            <h3 className="text-lg font-medium text-white mb-2">No Announcements</h3>
+            <p className="text-white/50">Create your first announcement to display on department TVs</p>
+          </SpotlightCard>
         ) : (
           announcements.map((announcement) => (
-            <div
+            <motion.div
               key={announcement.id}
-              className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-all hover:shadow-md ${
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`bg-[#0d0d1a] rounded-xl border border-[#392e4e] overflow-hidden transition-all hover:border-[#8400ff]/30 ${
                 !announcement.isActive && 'opacity-60'
               }`}
             >
@@ -267,40 +277,40 @@ export default function TVDisplayPage() {
                       : announcement.priority === 'medium'
                       ? 'bg-amber-500'
                       : 'bg-emerald-500'
-                    : 'bg-gray-300 dark:bg-gray-600'
+                    : 'bg-white/20'
                 }`} />
                 
                 {/* Priority Info Section */}
-                <div className={`w-24 flex-shrink-0 flex flex-col items-center justify-center gap-2 border-r border-gray-200 dark:border-gray-700 ${
+                <div className={`w-24 flex-shrink-0 flex flex-col items-center justify-center gap-2 border-r border-[#392e4e] ${
                   announcement.isActive 
                     ? announcement.priority === 'high' 
-                      ? 'bg-red-50 dark:bg-red-900/10' 
+                      ? 'bg-red-500/10' 
                       : announcement.priority === 'medium'
-                      ? 'bg-amber-50 dark:bg-amber-900/10'
-                      : 'bg-emerald-50 dark:bg-emerald-900/10'
-                    : 'bg-gray-50 dark:bg-gray-800'
+                      ? 'bg-amber-500/10'
+                      : 'bg-emerald-500/10'
+                    : 'bg-white/5'
                 }`}>
                   <div className={`p-2.5 rounded-lg ${
                     announcement.isActive 
                       ? announcement.priority === 'high' 
-                        ? 'bg-red-100 dark:bg-red-900/30' 
+                        ? 'bg-red-500/20' 
                         : announcement.priority === 'medium'
-                        ? 'bg-amber-100 dark:bg-amber-900/30'
-                        : 'bg-emerald-100 dark:bg-emerald-900/30'
-                      : 'bg-gray-200 dark:bg-gray-700'
+                        ? 'bg-amber-500/20'
+                        : 'bg-emerald-500/20'
+                      : 'bg-white/10'
                   }`}>
                     {announcement.priority === 'high' && (
-                      <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                       </svg>
                     )}
                     {announcement.priority === 'medium' && (
-                      <svg className="w-5 h-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     )}
                     {announcement.priority === 'low' && (
-                      <svg className="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     )}
@@ -308,11 +318,11 @@ export default function TVDisplayPage() {
                   <span className={`text-xs font-bold uppercase tracking-wide ${
                     announcement.isActive 
                       ? announcement.priority === 'high' 
-                        ? 'text-red-700 dark:text-red-400' 
+                        ? 'text-red-400' 
                         : announcement.priority === 'medium'
-                        ? 'text-amber-700 dark:text-amber-400'
-                        : 'text-emerald-700 dark:text-emerald-400'
-                      : 'text-gray-500 dark:text-gray-400'
+                        ? 'text-amber-400'
+                        : 'text-emerald-400'
+                      : 'text-white/40'
                   }`}>
                     {announcement.priority}
                   </span>
@@ -324,11 +334,11 @@ export default function TVDisplayPage() {
                   <div className="flex items-start justify-between gap-4 mb-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        <h3 className="text-lg font-semibold text-white">
                           {announcement.title}
                         </h3>
                         {!announcement.isActive && (
-                          <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-300">
+                          <span className="px-2 py-0.5 rounded text-xs font-medium bg-white/10 text-white/50">
                             INACTIVE
                           </span>
                         )}
@@ -338,7 +348,7 @@ export default function TVDisplayPage() {
                           {formatType(announcement.type)}
                         </span>
                         {announcement.courseCode && (
-                          <span className="px-2.5 py-1 rounded-lg text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
+                          <span className="px-2.5 py-1 rounded-lg text-xs font-medium bg-[#8400ff]/20 text-[#a855f7] border border-[#8400ff]/30">
                             {announcement.courseCode}
                           </span>
                         )}
@@ -351,8 +361,8 @@ export default function TVDisplayPage() {
                         onClick={() => toggleActive(announcement.id)}
                         className={`p-2 rounded-lg transition-colors ${
                           announcement.isActive 
-                            ? 'text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20' 
-                            : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                            ? 'text-emerald-400 hover:bg-emerald-500/10' 
+                            : 'text-white/40 hover:bg-white/5'
                         }`}
                         title={announcement.isActive ? 'Deactivate' : 'Activate'}
                       >
@@ -369,7 +379,7 @@ export default function TVDisplayPage() {
                       </button>
                       <button
                         onClick={() => handleEdit(announcement)}
-                        className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                        className="p-2 rounded-lg text-[#00e5ff] hover:bg-[#00e5ff]/10 transition-colors"
                         title="Edit"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -378,7 +388,7 @@ export default function TVDisplayPage() {
                       </button>
                       <button
                         onClick={() => handleDelete(announcement.id)}
-                        className="p-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                        className="p-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors"
                         title="Delete"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -389,12 +399,12 @@ export default function TVDisplayPage() {
                   </div>
                   
                   {/* Content */}
-                  <p className="text-gray-600 dark:text-gray-400 text-sm mb-4 line-clamp-2">
+                  <p className="text-white/60 text-sm mb-4 line-clamp-2">
                     {announcement.content}
                   </p>
                   
                   {/* Footer: Dates */}
-                  <div className="flex items-center gap-6 text-xs text-gray-500 dark:text-gray-500">
+                  <div className="flex items-center gap-6 text-xs text-white/40">
                     <span className="flex items-center gap-1.5">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -402,7 +412,7 @@ export default function TVDisplayPage() {
                       Created: {announcement.createdAt}
                     </span>
                     {announcement.scheduledDate && (
-                      <span className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 font-medium">
+                      <span className="flex items-center gap-1.5 text-[#00e5ff] font-medium">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
@@ -412,7 +422,7 @@ export default function TVDisplayPage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           ))
         )}
       </div>
