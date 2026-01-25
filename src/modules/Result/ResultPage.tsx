@@ -4,7 +4,7 @@ import { BentoGrid, BentoStatCard } from '@/components/ui/MagicBento';
 import SpotlightCard from '@/components/ui/SpotlightCard';
 import { motion } from 'framer-motion';
 import { Award, Download, FileText, Search, TrendingUp, Users } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 // Dummy result data
 const dummyStudents = [
@@ -60,6 +60,8 @@ interface ResultEntry {
   assignment: number;
 }
 
+type ResultNumericField = 'ct1' | 'ct2' | 'ct3' | 'attendance' | 'assignment';
+
 export default function ResultPage() {
   const [selectedCourse, setSelectedCourse] = useState<string>(dummyCourses[0].code);
   const [selectedSection, setSelectedSection] = useState<string>('A');
@@ -77,7 +79,7 @@ export default function ResultPage() {
     });
   }, [selectedSection, searchTerm]);
 
-  const handleResultChange = (studentId: string, field: keyof ResultEntry, value: number) => {
+  const handleResultChange = (studentId: string, field: ResultNumericField, value: number) => {
     setResults(prev => ({
       ...prev,
       [studentId]: {
@@ -92,15 +94,15 @@ export default function ResultPage() {
     }));
   };
 
-  const getResultValue = (studentId: string, field: keyof ResultEntry): number => {
+  const getResultValue = (studentId: string, field: ResultNumericField): number => {
     return results[studentId]?.[selectedCourse]?.[field] ?? 0;
   };
 
-  const calculateTotal = (studentId: string): number => {
+  const calculateTotal = useCallback((studentId: string): number => {
     const r = results[studentId]?.[selectedCourse];
     if (!r) return 0;
     return (r.ct1 || 0) + (r.ct2 || 0) + (r.ct3 || 0) + (r.attendance || 0) + (r.assignment || 0);
-  };
+  }, [results, selectedCourse]);
 
   const getGrade = (total: number): { grade: string; color: string } => {
     if (total >= 70) return { grade: 'A+', color: '#00e5ff' };
@@ -125,7 +127,7 @@ export default function ResultPage() {
       passRate: totals.length > 0 ? ((passed / totals.length) * 100).toFixed(0) : '0',
       totalStudents: filteredStudents.length,
     };
-  }, [filteredStudents, results, selectedCourse]);
+  }, [filteredStudents, calculateTotal]);
 
   return (
     <div className="space-y-6">

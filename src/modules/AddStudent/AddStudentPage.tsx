@@ -1,6 +1,6 @@
 "use client";
 
-import { SpotlightCard } from '@/components/ui/SpotlightCard';
+import SpotlightCard from '@/components/ui/SpotlightCard';
 import { sampleStudents } from '@/data/sampleData';
 import { Student } from '@/types';
 import { motion } from 'framer-motion';

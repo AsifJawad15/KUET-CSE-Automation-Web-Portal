@@ -236,4 +236,12 @@ export const BentoChartCard: React.FC<BentoChartCardProps> = ({
   );
 };
 
-export default { BentoGrid, BentoItem, BentoStatCard, BentoListCard, BentoChartCard };
+const MagicBento = {
+  BentoGrid,
+  BentoItem,
+  BentoStatCard,
+  BentoListCard,
+  BentoChartCard,
+};
+
+export default MagicBento;
