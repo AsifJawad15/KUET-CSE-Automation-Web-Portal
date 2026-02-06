@@ -52,7 +52,7 @@ export default function SignUp({ onToggleForm }: SignUpProps) {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="text-3xl font-bold text-slate-900 dark:text-white mb-2"
+          className="text-3xl font-bold text-[#5D4E37] dark:text-white mb-2"
         >
           Create Account
         </motion.h2>
@@ -60,7 +60,7 @@ export default function SignUp({ onToggleForm }: SignUpProps) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="text-sm text-slate-600 dark:text-slate-400"
+          className="text-sm text-[#8B7355] dark:text-slate-400"
         >
           Register to access the KUET CSE Portal
         </motion.p>
@@ -71,9 +71,9 @@ export default function SignUp({ onToggleForm }: SignUpProps) {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.3 }}
-        className="p-4 rounded-xl bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800"
+        className="p-4 rounded-xl bg-[#F0E4D3] dark:bg-cyan-900/20 border border-[#DCC5B2] dark:border-cyan-800"
       >
-        <p className="text-xs text-cyan-700 dark:text-cyan-300">
+        <p className="text-xs text-[#5D4E37] dark:text-cyan-300">
           <strong>Note:</strong> Registration is currently managed by the admin. 
           Contact the department office for account creation.
         </p>
@@ -97,11 +97,11 @@ export default function SignUp({ onToggleForm }: SignUpProps) {
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.4 }}
         >
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+          <label className="block text-sm font-medium text-[#5D4E37] dark:text-slate-300 mb-2">
             Full Name
           </label>
           <div className="relative">
-            <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#8B7355] dark:text-slate-400" />
             <input
               type="text"
               placeholder="Enter your full name"
@@ -118,11 +118,11 @@ export default function SignUp({ onToggleForm }: SignUpProps) {
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.5 }}
         >
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+          <label className="block text-sm font-medium text-[#5D4E37] dark:text-slate-300 mb-2">
             Email Address
           </label>
           <div className="relative">
-            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#8B7355] dark:text-slate-400" />
             <input
               type="email"
               placeholder="Enter your email"
@@ -139,11 +139,11 @@ export default function SignUp({ onToggleForm }: SignUpProps) {
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.6 }}
         >
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+          <label className="block text-sm font-medium text-[#5D4E37] dark:text-slate-300 mb-2">
             Password
           </label>
           <div className="relative">
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#8B7355] dark:text-slate-400" />
             <input
               type={showPassword ? 'text' : 'password'}
               placeholder="Create a password"
@@ -155,7 +155,7 @@ export default function SignUp({ onToggleForm }: SignUpProps) {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8B7355] dark:text-slate-400 hover:text-[#5D4E37] dark:hover:text-slate-300 transition-colors"
             >
               {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
             </button>
@@ -167,11 +167,11 @@ export default function SignUp({ onToggleForm }: SignUpProps) {
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.7 }}
         >
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+          <label className="block text-sm font-medium text-[#5D4E37] dark:text-slate-300 mb-2">
             Confirm Password
           </label>
           <div className="relative">
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#8B7355] dark:text-slate-400" />
             <input
               type={showPassword ? 'text' : 'password'}
               placeholder="Confirm your password"
@@ -209,11 +209,11 @@ export default function SignUp({ onToggleForm }: SignUpProps) {
         transition={{ delay: 0.9 }}
         className="text-center lg:hidden pt-4"
       >
-        <p className="text-sm text-slate-600 dark:text-slate-400">
+        <p className="text-sm text-[#8B7355] dark:text-slate-400">
           Already have an account?{' '}
           <button
             onClick={onToggleForm}
-            className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 font-semibold transition-colors"
+            className="text-[#D9A299] dark:text-indigo-400 hover:text-[#5D4E37] dark:hover:text-indigo-300 font-semibold transition-colors"
           >
             Sign In
           </button>
