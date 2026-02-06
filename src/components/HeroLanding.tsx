@@ -251,10 +251,10 @@ const HeroLanding: React.FC = () => {
             transition={{ duration: 0.6 }}
             className="text-center mb-16"
           >
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-[#5D4E37] dark:text-white mb-4">
               Powerful Features
             </h2>
-            <p className="text-white/60 max-w-2xl mx-auto">
+            <p className="text-[#8B7355] dark:text-white/60 max-w-2xl mx-auto">
               Everything you need to manage academic operations efficiently
             </p>
           </motion.div>
@@ -275,19 +275,19 @@ const HeroLanding: React.FC = () => {
                   <div className="flex flex-col h-full">
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${
                       feature.color.includes('132') 
-                        ? 'bg-[#8400ff]/20 text-[#8400ff]' 
-                        : 'bg-[#00e5ff]/20 text-[#00e5ff]'
+                        ? 'bg-[#D9A299]/30 text-[#D9A299] dark:bg-[#8400ff]/20 dark:text-[#8400ff]' 
+                        : 'bg-[#DCC5B2]/40 text-[#8B7355] dark:bg-[#00e5ff]/20 dark:text-[#00e5ff]'
                     }`}>
                       <feature.icon className="w-6 h-6" />
                     </div>
-                    <h3 className="text-xl font-semibold text-white mb-2">
+                    <h3 className="text-xl font-semibold text-[#5D4E37] dark:text-white mb-2">
                       {feature.title}
                     </h3>
-                    <p className="text-white/60 text-sm flex-1">
+                    <p className="text-[#8B7355] dark:text-white/60 text-sm flex-1">
                       {feature.description}
                     </p>
                     <motion.div 
-                      className="mt-4 flex items-center text-sm text-[#8400ff] font-medium cursor-pointer group"
+                      className="mt-4 flex items-center text-sm text-[#D9A299] dark:text-[#8400ff] font-medium cursor-pointer group"
                       whileHover={{ x: 5 }}
                     >
                       Learn more 
