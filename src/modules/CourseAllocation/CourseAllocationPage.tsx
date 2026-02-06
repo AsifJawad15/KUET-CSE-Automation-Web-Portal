@@ -30,14 +30,14 @@ export default function CourseAllocationPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Course Allocation</h1>
-          <p className="text-white/60 mt-1">Assign courses to faculty members</p>
+          <h1 className="text-2xl font-bold text-[#5D4E37] dark:text-white">Course Allocation</h1>
+          <p className="text-[#8B7355] dark:text-white/60 mt-1">Assign courses to faculty members</p>
         </div>
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => setShowForm(true)}
-          className="px-4 py-2 bg-gradient-to-r from-[#8400ff] to-[#a855f7] text-white rounded-lg hover:from-[#9933ff] hover:to-[#b366ff] transition-all flex items-center gap-2 shadow-lg shadow-[#8400ff]/25"
+          className="px-4 py-2 bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#8400ff] dark:to-[#a855f7] text-white rounded-lg hover:from-[#C88989] hover:to-[#CCB5A2] dark:hover:from-[#9933ff] dark:hover:to-[#b366ff] transition-all flex items-center gap-2 shadow-lg shadow-[#D9A299]/25 dark:shadow-[#8400ff]/25"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -51,69 +51,69 @@ export default function CourseAllocationPage() {
         <select
           value={filterYear}
           onChange={(e) => setFilterYear(e.target.value)}
-          className="px-4 py-2 border border-[#392e4e] rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-[#8400ff] focus:border-transparent"
+          className="px-4 py-2 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-[#FAF7F3] dark:bg-white/5 text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#8400ff] focus:border-transparent"
         >
-          <option value="all" className="bg-[#0d0d1a]">All Years</option>
-          <option value="1" className="bg-[#0d0d1a]">1st Year</option>
-          <option value="2" className="bg-[#0d0d1a]">2nd Year</option>
-          <option value="3" className="bg-[#0d0d1a]">3rd Year</option>
-          <option value="4" className="bg-[#0d0d1a]">4th Year</option>
+          <option value="all" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">All Years</option>
+          <option value="1" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">1st Year</option>
+          <option value="2" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">2nd Year</option>
+          <option value="3" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">3rd Year</option>
+          <option value="4" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">4th Year</option>
         </select>
         <select
           value={filterType}
           onChange={(e) => setFilterType(e.target.value)}
-          className="px-4 py-2 border border-[#392e4e] rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-[#8400ff] focus:border-transparent"
+          className="px-4 py-2 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-[#FAF7F3] dark:bg-white/5 text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#8400ff] focus:border-transparent"
         >
-          <option value="all" className="bg-[#0d0d1a]">All Types</option>
-          <option value="theory" className="bg-[#0d0d1a]">Theory</option>
-          <option value="lab" className="bg-[#0d0d1a]">Lab/Sessional</option>
+          <option value="all" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">All Types</option>
+          <option value="theory" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">Theory</option>
+          <option value="lab" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">Lab/Sessional</option>
         </select>
       </div>
 
       {/* Courses Table */}
-      <SpotlightCard className="rounded-xl border border-[#392e4e] overflow-hidden" spotlightColor="rgba(132, 0, 255, 0.1)">
+      <SpotlightCard className="rounded-xl border border-[#DCC5B2] dark:border-[#392e4e] overflow-hidden bg-[#FAF7F3] dark:bg-transparent" spotlightColor="rgba(217, 162, 153, 0.2)">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-white/5">
+            <thead className="bg-[#F0E4D3] dark:bg-white/5">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-white/60 uppercase tracking-wider">Code</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-white/60 uppercase tracking-wider">Title</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-white/60 uppercase tracking-wider">Type</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-white/60 uppercase tracking-wider">Credits</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-white/60 uppercase tracking-wider">Year-Term</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-white/60 uppercase tracking-wider">Teachers</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-white/60 uppercase tracking-wider">Sections/Groups</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-white/60 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase">Code</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase tracking-wider">Title</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase tracking-wider">Type</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase tracking-wider">Credits</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase tracking-wider">Year-Term</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase tracking-wider">Teachers</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase tracking-wider">Sections/Groups</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#392e4e]">
+            <tbody className="divide-y divide-[#DCC5B2] dark:divide-[#392e4e]">
               {filteredCourses.map((course) => (
-                <tr key={course.id} className="hover:bg-white/5 transition-colors">
+                <tr key={course.id} className="hover:bg-[#F0E4D3] dark:hover:bg-white/5 transition-colors">
                   <td className="px-6 py-4">
-                    <span className="font-medium text-white">{course.code}</span>
+                    <span className="font-medium text-[#5D4E37] dark:text-white">{course.code}</span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="text-white">{course.title}</span>
+                    <span className="text-[#5D4E37] dark:text-white">{course.title}</span>
                   </td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                       course.type === 'theory' 
-                        ? 'bg-[#00e5ff]/20 text-[#00e5ff] border border-[#00e5ff]/30' 
-                        : 'bg-[#8400ff]/20 text-[#a855f7] border border-[#8400ff]/30'
+                        ? 'bg-[#D9A299]/30 text-[#5D4E37] border border-[#D9A299]/50 dark:bg-[#00e5ff]/20 dark:text-[#00e5ff] dark:border-[#00e5ff]/30' 
+                        : 'bg-[#DCC5B2]/40 text-[#5D4E37] border border-[#DCC5B2]/60 dark:bg-[#8400ff]/20 dark:text-[#a855f7] dark:border-[#8400ff]/30'
                     }`}>
                       {course.type === 'theory' ? 'Theory' : 'Lab'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-white/60">
+                  <td className="px-6 py-4 text-[#8B7355] dark:text-white/60">
                     {course.credits}
                   </td>
-                  <td className="px-6 py-4 text-white/60">
+                  <td className="px-6 py-4 text-[#8B7355] dark:text-white/60">
                     {course.year}-{course.term}
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-col gap-1">
                       {getTeacherNames(course.teachers).map((name, idx) => (
-                        <span key={idx} className="text-sm text-white/70">{name}</span>
+                        <span key={idx} className="text-sm text-[#5D4E37] dark:text-white/70">{name}</span>
                       ))}
                     </div>
                   </td>
@@ -122,7 +122,7 @@ export default function CourseAllocationPage() {
                       {(course.sections || course.groups || []).map((item) => (
                         <span
                           key={item}
-                          className="px-2 py-0.5 bg-white/5 text-white/60 rounded text-xs border border-[#392e4e]"
+                          className="px-2 py-0.5 bg-[#F0E4D3] dark:bg-white/5 text-[#5D4E37] dark:text-white/60 rounded text-xs border border-[#DCC5B2] dark:border-[#392e4e]"
                         >
                           {item}
                         </span>

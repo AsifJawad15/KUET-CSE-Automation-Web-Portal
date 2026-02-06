@@ -59,14 +59,14 @@ export default function RoomAllocationPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Room Allocation</h1>
-          <p className="text-white/60 mt-1">Manage classroom and lab allocations</p>
+          <h1 className="text-2xl font-bold text-[#5D4E37] dark:text-white">Room Allocation</h1>
+          <p className="text-[#8B7355] dark:text-white/60 mt-1">Manage classroom and lab allocations</p>
         </div>
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => setShowForm(true)}
-          className="px-4 py-2 bg-gradient-to-r from-[#8400ff] to-[#a855f7] text-white rounded-lg hover:from-[#9933ff] hover:to-[#b366ff] transition-all flex items-center gap-2 shadow-lg shadow-[#8400ff]/25"
+          className="px-4 py-2 bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#8400ff] dark:to-[#a855f7] text-white rounded-lg hover:from-[#C88989] hover:to-[#CCB5A2] dark:hover:from-[#9933ff] dark:hover:to-[#b366ff] transition-all flex items-center gap-2 shadow-lg shadow-[#D9A299]/25 dark:shadow-[#8400ff]/25"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -77,25 +77,25 @@ export default function RoomAllocationPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <SpotlightCard className="rounded-xl p-4 border border-[#392e4e]" spotlightColor="rgba(132, 0, 255, 0.15)">
-          <p className="text-sm text-white/50">Total Rooms</p>
-          <p className="text-2xl font-bold text-white">{stats.total}</p>
+        <SpotlightCard className="rounded-xl p-4 bg-[#FAF7F3] dark:bg-transparent border border-[#DCC5B2] dark:border-[#392e4e]" spotlightColor="rgba(217, 162, 153, 0.2)">
+          <p className="text-sm text-[#8B7355] dark:text-white/50">Total Rooms</p>
+          <p className="text-2xl font-bold text-[#5D4E37] dark:text-white">{stats.total}</p>
         </SpotlightCard>
-        <SpotlightCard className="rounded-xl p-4 border border-[#392e4e]" spotlightColor="rgba(0, 229, 255, 0.15)">
-          <p className="text-sm text-white/50">Available</p>
-          <p className="text-2xl font-bold text-[#00e5ff]">{stats.available}</p>
+        <SpotlightCard className="rounded-xl p-4 bg-[#FAF7F3] dark:bg-transparent border border-[#DCC5B2] dark:border-[#392e4e]" spotlightColor="rgba(217, 162, 153, 0.2)">
+          <p className="text-sm text-[#8B7355] dark:text-white/50">Available</p>
+          <p className="text-2xl font-bold text-[#D9A299] dark:text-[#00e5ff]">{stats.available}</p>
         </SpotlightCard>
-        <SpotlightCard className="rounded-xl p-4 border border-[#392e4e]" spotlightColor="rgba(239, 68, 68, 0.15)">
-          <p className="text-sm text-white/50">Occupied</p>
-          <p className="text-2xl font-bold text-red-400">{stats.occupied}</p>
+        <SpotlightCard className="rounded-xl p-4 bg-[#FAF7F3] dark:bg-transparent border border-[#DCC5B2] dark:border-[#392e4e]" spotlightColor="rgba(217, 162, 153, 0.2)">
+          <p className="text-sm text-[#8B7355] dark:text-white/50">Occupied</p>
+          <p className="text-2xl font-bold text-red-500 dark:text-red-400">{stats.occupied}</p>
         </SpotlightCard>
-        <SpotlightCard className="rounded-xl p-4 border border-[#392e4e]" spotlightColor="rgba(0, 229, 255, 0.15)">
-          <p className="text-sm text-white/50">Classrooms</p>
-          <p className="text-2xl font-bold text-[#00e5ff]">{stats.classrooms}</p>
+        <SpotlightCard className="rounded-xl p-4 bg-[#FAF7F3] dark:bg-transparent border border-[#DCC5B2] dark:border-[#392e4e]" spotlightColor="rgba(217, 162, 153, 0.2)">
+          <p className="text-sm text-[#8B7355] dark:text-white/50">Classrooms</p>
+          <p className="text-2xl font-bold text-[#D9A299] dark:text-[#00e5ff]">{stats.classrooms}</p>
         </SpotlightCard>
-        <SpotlightCard className="rounded-xl p-4 border border-[#392e4e]" spotlightColor="rgba(132, 0, 255, 0.15)">
-          <p className="text-sm text-white/50">Labs</p>
-          <p className="text-2xl font-bold text-[#8400ff]">{stats.labs}</p>
+        <SpotlightCard className="rounded-xl p-4 bg-[#FAF7F3] dark:bg-transparent border border-[#DCC5B2] dark:border-[#392e4e]" spotlightColor="rgba(217, 162, 153, 0.2)">
+          <p className="text-sm text-[#8B7355] dark:text-white/50">Labs</p>
+          <p className="text-2xl font-bold text-[#D9A299] dark:text-[#8400ff]">{stats.labs}</p>
         </SpotlightCard>
       </div>
 
@@ -104,22 +104,22 @@ export default function RoomAllocationPage() {
         <select
           value={filterType}
           onChange={(e) => setFilterType(e.target.value)}
-          className="px-4 py-2 border border-[#392e4e] rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-[#8400ff] focus:border-transparent"
+          className="px-4 py-2 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-[#FAF7F3] dark:bg-white/5 text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#8400ff] focus:border-transparent"
         >
-          <option value="all" className="bg-[#0d0d1a]">All Types</option>
-          <option value="classroom" className="bg-[#0d0d1a]">Classrooms</option>
-          <option value="lab" className="bg-[#0d0d1a]">Labs</option>
-          <option value="seminar" className="bg-[#0d0d1a]">Seminar Halls</option>
-          <option value="research" className="bg-[#0d0d1a]">Research Labs</option>
+          <option value="all" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">All Types</option>
+          <option value="classroom" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">Classrooms</option>
+          <option value="lab" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">Labs</option>
+          <option value="seminar" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">Seminar Halls</option>
+          <option value="research" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">Research Labs</option>
         </select>
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
-          className="px-4 py-2 border border-[#392e4e] rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-[#8400ff] focus:border-transparent"
+          className="px-4 py-2 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-[#FAF7F3] dark:bg-white/5 text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#8400ff] focus:border-transparent"
         >
-          <option value="all" className="bg-[#0d0d1a]">All Status</option>
-          <option value="available" className="bg-[#0d0d1a]">Available</option>
-          <option value="occupied" className="bg-[#0d0d1a]">Occupied</option>
+          <option value="all" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">All Status</option>
+          <option value="available" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">Available</option>
+          <option value="occupied" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">Occupied</option>
         </select>
       </div>
 
@@ -131,18 +131,18 @@ export default function RoomAllocationPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
-            className={`bg-[#0d0d1a] rounded-xl p-5 border-2 transition-all ${
+            className={`bg-[#FAF7F3] dark:bg-[#0d0d1a] rounded-xl p-5 border-2 transition-all ${
               room.isAvailable 
-                ? 'border-emerald-500/30 hover:border-emerald-500/50' 
-                : 'border-red-500/30 hover:border-red-500/50'
+                ? 'border-emerald-400/40 dark:border-emerald-500/30 hover:border-emerald-500/60 dark:hover:border-emerald-500/50' 
+                : 'border-red-400/40 dark:border-red-500/30 hover:border-red-500/60 dark:hover:border-red-500/50'
             }`}
           >
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <span className="text-3xl">{getRoomTypeIcon(room.type)}</span>
                 <div>
-                  <h3 className="font-semibold text-white">{room.name}</h3>
-                  <p className="text-sm text-white/50">{room.building}</p>
+                  <h3 className="font-semibold text-[#5D4E37] dark:text-white">{room.name}</h3>
+                  <p className="text-sm text-[#8B7355] dark:text-white/50">{room.building}</p>
                 </div>
               </div>
               <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRoomTypeColor(room.type)}`}>
@@ -152,30 +152,30 @@ export default function RoomAllocationPage() {
 
             <div className="mt-4 space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-white/50">Capacity</span>
-                <span className="font-medium text-white">{room.capacity} seats</span>
+                <span className="text-[#8B7355] dark:text-white/50">Capacity</span>
+                <span className="font-medium text-[#5D4E37] dark:text-white">{room.capacity} seats</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-white/50">Status</span>
-                <span className={`font-medium ${room.isAvailable ? 'text-emerald-400' : 'text-red-400'}`}>
+                <span className="text-[#8B7355] dark:text-white/50">Status</span>
+                <span className={`font-medium ${room.isAvailable ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
                   {room.isAvailable ? 'Available' : 'Occupied'}
                 </span>
               </div>
               {!room.isAvailable && room.occupiedBy && (
                 <div className="text-sm">
-                  <span className="text-white/50">Occupied by: </span>
-                  <span className="text-white">{room.occupiedBy}</span>
+                  <span className="text-[#8B7355] dark:text-white/50">Occupied by: </span>
+                  <span className="text-[#5D4E37] dark:text-white">{room.occupiedBy}</span>
                 </div>
               )}
             </div>
 
             {room.facilities && room.facilities.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-[#392e4e]">
+              <div className="mt-4 pt-4 border-t border-[#DCC5B2] dark:border-[#392e4e]">
                 <div className="flex flex-wrap gap-1">
                   {room.facilities.map((facility) => (
                     <span
                       key={facility}
-                      className="px-2 py-0.5 bg-white/5 text-white/60 rounded text-xs border border-[#392e4e]"
+                      className="px-2 py-0.5 bg-[#F0E4D3] dark:bg-white/5 text-[#5D4E37] dark:text-white/60 rounded text-xs border border-[#DCC5B2] dark:border-[#392e4e]"
                     >
                       {facility}
                     </span>

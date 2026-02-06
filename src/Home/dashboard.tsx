@@ -31,14 +31,14 @@ export default function Dashboard() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-[#060010] flex items-center justify-center transition-colors">
+      <div className="min-h-screen bg-[#FAF7F3] dark:bg-[#060010] flex items-center justify-center transition-colors">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           className="flex flex-col items-center gap-4"
         >
-          <Loader2 className="w-10 h-10 text-[#8400ff] animate-spin" />
-          <p className="text-slate-600 dark:text-white/60 font-medium">Loading dashboard...</p>
+          <Loader2 className="w-10 h-10 text-[#D9A299] animate-spin" />
+          <p className="text-[#8B7355] dark:text-white/60 font-medium">Loading dashboard...</p>
         </motion.div>
       </div>
     );
@@ -112,7 +112,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#060010] transition-colors duration-300">
+    <div className="min-h-screen bg-[#FAF7F3] dark:bg-[#060010] transition-colors duration-300">
       <Sidebar 
         activeItem={activeMenu} 
         onMenuChange={setActiveMenu}
