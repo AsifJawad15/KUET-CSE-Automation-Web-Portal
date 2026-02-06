@@ -18,7 +18,7 @@ export const BentoItem: React.FC<BentoItemProps> = ({
   className = '',
   colSpan = 1,
   rowSpan = 1,
-  spotlightColor = 'rgba(132, 0, 255, 0.15)',
+  spotlightColor = 'rgba(217, 162, 153, 0.2)',
   delay = 0,
 }) => {
   const colSpanClasses: Record<number, string> = {
@@ -112,14 +112,14 @@ export const BentoStatCard: React.FC<BentoStatCardProps> = ({
   value,
   subtitle,
   trend,
-  spotlightColor = 'rgba(132, 0, 255, 0.15)',
+  spotlightColor = 'rgba(217, 162, 153, 0.2)',
   delay = 0,
 }) => {
   return (
     <BentoItem spotlightColor={spotlightColor} delay={delay}>
       <div className="p-5 h-full flex flex-col">
         <div className="flex items-center justify-between mb-4">
-          <div className="p-2.5 rounded-xl bg-[#8400ff]/10">
+          <div className="p-2.5 rounded-xl bg-[#D9A299]/20">
             {icon}
           </div>
           {trend && (
@@ -133,10 +133,10 @@ export const BentoStatCard: React.FC<BentoStatCardProps> = ({
           )}
         </div>
         <div className="mt-auto">
-          <h3 className="text-2xl font-bold text-white mb-1">{value}</h3>
-          <p className="text-sm text-white/60">{title}</p>
+          <h3 className="text-2xl font-bold text-[#5D4E37] dark:text-white mb-1">{value}</h3>
+          <p className="text-sm text-[#8B7355] dark:text-white/60">{title}</p>
           {subtitle && (
-            <p className="text-xs text-white/40 mt-1">{subtitle}</p>
+            <p className="text-xs text-[#A89888] dark:text-white/40 mt-1">{subtitle}</p>
           )}
         </div>
       </div>
@@ -162,7 +162,7 @@ interface BentoListCardProps {
 export const BentoListCard: React.FC<BentoListCardProps> = ({
   title,
   items,
-  spotlightColor = 'rgba(132, 0, 255, 0.15)',
+  spotlightColor = 'rgba(217, 162, 153, 0.2)',
   delay = 0,
   colSpan = 1,
   rowSpan = 1,
@@ -170,30 +170,30 @@ export const BentoListCard: React.FC<BentoListCardProps> = ({
   return (
     <BentoItem spotlightColor={spotlightColor} delay={delay} colSpan={colSpan} rowSpan={rowSpan}>
       <div className="p-5 h-full flex flex-col">
-        <h3 className="text-sm font-semibold text-white/80 mb-4">{title}</h3>
-        <div className="space-y-3 flex-1 overflow-y-auto max-h-[300px] pr-1 [&::-webkit-scrollbar]:w-[4px] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#392e4e] [&::-webkit-scrollbar-thumb]:rounded-full">
+        <h3 className="text-sm font-semibold text-[#5D4E37] dark:text-white/80 mb-4">{title}</h3>
+        <div className="space-y-3 flex-1 overflow-y-auto max-h-[300px] pr-1 [&::-webkit-scrollbar]:w-[4px] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#DCC5B2] dark:[&::-webkit-scrollbar-thumb]:bg-[#392e4e] [&::-webkit-scrollbar-thumb]:rounded-full">
           {items.map((item, index) => (
             <motion.div
               key={item.id}
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: delay + index * 0.05 }}
-              className="flex items-center justify-between p-2.5 rounded-lg bg-white/5 hover:bg-[#8400ff]/10 transition-colors group cursor-pointer"
+              className="flex items-center justify-between p-2.5 rounded-lg bg-[#F0E4D3] dark:bg-white/5 hover:bg-[#DCC5B2] dark:hover:bg-[#8400ff]/10 transition-colors group cursor-pointer"
             >
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-white font-medium truncate group-hover:text-[#00e5ff] transition-colors">
+                <p className="text-sm text-[#5D4E37] dark:text-white font-medium truncate group-hover:text-[#D9A299] dark:group-hover:text-[#00e5ff] transition-colors">
                   {item.primary}
                 </p>
                 {item.secondary && (
-                  <p className="text-xs text-white/50 truncate">{item.secondary}</p>
+                  <p className="text-xs text-[#8B7355] dark:text-white/50 truncate">{item.secondary}</p>
                 )}
               </div>
               {item.badge && (
                 <span 
                   className="text-xs px-2 py-0.5 rounded-full ml-2 flex-shrink-0"
                   style={{ 
-                    backgroundColor: item.badgeColor ? `${item.badgeColor}20` : 'rgba(132, 0, 255, 0.2)',
-                    color: item.badgeColor || '#a855f7'
+                    backgroundColor: item.badgeColor ? `${item.badgeColor}20` : 'rgba(217, 162, 153, 0.25)',
+                    color: item.badgeColor || '#D9A299'
                   }}
                 >
                   {item.badge}
@@ -219,7 +219,7 @@ interface BentoChartCardProps {
 export const BentoChartCard: React.FC<BentoChartCardProps> = ({
   title,
   children,
-  spotlightColor = 'rgba(0, 229, 255, 0.15)',
+  spotlightColor = 'rgba(220, 197, 178, 0.2)',
   delay = 0,
   colSpan = 2,
   rowSpan = 1,
@@ -227,7 +227,7 @@ export const BentoChartCard: React.FC<BentoChartCardProps> = ({
   return (
     <BentoItem spotlightColor={spotlightColor} delay={delay} colSpan={colSpan} rowSpan={rowSpan}>
       <div className="p-5 h-full flex flex-col">
-        <h3 className="text-sm font-semibold text-white/80 mb-4">{title}</h3>
+        <h3 className="text-sm font-semibold text-[#5D4E37] dark:text-white/80 mb-4">{title}</h3>
         <div className="flex-1 min-h-0">
           {children}
         </div>
