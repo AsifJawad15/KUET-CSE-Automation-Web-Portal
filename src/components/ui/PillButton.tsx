@@ -29,9 +29,9 @@ const PillButton: React.FC<PillButtonProps> = ({
   const baseStyles = 'relative inline-flex items-center justify-center font-medium transition-all duration-300 rounded-full overflow-hidden backdrop-blur-md';
   
   const variantStyles = {
-    primary: 'bg-[#8400ff]/30 text-white hover:bg-[#8400ff]/40 hover:shadow-[0_0_25px_rgba(132,0,255,0.35)] border border-[#8400ff]/40',
-    secondary: 'bg-[#00e5ff]/20 text-white hover:bg-[#00e5ff]/30 hover:shadow-[0_0_25px_rgba(0,229,255,0.35)] border border-[#00e5ff]/40',
-    outline: 'bg-white/5 border border-[#8400ff]/50 text-[#b366ff] hover:bg-[#8400ff]/15 hover:shadow-[0_0_20px_rgba(132,0,255,0.25)]',
+    primary: 'bg-[#D9A299]/40 text-white hover:bg-[#D9A299]/50 hover:shadow-[0_0_25px_rgba(217,162,153,0.4)] border border-[#D9A299]/50',
+    secondary: 'bg-[#DCC5B2]/30 text-white hover:bg-[#DCC5B2]/40 hover:shadow-[0_0_25px_rgba(220,197,178,0.4)] border border-[#DCC5B2]/50',
+    outline: 'bg-white/5 border border-[#D9A299]/50 text-[#D9A299] hover:bg-[#D9A299]/20 hover:shadow-[0_0_20px_rgba(217,162,153,0.3)]',
     ghost: 'bg-white/5 border border-white/15 text-white/90 hover:bg-white/10 hover:border-white/25'
   };
 
@@ -59,9 +59,9 @@ const PillButton: React.FC<PillButtonProps> = ({
         whileHover={{ opacity: 1 }}
         style={{
           background: variant === 'primary' 
-            ? 'radial-gradient(circle at center, rgba(132,0,255,0.3), transparent 70%)' 
+            ? 'radial-gradient(circle at center, rgba(217,162,153,0.4), transparent 70%)' 
             : variant === 'secondary'
-            ? 'radial-gradient(circle at center, rgba(0,229,255,0.3), transparent 70%)'
+            ? 'radial-gradient(circle at center, rgba(220,197,178,0.4), transparent 70%)'
             : 'radial-gradient(circle at center, rgba(255,255,255,0.1), transparent 70%)'
         }}
       />

@@ -109,7 +109,7 @@ const HeroLanding: React.FC = () => {
       <div className="absolute inset-0 z-0">
         <LightRays
           raysOrigin="top-center"
-          raysColor="#8400ff"
+          raysColor="#D9A299"
           raysSpeed={0.6}
           lightSpread={0.8}
           rayLength={3.5}
@@ -123,7 +123,7 @@ const HeroLanding: React.FC = () => {
 
       {/* Gradient overlays - less opacity to show more light rays */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#060010]/30 to-[#060010]/80 z-[1]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(132,0,255,0.1),transparent_50%)] z-[1]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(217,162,153,0.15),transparent_50%)] z-[1]" />
 
       {/* Content */}
       <div className="relative z-10">
@@ -137,7 +137,7 @@ const HeroLanding: React.FC = () => {
           <div className="flex items-center gap-3">
             <motion.div 
               animate={floatAnimation}
-              className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#8400ff] to-[#5c00b3] flex items-center justify-center shadow-lg shadow-[#8400ff]/30"
+              className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#D9A299] to-[#DCC5B2] flex items-center justify-center shadow-lg shadow-[#D9A299]/30"
             >
               <GraduationCap className="w-6 h-6 text-white" />
             </motion.div>
@@ -170,10 +170,10 @@ const HeroLanding: React.FC = () => {
             {/* Badge */}
             <motion.div 
               variants={itemVariants}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#8400ff]/10 border border-[#8400ff]/30 mb-8"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#D9A299]/20 border border-[#D9A299]/40 mb-8"
             >
-              <Sparkles className="w-4 h-4 text-[#8400ff]" />
-              <span className="text-sm text-[#8400ff] font-medium">CSE Department Automation</span>
+              <Sparkles className="w-4 h-4 text-[#D9A299]" />
+              <span className="text-sm text-[#D9A299] font-medium">CSE Department Automation</span>
             </motion.div>
 
             {/* Main Heading */}
@@ -182,7 +182,7 @@ const HeroLanding: React.FC = () => {
               className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight"
             >
               Streamline Your
-              <span className="block bg-gradient-to-r from-[#8400ff] via-[#b366ff] to-[#00e5ff] bg-clip-text text-transparent">
+              <span className="block bg-gradient-to-r from-[#D9A299] via-[#DCC5B2] to-[#F0E4D3] bg-clip-text text-transparent">
                 Academic Journey
               </span>
             </motion.h1>
@@ -232,7 +232,7 @@ const HeroLanding: React.FC = () => {
                   transition={{ delay: 0.8 + index * 0.1 }}
                   className="text-center"
                 >
-                  <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-[#8400ff] to-[#00e5ff] bg-clip-text text-transparent">
+                  <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] bg-clip-text text-transparent">
                     {stat.value}
                   </div>
                   <div className="text-sm text-white/60 mt-1">{stat.label}</div>

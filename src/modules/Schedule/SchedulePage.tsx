@@ -28,17 +28,17 @@ export default function SchedulePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Class Schedule</h1>
-          <p className="text-white/60 mt-1">Manage class schedules and timetables</p>
+          <h1 className="text-2xl font-bold text-[#5D4E37] dark:text-white">Class Schedule</h1>
+          <p className="text-[#8B7355] dark:text-white/60 mt-1">Manage class schedules and timetables</p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex bg-white/5 border border-[#392e4e] rounded-lg p-1">
+          <div className="flex bg-[#F0E4D3] dark:bg-white/5 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg p-1">
             <button
               onClick={() => setViewMode('table')}
               className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
                 viewMode === 'table' 
-                  ? 'bg-[#8400ff] text-white' 
-                  : 'text-white/60 hover:text-white'
+                  ? 'bg-[#D9A299] dark:bg-[#8400ff] text-white' 
+                  : 'text-[#5D4E37] dark:text-white/60 hover:text-[#D9A299] dark:hover:text-white'
               }`}
             >
               Table
@@ -47,8 +47,8 @@ export default function SchedulePage() {
               onClick={() => setViewMode('grid')}
               className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
                 viewMode === 'grid' 
-                  ? 'bg-[#8400ff] text-white' 
-                  : 'text-white/60 hover:text-white'
+                  ? 'bg-[#D9A299] dark:bg-[#8400ff] text-white' 
+                  : 'text-[#5D4E37] dark:text-white/60 hover:text-[#D9A299] dark:hover:text-white'
               }`}
             >
               Grid
@@ -58,7 +58,7 @@ export default function SchedulePage() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => setShowForm(true)}
-            className="px-4 py-2 bg-gradient-to-r from-[#8400ff] to-[#a855f7] text-white rounded-lg hover:from-[#9933ff] hover:to-[#b366ff] transition-all flex items-center gap-2 shadow-lg shadow-[#8400ff]/25"
+            className="px-4 py-2 bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#8400ff] dark:to-[#a855f7] text-white rounded-lg hover:from-[#C88989] hover:to-[#CCB5A2] dark:hover:from-[#9933ff] dark:hover:to-[#b366ff] transition-all flex items-center gap-2 shadow-lg shadow-[#D9A299]/25 dark:shadow-[#8400ff]/25"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -73,54 +73,54 @@ export default function SchedulePage() {
         <select
           value={filterDay}
           onChange={(e) => setFilterDay(e.target.value)}
-          className="px-4 py-2 border border-[#392e4e] rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-[#8400ff] focus:border-transparent"
+          className="px-4 py-2 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-[#FAF7F3] dark:bg-white/5 text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#8400ff] focus:border-transparent"
         >
-          <option value="all" className="bg-[#0d0d1a]">All Days</option>
+          <option value="all" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">All Days</option>
           {DAYS.map(day => (
-            <option key={day} value={day} className="bg-[#0d0d1a]">{day}</option>
+            <option key={day} value={day} className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">{day}</option>
           ))}
         </select>
       </div>
 
       {/* Table View */}
       {viewMode === 'table' && (
-        <SpotlightCard className="rounded-xl border border-[#392e4e] overflow-hidden" spotlightColor="rgba(132, 0, 255, 0.1)">
+        <SpotlightCard className="rounded-xl border border-[#DCC5B2] dark:border-[#392e4e] overflow-hidden bg-[#FAF7F3] dark:bg-transparent" spotlightColor="rgba(217, 162, 153, 0.2)">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-white/5">
+              <thead className="bg-[#F0E4D3] dark:bg-white/5">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-white/60 uppercase">Day</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-white/60 uppercase">Time</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-white/60 uppercase">Course</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-white/60 uppercase">Teacher</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-white/60 uppercase">Room</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-white/60 uppercase">Section/Group</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-white/60 uppercase">Actions</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase">Day</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase">Time</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase">Course</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase">Teacher</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase">Room</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase">Section/Group</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#392e4e]">
+              <tbody className="divide-y divide-[#DCC5B2] dark:divide-[#392e4e]">
                 {filteredSchedules.map((schedule) => (
-                  <tr key={schedule.id} className="hover:bg-white/5 transition-colors">
+                  <tr key={schedule.id} className="hover:bg-[#F0E4D3] dark:hover:bg-white/5 transition-colors">
                     <td className="px-6 py-4">
-                      <span className="font-medium text-white">{schedule.day}</span>
+                      <span className="font-medium text-[#5D4E37] dark:text-white">{schedule.day}</span>
                     </td>
-                    <td className="px-6 py-4 text-white/60">
+                    <td className="px-6 py-4 text-[#8B7355] dark:text-white/60">
                       {schedule.startTime} - {schedule.endTime}
                     </td>
                     <td className="px-6 py-4">
                       <div>
-                        <span className="font-medium text-white">{schedule.courseCode}</span>
-                        <p className="text-sm text-white/50">{schedule.courseName}</p>
+                        <span className="font-medium text-[#5D4E37] dark:text-white">{schedule.courseCode}</span>
+                        <p className="text-sm text-[#8B7355] dark:text-white/50">{schedule.courseName}</p>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-white/70">
+                    <td className="px-6 py-4 text-[#5D4E37] dark:text-white/70">
                       {schedule.teacherName}
                     </td>
-                    <td className="px-6 py-4 text-white/60">
+                    <td className="px-6 py-4 text-[#8B7355] dark:text-white/60">
                       {schedule.roomName}
                     </td>
                     <td className="px-6 py-4">
-                      <span className="px-2 py-1 bg-[#00e5ff]/20 text-[#00e5ff] border border-[#00e5ff]/30 rounded text-sm">
+                      <span className="px-2 py-1 bg-[#D9A299]/30 text-[#5D4E37] border border-[#D9A299]/50 dark:bg-[#00e5ff]/20 dark:text-[#00e5ff] dark:border-[#00e5ff]/30 rounded text-sm">
                         {schedule.section || schedule.group}
                       </span>
                     </td>
