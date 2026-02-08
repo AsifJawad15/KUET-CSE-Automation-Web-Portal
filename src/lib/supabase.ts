@@ -49,6 +49,8 @@ export interface Teacher {
   designation: TeacherDesignation;
   department: string;
   office_room: string | null;
+  is_on_leave: boolean;
+  leave_reason: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -76,4 +78,38 @@ export interface Student {
 // Student with auth info (only when you need email/is_active)
 export interface StudentWithAuth extends Student {
   profile: Profile;
+}
+
+// Course from DB
+export interface DBCourse {
+  id: string;
+  code: string;
+  title: string;
+  credit: number;
+  course_type: string; // 'Theory' | 'Lab'
+  description: string | null;
+  created_at: string;
+}
+
+// Course offering from DB (teacher ↔ course assignment)
+export interface DBCourseOffering {
+  id: string;
+  course_id: string;
+  teacher_user_id: string;
+  term: string; // e.g. '3-2'
+  session: string;
+  batch: string | null;
+  academic_year: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+// Course offering with joined teacher data
+export interface DBCourseOfferingWithTeacher extends DBCourseOffering {
+  teacher: Teacher;
+}
+
+// Course with its offerings (for allocation view)
+export interface DBCourseWithOfferings extends DBCourse {
+  course_offerings: DBCourseOfferingWithTeacher[];
 }

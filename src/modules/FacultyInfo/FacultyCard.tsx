@@ -3,7 +3,7 @@
 import SpotlightCard from '@/components/ui/SpotlightCard';
 import { TeacherDesignation, TeacherWithAuth } from '@/lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MoreVertical, Edit, RefreshCw, Key } from 'lucide-react';
+import { MoreVertical, Edit, RefreshCw, Key, UserX, UserCheck } from 'lucide-react';
 import { useRef, useEffect, useState } from 'react';
 
 interface FacultyCardProps {
@@ -11,6 +11,7 @@ interface FacultyCardProps {
   index: number;
   onEditProfile: (teacher: TeacherWithAuth) => void;
   onCopyPassword: (teacher: TeacherWithAuth) => void;
+  onToggleLeave: (teacher: TeacherWithAuth) => void;
 }
 
 const getDesignationColor = (designation: TeacherDesignation) => {
@@ -33,7 +34,7 @@ const getDesignationLabel = (designation: TeacherDesignation) => {
   }
 };
 
-export default function FacultyCard({ teacher, index, onEditProfile, onCopyPassword }: FacultyCardProps) {
+export default function FacultyCard({ teacher, index, onEditProfile, onCopyPassword, onToggleLeave }: FacultyCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -55,16 +56,23 @@ export default function FacultyCard({ teacher, index, onEditProfile, onCopyPassw
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
     >
-      <SpotlightCard className="rounded-xl p-5 border border-[#DCC5B2] dark:border-[#392e4e] h-full" spotlightColor="rgba(217, 162, 153, 0.2)">
+      <SpotlightCard className={`rounded-xl p-5 border h-full ${teacher.is_on_leave ? 'border-amber-400/50 dark:border-amber-400/30' : 'border-[#DCC5B2] dark:border-[#392e4e]'}`} spotlightColor={teacher.is_on_leave ? 'rgba(245, 158, 11, 0.15)' : 'rgba(217, 162, 153, 0.2)'}>
         <div className="flex items-start gap-4">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#D9A299] to-[#DCC5B2] flex items-center justify-center text-white text-xl font-bold">
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center text-white text-xl font-bold ${teacher.is_on_leave ? 'bg-gradient-to-br from-amber-500/70 to-amber-600/70 opacity-70' : 'bg-gradient-to-br from-[#D9A299] to-[#DCC5B2]'}`}>
             {teacher.full_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-[#5D4E37] dark:text-white">{teacher.full_name}</h3>
-            <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${getDesignationColor(teacher.designation)}`}>
-              {getDesignationLabel(teacher.designation)}
-            </span>
+            <h3 className={`font-semibold ${teacher.is_on_leave ? 'text-[#8B7355] dark:text-white/50' : 'text-[#5D4E37] dark:text-white'}`}>{teacher.full_name}</h3>
+            <div className="flex flex-wrap items-center gap-1.5 mt-1">
+              <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${getDesignationColor(teacher.designation)}`}>
+                {getDesignationLabel(teacher.designation)}
+              </span>
+              {teacher.is_on_leave && (
+                <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/20 text-amber-500 border border-amber-500/30">
+                  On Leave
+                </span>
+              )}
+            </div>
           </div>
           {/* 3-dot menu */}
           <div className="relative" ref={menuRef}>
@@ -108,6 +116,21 @@ export default function FacultyCard({ teacher, index, onEditProfile, onCopyPassw
                     <Key className="w-4 h-4 text-amber-400" />
                     Copy Password
                   </button>
+                  <div className="border-t border-[#DCC5B2]/50 dark:border-[#392e4e]/50" />
+                  <button
+                    onClick={() => { setMenuOpen(false); onToggleLeave(teacher); }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors ${
+                      teacher.is_on_leave
+                        ? 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10'
+                        : 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10'
+                    }`}
+                  >
+                    {teacher.is_on_leave ? (
+                      <><UserCheck className="w-4 h-4" /> Mark as Present</>
+                    ) : (
+                      <><UserX className="w-4 h-4" /> Mark as On Leave</>
+                    )}
+                  </button>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -135,7 +158,12 @@ export default function FacultyCard({ teacher, index, onEditProfile, onCopyPassw
             </svg>
             <span className="font-mono text-xs">{teacher.teacher_uid}</span>
           </div>
-          {teacher.profile.is_active ? (
+          {teacher.is_on_leave ? (
+            <div className="flex items-center gap-2 text-amber-500">
+              <UserX className="w-4 h-4" />
+              <span className="text-xs">On Leave{teacher.leave_reason ? ` — ${teacher.leave_reason}` : ''}</span>
+            </div>
+          ) : teacher.profile.is_active ? (
             <div className="flex items-center gap-2 text-emerald-500">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />

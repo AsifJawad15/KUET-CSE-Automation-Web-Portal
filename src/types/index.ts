@@ -61,6 +61,7 @@ export interface Course {
   type: CourseType;
   year: 1 | 2 | 3 | 4;
   term: 1 | 2;
+  description?: string;
   teachers: string[]; // teacher IDs
   sections?: string[]; // For theory: ['A', 'B']
   groups?: string[]; // For lab: ['A1', 'A2', 'B1', 'B2']

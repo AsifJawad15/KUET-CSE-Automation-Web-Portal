@@ -11,6 +11,7 @@ import {
   formatSession,
   StudentWithAuth 
 } from '@/services/studentService';
+import AddStudentCSV from './AddStudentCSV';
 
 export default function AddStudentPage() {
   const [students, setStudents] = useState<StudentWithAuth[]>([]);
@@ -19,6 +20,7 @@ export default function AddStudentPage() {
   const [filterBatch, setFilterBatch] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCSV, setShowCSV] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     roll: '',
@@ -129,18 +131,46 @@ export default function AddStudentPage() {
           <h1 className="text-2xl font-bold text-[#5D4E37] dark:text-white">Student Management</h1>
           <p className="text-[#8B7355] dark:text-white/60 mt-1">Add and manage student records</p>
         </div>
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setShowForm(true)}
-          className="px-5 py-2.5 bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] text-white rounded-full hover:shadow-lg hover:shadow-[#D9A299]/25 transition-all flex items-center gap-2"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-          </svg>
-          Add Student
-        </motion.button>
+        <div className="flex items-center gap-3">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowForm(true)}
+            className="px-5 py-2.5 bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] text-white rounded-full hover:shadow-lg hover:shadow-[#D9A299]/25 transition-all flex items-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+            </svg>
+            Add Student
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowCSV(!showCSV)}
+            className={`px-5 py-2.5 rounded-full transition-all flex items-center gap-2 ${
+              showCSV
+                ? 'bg-gradient-to-r from-[#00e5ff] to-[#8400ff] text-white shadow-lg shadow-[#8400ff]/25'
+                : 'border border-[#DCC5B2] dark:border-[#392e4e] text-[#5D4E37] dark:text-white/70 hover:bg-[#F0E4D3] dark:hover:bg-white/5'
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            CSV Upload
+          </motion.button>
+        </div>
       </motion.div>
+
+      {/* CSV Upload Section */}
+      {showCSV && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-3xl"
+        >
+          <AddStudentCSV onComplete={loadStudents} />
+        </motion.div>
+      )}
 
       {showForm && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
