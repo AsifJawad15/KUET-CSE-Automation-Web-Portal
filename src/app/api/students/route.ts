@@ -15,9 +15,9 @@ export async function POST(request: NextRequest) {
     const { full_name, email, phone, roll_no, term, session } = body;
 
     // Validate required fields
-    if (!full_name || !email || !phone || !roll_no || !term || !session) {
+    if (!full_name || !email || !roll_no || !term || !session) {
       return NextResponse.json(
-        { success: false, error: 'All fields are required: full_name, email, phone, roll_no, term, session' },
+        { success: false, error: 'Required fields: full_name, email, roll_no, term, session' },
         { status: 400 }
       );
     }

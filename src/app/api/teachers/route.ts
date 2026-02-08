@@ -15,9 +15,9 @@ export async function POST(request: NextRequest) {
     const { full_name, email, phone, designation, password } = body;
 
     // Validate required fields
-    if (!full_name || !email || !phone || !designation) {
+    if (!full_name || !email || !designation) {
       return NextResponse.json(
-        { success: false, error: 'All fields are required: full_name, email, phone, designation' },
+        { success: false, error: 'Required fields: full_name, email, designation' },
         { status: 400 }
       );
     }
@@ -182,6 +182,25 @@ export async function PATCH(request: NextRequest) {
         success: true,
         newPassword,
       });
+    }
+
+    // Toggle leave status
+    if (action === 'toggle_leave') {
+      const { is_on_leave, leave_reason } = body;
+
+      const updates: Record<string, any> = {
+        is_on_leave: !!is_on_leave,
+        leave_reason: is_on_leave ? (leave_reason || null) : null,
+      };
+
+      const { error } = await supabase
+        .from('teachers')
+        .update(updates)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      return NextResponse.json({ success: true });
     }
 
     // Update profile: update teacher data

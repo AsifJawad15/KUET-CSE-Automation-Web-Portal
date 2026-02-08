@@ -2,6 +2,7 @@
 export { AddFacultyPage } from './AddFaculty';
 export { AddStudentPage } from './AddStudent';
 export { CourseAllocationPage } from './CourseAllocation';
+export { CourseInfoPage } from './CourseInfo';
 export { DashboardOverview } from './Dashboard';
 export { FacultyInfoPage } from './FacultyInfo';
 export { StudentInfoPage } from './StudentInfo';

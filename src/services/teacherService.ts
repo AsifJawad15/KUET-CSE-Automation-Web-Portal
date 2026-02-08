@@ -117,6 +117,37 @@ export async function resetTeacherPassword(userId: string): Promise<{ success: b
 }
 
 /**
+ * Toggle teacher leave status
+ */
+export async function toggleTeacherLeave(
+  userId: string,
+  isOnLeave: boolean,
+  leaveReason?: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const response = await fetch('/api/teachers', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId,
+        action: 'toggle_leave',
+        is_on_leave: isOnLeave,
+        leave_reason: leaveReason || null,
+      }),
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error: any) {
+    console.error('Error toggling leave status:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to toggle leave status',
+    };
+  }
+}
+
+/**
  * Update teacher profile data (name, phone, designation)
  */
 export async function updateTeacherProfile(

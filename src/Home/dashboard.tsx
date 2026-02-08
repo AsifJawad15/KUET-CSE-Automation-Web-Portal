@@ -4,6 +4,7 @@ import Sidebar from '@/components/Sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { AddStudentPage } from '@/modules/AddStudent';
 import { CourseAllocationPage } from '@/modules/CourseAllocation';
+import { CourseInfoPage } from '@/modules/CourseInfo';
 import { DashboardOverview } from '@/modules/Dashboard';
 import { FacultyInfoPage } from '@/modules/FacultyInfo';
 import { ResultPage } from '@/modules/Result';
@@ -66,6 +67,8 @@ export default function Dashboard() {
           return <FacultyInfoPage />;
         case 'room-allocation':
           return <RoomAllocationPage />;
+        case 'course-info':
+          return <CourseInfoPage />;
         case 'course-allocation':
           return <CourseAllocationPage />;
         case 'schedule':
