@@ -278,6 +278,7 @@ export default function FacultyInfoPage() {
                       index={index}
                       onUpdate={handleEditProfile}
                       onToggleLeave={handleToggleLeave}
+                      onCopyPassword={handleCopyPassword}
                       onDelete={(t) => handleDelete(t.user_id)}
                     />
                   ))}
@@ -308,6 +309,7 @@ export default function FacultyInfoPage() {
                         index={index}
                         onUpdate={handleEditProfile}
                         onToggleLeave={handleToggleLeave}
+                        onCopyPassword={handleCopyPassword}
                         onDelete={(t) => handleDelete(t.user_id)}
                       />
                     ))}

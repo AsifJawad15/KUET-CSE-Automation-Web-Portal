@@ -3,7 +3,7 @@
 import SpotlightCard from '@/components/ui/SpotlightCard';
 import { TeacherDesignation, TeacherWithAuth } from '@/lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MoreVertical, Edit, UserX, UserCheck, Trash2 } from 'lucide-react';
+import { MoreVertical, Edit, UserX, UserCheck, Trash2, Copy } from 'lucide-react';
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -12,6 +12,7 @@ interface FacultyCardProps {
   index: number;
   onUpdate: (teacher: TeacherWithAuth) => void;
   onToggleLeave: (teacher: TeacherWithAuth) => void;
+  onCopyPassword: (teacher: TeacherWithAuth) => void;
   onDelete: (teacher: TeacherWithAuth) => void;
 }
 
@@ -35,7 +36,7 @@ const getDesignationLabel = (designation: TeacherDesignation) => {
   }
 };
 
-export default function FacultyCard({ teacher, index, onUpdate, onToggleLeave, onDelete }: FacultyCardProps) {
+export default function FacultyCard({ teacher, index, onUpdate, onToggleLeave, onCopyPassword, onDelete }: FacultyCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -107,6 +108,14 @@ export default function FacultyCard({ teacher, index, onUpdate, onToggleLeave, o
               ) : (
                 <><UserX className="w-4 h-4" /> Mark as On Leave</>
               )}
+            </button>
+            <div className="border-t border-[#DCC5B2]/50 dark:border-[#392e4e]/50" />
+            <button
+              onClick={() => { closeMenu(); onCopyPassword(teacher); }}
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-[#5D4E37] dark:text-white/80 hover:bg-[#F0E4D3] dark:hover:bg-white/5 transition-colors"
+            >
+              <Copy className="w-4 h-4 text-[#D9A299] dark:text-[#00e5ff]" />
+              Copy Password
             </button>
             <div className="border-t border-[#DCC5B2]/50 dark:border-[#392e4e]/50" />
             <button
