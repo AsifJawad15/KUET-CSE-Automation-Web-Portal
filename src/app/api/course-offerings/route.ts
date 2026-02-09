@@ -1,5 +1,5 @@
+import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 // ==========================================
 // GET /api/course-offerings — List offerings with teacher + course info
@@ -20,10 +20,12 @@ export async function GET(request: NextRequest) {
         courses (id, code, title, credit, course_type, description),
         teachers!course_offerings_teacher_user_id_fkey (
           user_id,
+          full_name,
+          phone,
           department,
           designation,
-          specialization,
-          profiles!teachers_user_id_fkey (full_name, email, phone)
+          is_on_leave,
+          profiles!teachers_user_id_fkey (email)
         )
       `)
       .order('created_at', { ascending: false });
@@ -56,7 +58,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { course_id, teacher_user_id, section } = body;
+    const { course_id, teacher_user_id, section, term, session } = body;
 
     if (!course_id || !teacher_user_id) {
       return NextResponse.json(
@@ -80,9 +82,48 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Derive term from curriculum table if not provided
+    let resolvedTerm = term;
+    if (!resolvedTerm) {
+      const { data: curriculumEntry } = await supabase
+        .from('curriculum')
+        .select('term')
+        .eq('course_id', course_id)
+        .limit(1)
+        .maybeSingle();
+      resolvedTerm = curriculumEntry?.term || null;
+    }
+
+    // If still no term, try to get it from the course code pattern (e.g., CSE 3200 → year 3, term 2 → '3-2')
+    if (!resolvedTerm) {
+      const { data: courseData } = await supabase
+        .from('courses')
+        .select('code')
+        .eq('id', course_id)
+        .single();
+      if (courseData?.code) {
+        const match = courseData.code.match(/\d/);
+        if (match) {
+          const year = Math.min(Math.ceil(parseInt(match[0]) / 1), 4);
+          // Default to term x-1, can be overridden
+          resolvedTerm = `${year}-1`;
+        }
+      }
+    }
+
+    if (!resolvedTerm) {
+      resolvedTerm = '1-1'; // Ultimate fallback
+    }
+
+    // Derive session: use provided value or current academic year
+    const currentYear = new Date().getFullYear();
+    const resolvedSession = session || `${currentYear - 1}-${currentYear}`;
+
     const insertData: Record<string, any> = {
       course_id,
       teacher_user_id,
+      term: resolvedTerm,
+      session: resolvedSession,
     };
     if (section) insertData.section = section;
 
@@ -94,10 +135,12 @@ export async function POST(request: NextRequest) {
         courses (id, code, title, credit, course_type, description),
         teachers!course_offerings_teacher_user_id_fkey (
           user_id,
+          full_name,
+          phone,
           department,
           designation,
-          specialization,
-          profiles!teachers_user_id_fkey (full_name, email, phone)
+          is_on_leave,
+          profiles!teachers_user_id_fkey (email)
         )
       `)
       .single();
@@ -195,10 +238,12 @@ export async function PATCH(request: NextRequest) {
         courses (id, code, title, credit, course_type, description),
         teachers!course_offerings_teacher_user_id_fkey (
           user_id,
+          full_name,
+          phone,
           department,
           designation,
-          specialization,
-          profiles!teachers_user_id_fkey (full_name, email, phone)
+          is_on_leave,
+          profiles!teachers_user_id_fkey (email)
         )
       `)
       .single();
