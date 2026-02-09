@@ -1,23 +1,21 @@
 "use client";
 
 import SpotlightCard from '@/components/ui/SpotlightCard';
-import { DBCourse } from '@/lib/supabase';
+import { DBCourse, isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useState, useEffect, useCallback } from 'react';
-import React from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 // Types for API responses
 interface TeacherProfile {
-  full_name: string;
   email: string;
-  phone: string | null;
 }
 
 interface TeacherData {
   user_id: string;
+  full_name: string;
+  phone: string | null;
   department: string;
   designation: string;
-  specialization: string | null;
   is_on_leave: boolean;
   leave_reason: string | null;
   profiles: TeacherProfile;
@@ -60,7 +58,7 @@ function AssignTeacherModal({
     (t) =>
       !existingAssignments.includes(t.user_id) &&
       !t.is_on_leave &&
-      (t.profiles.full_name.toLowerCase().includes(search.toLowerCase()) ||
+      (t.full_name.toLowerCase().includes(search.toLowerCase()) ||
         t.designation.toLowerCase().includes(search.toLowerCase()))
   );
 
@@ -138,11 +136,11 @@ function AssignTeacherModal({
                   </div>
                   {/* Avatar */}
                   <div className="w-9 h-9 rounded-full bg-[#D9A299]/30 dark:bg-[#8400ff]/30 border border-[#D9A299]/50 dark:border-[#8400ff]/40 flex items-center justify-center text-[#5D4E37] dark:text-white text-sm font-semibold flex-shrink-0">
-                    {teacher.profiles.full_name.charAt(0)}
+                    {teacher.full_name.charAt(0)}
                   </div>
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-[#5D4E37] dark:text-white truncate">{teacher.profiles.full_name}</p>
+                    <p className="text-sm font-medium text-[#5D4E37] dark:text-white truncate">{teacher.full_name}</p>
                     <p className="text-xs text-[#8B7355] dark:text-white/50">{teacher.designation}</p>
                   </div>
                 </motion.button>
@@ -264,6 +262,8 @@ export default function CourseAllocationPage() {
   const [filterType, setFilterType] = useState<string>('all');
   const [assignCourse, setAssignCourse] = useState<DBCourse | null>(null);
   const [removeInfo, setRemoveInfo] = useState<{ offeringId: string; teacherName: string; courseCode: string; courseTitle: string } | null>(null);
+  const [realtimeStatus, setRealtimeStatus] = useState<string>('connecting');
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   // Fetch all data
   const fetchData = useCallback(async () => {
@@ -284,13 +284,14 @@ export default function CourseAllocationPage() {
       // Map to our expected shape
       const mappedTeachers: TeacherData[] = (teachersData || []).map((t: any) => ({
         user_id: t.user_id,
+        full_name: t.full_name || 'Unknown',
+        phone: t.phone || null,
         department: t.department || 'CSE',
         designation: t.designation || '',
-        specialization: t.specialization || null,
+        is_on_leave: t.is_on_leave || false,
+        leave_reason: t.leave_reason || null,
         profiles: {
-          full_name: t.profiles?.full_name || t.full_name || 'Unknown',
-          email: t.profiles?.email || t.email || '',
-          phone: t.profiles?.phone || t.phone || null,
+          email: t.profiles?.email || t.profile?.email || t.email || '',
         },
       }));
       setTeachers(mappedTeachers);
@@ -305,6 +306,37 @@ export default function CourseAllocationPage() {
 
   useEffect(() => {
     fetchData();
+  }, [fetchData]);
+
+  // ==========================================
+  // Supabase Real-Time Subscription
+  // ==========================================
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+
+    const channel = supabase
+      .channel('course-allocation-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'course_offerings',
+        },
+        (payload) => {
+          console.log('[Realtime] course_offerings changed:', payload.eventType, payload);
+          // Refetch all data to get joined teacher/course info
+          fetchData();
+        }
+      )
+      .subscribe((status) => {
+        console.log('[Realtime] Subscription status:', status);
+        setRealtimeStatus(status === 'SUBSCRIBED' ? 'connected' : status === 'CLOSED' ? 'disconnected' : 'connecting');
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [fetchData]);
 
   // Get offerings for a course
@@ -342,6 +374,8 @@ export default function CourseAllocationPage() {
       await fetchData();
       setAssignCourse(null);
       setError(null);
+      setSuccessMsg('Teacher assigned successfully!');
+      setTimeout(() => setSuccessMsg(null), 3000);
     } catch {
       setError('Failed to assign teacher');
     } finally {
@@ -363,6 +397,8 @@ export default function CourseAllocationPage() {
       await fetchData();
       setRemoveInfo(null);
       setError(null);
+      setSuccessMsg('Teacher removed successfully!');
+      setTimeout(() => setSuccessMsg(null), 3000);
     } catch {
       setError('Failed to remove assignment');
     } finally {
@@ -392,6 +428,41 @@ export default function CourseAllocationPage() {
           {loading ? 'Loading...' : 'Refresh'}
         </motion.button>
       </div>
+
+      {/* Real-time Connection Indicator */}
+      <div className="flex items-center gap-2 text-xs">
+        <span className={`inline-block w-2 h-2 rounded-full ${
+          realtimeStatus === 'connected' ? 'bg-green-400 animate-pulse' :
+          realtimeStatus === 'connecting' ? 'bg-yellow-400 animate-pulse' :
+          'bg-red-400'
+        }`} />
+        <span className={`${
+          realtimeStatus === 'connected' ? 'text-green-500 dark:text-green-400' :
+          realtimeStatus === 'connecting' ? 'text-yellow-500 dark:text-yellow-400' :
+          'text-red-500 dark:text-red-400'
+        }`}>
+          {realtimeStatus === 'connected' ? 'Live — Real-time sync active' :
+           realtimeStatus === 'connecting' ? 'Connecting to real-time...' :
+           'Disconnected — changes may not sync automatically'}
+        </span>
+      </div>
+
+      {/* Success Banner */}
+      <AnimatePresence>
+        {successMsg && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="px-4 py-3 rounded-lg bg-green-500/10 border border-green-500/30 flex items-center justify-between"
+          >
+            <p className="text-sm text-green-400">{successMsg}</p>
+            <button onClick={() => setSuccessMsg(null)} className="text-green-400 hover:text-green-300">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Error Banner */}
       {error && (
@@ -498,7 +569,7 @@ export default function CourseAllocationPage() {
                     ) : (
                       <div className="flex flex-col gap-1.5">
                         {courseOfferings.map((offering) => {
-                          const name = offering.teachers?.profiles?.full_name || 'Unknown';
+                          const name = offering.teachers?.full_name || 'Unknown';
                           return (
                             <div key={offering.id} className="flex items-center gap-2 group">
                               <div className="w-7 h-7 rounded-full bg-[#D9A299]/30 dark:bg-[#8400ff]/30 border border-[#D9A299]/50 dark:border-[#8400ff]/40 flex items-center justify-center text-xs font-semibold text-[#5D4E37] dark:text-white flex-shrink-0">
