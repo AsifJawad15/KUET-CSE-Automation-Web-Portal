@@ -1,95 +1,95 @@
 // ==========================================
-// KUET CSE Automation - Color Palette
-// Fixed color system for consistent theming
+// KUET CSE — Color Palette
+// Warm Brown / Beige / Cream / Black
 // ==========================================
 
 export const colors = {
-  // Primary Brand Colors - Blue/Indigo gradient
+  // Primary — Warm Brown
   primary: {
-    50: '#eef2ff',
-    100: '#e0e7ff',
-    200: '#c7d2fe',
-    300: '#a5b4fc',
-    400: '#818cf8',
-    500: '#6366f1', // Main primary
-    600: '#4f46e5',
-    700: '#4338ca',
-    800: '#3730a3',
-    900: '#312e81',
-    950: '#1e1b4b',
+    50: '#FAF0E6',
+    100: '#F0DCC8',
+    200: '#DEB89A',
+    300: '#C4956A',
+    400: '#A87B50',
+    500: '#5D4037',
+    600: '#4E342E',
+    700: '#3E2723',
+    800: '#2C1810',
+    900: '#1A0F08',
+    950: '#0F0A06',
   },
-  
-  // Secondary - Cyan/Teal accent
+
+  // Secondary — Gold Brown
   secondary: {
-    50: '#ecfeff',
-    100: '#cffafe',
-    200: '#a5f3fc',
-    300: '#67e8f9',
-    400: '#22d3ee',
-    500: '#06b6d4', // Main secondary
-    600: '#0891b2',
-    700: '#0e7490',
-    800: '#155e75',
-    900: '#164e63',
-    950: '#083344',
+    50: '#FFF8E7',
+    100: '#FCEDC4',
+    200: '#F5D68B',
+    300: '#E8BA4E',
+    400: '#C49A2E',
+    500: '#8B6914',
+    600: '#725610',
+    700: '#5A430D',
+    800: '#3D2E08',
+    900: '#2A1F05',
+    950: '#1A1206',
   },
-  
-  // Accent - Emerald for success states
+
+  // Accent — Warm Beige
   accent: {
-    50: '#ecfdf5',
-    100: '#d1fae5',
-    200: '#a7f3d0',
-    300: '#6ee7b7',
-    400: '#34d399',
-    500: '#10b981', // Main accent
-    600: '#059669',
-    700: '#047857',
-    800: '#065f46',
-    900: '#064e3b',
-    950: '#022c22',
+    50: '#FFF5EB',
+    100: '#FFE8D0',
+    200: '#F5D4B0',
+    300: '#E8C09A',
+    400: '#D4A574',
+    500: '#C4956A',
+    600: '#A8795A',
+    700: '#8B6347',
+    800: '#6B4D38',
+    900: '#4A3528',
+    950: '#2C1F18',
   },
-  
-  // Warning - Amber
+
+  // Warning — Amber (unchanged)
   warning: {
-    50: '#fffbeb',
-    100: '#fef3c7',
-    200: '#fde68a',
-    300: '#fcd34d',
-    400: '#fbbf24',
-    500: '#f59e0b',
-    600: '#d97706',
-    700: '#b45309',
-    800: '#92400e',
-    900: '#78350f',
+    50: '#FFFBEB',
+    100: '#FEF3C7',
+    200: '#FDE68A',
+    300: '#FCD34D',
+    400: '#FBBF24',
+    500: '#F59E0B',
+    600: '#D97706',
+    700: '#B45309',
+    800: '#92400E',
+    900: '#78350F',
   },
-  
-  // Error/Danger - Rose
+
+  // Error/Danger — Terracotta Red
   danger: {
-    50: '#fff1f2',
-    100: '#ffe4e6',
-    200: '#fecdd3',
-    300: '#fda4af',
-    400: '#fb7185',
-    500: '#f43f5e',
-    600: '#e11d48',
-    700: '#be123c',
-    800: '#9f1239',
-    900: '#881337',
+    50: '#FFF5F5',
+    100: '#FFE0E0',
+    200: '#FBBFBF',
+    300: '#F09090',
+    400: '#E06060',
+    500: '#C53030',
+    600: '#A02020',
+    700: '#801818',
+    800: '#601010',
+    900: '#400808',
   },
-  
-  // Neutral - Slate (for backgrounds, text)
+
+  // Neutral — Warm Gray
   neutral: {
-    50: '#f8fafc',
-    100: '#f1f5f9',
-    200: '#e2e8f0',
-    300: '#cbd5e1',
-    400: '#94a3b8',
-    500: '#64748b',
-    600: '#475569',
-    700: '#334155',
-    800: '#1e293b',
-    900: '#0f172a',
-    950: '#020617',
+    50: '#FDF8F3',
+    100: '#F5EDE4',
+    200: '#E8DDD1',
+    300: '#D4C8BC',
+    400: '#A89888',
+    500: '#8B7355',
+    600: '#6B5744',
+    700: '#4A3D30',
+    800: '#2C1810',
+    900: '#1A0F08',
+    950: '#0F0A06',
   },
 };
 
@@ -98,13 +98,13 @@ export const lightTheme = {
   background: {
     primary: colors.neutral[50],
     secondary: colors.neutral[100],
-    tertiary: '#ffffff',
+    tertiary: '#FFFFFF',
   },
   text: {
-    primary: colors.neutral[900],
+    primary: colors.neutral[800],
     secondary: colors.neutral[600],
     tertiary: colors.neutral[500],
-    inverse: '#ffffff',
+    inverse: '#FFFFFF',
   },
   border: {
     light: colors.neutral[200],
@@ -112,9 +112,9 @@ export const lightTheme = {
     dark: colors.neutral[400],
   },
   surface: {
-    card: '#ffffff',
-    elevated: '#ffffff',
-    overlay: 'rgba(0, 0, 0, 0.5)',
+    card: '#FFFFFF',
+    elevated: '#FFFBF7',
+    overlay: 'rgba(44, 24, 16, 0.5)',
   },
 };
 
@@ -138,16 +138,17 @@ export const darkTheme = {
   surface: {
     card: colors.neutral[900],
     elevated: colors.neutral[800],
-    overlay: 'rgba(0, 0, 0, 0.7)',
+    overlay: 'rgba(15, 10, 6, 0.7)',
   },
 };
 
 // Gradient presets
 export const gradients = {
-  primary: 'from-indigo-600 via-purple-600 to-blue-600',
-  secondary: 'from-cyan-500 via-teal-500 to-emerald-500',
-  accent: 'from-pink-500 via-rose-500 to-red-500',
-  dark: 'from-slate-900 via-slate-800 to-slate-900',
-  light: 'from-slate-50 via-white to-slate-100',
-  mesh: 'from-indigo-500/10 via-purple-500/10 to-cyan-500/10',
+  primary: 'from-[#5D4037] via-[#8B6914] to-[#D4A574]',
+  secondary: 'from-[#D4A574] via-[#C4956A] to-[#8B6914]',
+  accent: 'from-[#D4A574] to-[#E8C09A]',
+  dark: 'from-[#0F0A06] via-[#1A0F08] to-[#0F0A06]',
+  light: 'from-[#FDF8F3] via-white to-[#F5EDE4]',
+  mesh: 'from-[#5D4037]/10 via-[#8B6914]/10 to-[#D4A574]/10',
+  warmOverlay: 'from-[#1A0F08]/80 via-transparent to-[#0F0A06]/90',
 };
