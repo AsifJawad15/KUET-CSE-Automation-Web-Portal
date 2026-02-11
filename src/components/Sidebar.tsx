@@ -10,6 +10,7 @@ import {
     ChevronLeft,
     ChevronRight,
     FileText,
+    Globe,
     GraduationCap,
     LayoutDashboard,
     LogOut,
@@ -83,6 +84,7 @@ export default function Sidebar({ activeItem, onMenuChange, isCollapsed, onToggl
     { id: 'schedule', label: 'Schedule', icon: Calendar },
     { id: 'add-student', label: 'Add Student', icon: UserPlus, adminOnly: true },
     { id: 'result', label: 'Result', icon: FileText },
+    { id: 'website-cms', label: 'Website CMS', icon: Globe, adminOnly: true },
   ];
 
   const filteredMenuItems = menuItems.filter(item => !item.adminOnly || isAdmin);

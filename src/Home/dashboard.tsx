@@ -93,6 +93,22 @@ export default function Dashboard() {
           return <AddStudentPage />;
         case 'result':
           return <ResultPage />;
+        case 'website-cms':
+          if (user?.role !== 'admin') {
+            return (
+              <div className="bg-white dark:bg-[#1A0F08] rounded-2xl shadow-lg p-8 border border-[#DCC5B2] dark:border-[#2C1810] text-center">
+                <h2 className="text-xl font-bold text-[#2C1810] dark:text-white mb-2">Access Restricted</h2>
+                <p className="text-[#6B5744] dark:text-white/60">Website CMS is only accessible to administrators.</p>
+              </div>
+            );
+          }
+          return (
+            <div className="bg-white dark:bg-[#1A0F08] rounded-2xl shadow-lg p-8 border border-[#DCC5B2] dark:border-[#2C1810]">
+              <h2 className="text-2xl font-bold text-[#2C1810] dark:text-white mb-2">Website CMS</h2>
+              <p className="text-[#6B5744] dark:text-white/60 mb-6">Manage landing page content — hero slides, HOD message, news, stats, and more.</p>
+              <p className="text-sm text-[#8B7355]">Full CMS module coming soon. For now, manage content via <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer" className="text-[#D4A574] underline">Supabase Table Editor</a>.</p>
+            </div>
+          );
         default:
           return <DashboardOverview />;
       }
