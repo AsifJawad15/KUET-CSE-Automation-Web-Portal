@@ -167,7 +167,7 @@ Initialize the database using the provided schema:
 psql -U your_username -d your_database
 
 # Import the schema
-\i database_schema.sql
+\\i database_schema.sql
 ```
 
 Alternatively, if using Supabase, you can execute the SQL schema through the Supabase SQL Editor.
@@ -357,7 +357,7 @@ npm test -- --coverage
 - **API Documentation**: Coming soon
 - **User Guide**: Coming soon
 - **Admin Guide**: Coming soon
-- **Development Guide**: See [CONTRIBUTING.md](./CONTRIBUTING.md)
+- **Development Guide**: See contribution guidelines below
 
 ---
 
@@ -419,7 +419,7 @@ If applicable, add screenshots.
 
 ## 📜 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License. See the LICENSE file for details when available.
 
 ---
 
