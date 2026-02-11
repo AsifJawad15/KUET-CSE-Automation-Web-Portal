@@ -3,9 +3,10 @@
 import SpotlightCard from '@/components/ui/SpotlightCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { TermUpgradeRequestWithStudent } from '@/lib/supabase';
 import { motion } from 'framer-motion';
 import {
-    AlertCircle,
+    ArrowUpCircle,
     Bell,
     BookOpen,
     Building2,
@@ -13,69 +14,25 @@ import {
     CheckCircle,
     Clock,
     GraduationCap,
+    Loader2,
     Sparkles,
     TrendingUp,
     Users
 } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface DashboardOverviewProps {
   onMenuChange?: (menuId: string) => void;
 }
 
-// Stats data
-const stats = [
-  { 
-    label: 'Total Students', 
-    value: '486', 
-    change: '+12', 
-    changeType: 'increase',
-    icon: Users, 
-    color: 'from-[#8400ff] to-[#5c00b3]',
-    spotlightColor: 'rgba(132, 0, 255, 0.25)'
-  },
-  { 
-    label: 'Faculty Members', 
-    value: '24', 
-    change: '+2', 
-    changeType: 'increase',
-    icon: GraduationCap, 
-    color: 'from-[#00e5ff] to-[#00b3cc]',
-    spotlightColor: 'rgba(0, 229, 255, 0.25)'
-  },
-  { 
-    label: 'Available Rooms', 
-    value: '18', 
-    change: '-3', 
-    changeType: 'decrease',
-    icon: Building2, 
-    color: 'from-[#8400ff] to-[#5c00b3]',
-    spotlightColor: 'rgba(132, 0, 255, 0.25)'
-  },
-  { 
-    label: 'Active Courses', 
-    value: '32', 
-    change: '0', 
-    changeType: 'neutral',
-    icon: BookOpen, 
-    color: 'from-[#00e5ff] to-[#00b3cc]',
-    spotlightColor: 'rgba(0, 229, 255, 0.25)'
-  },
-];
-
-const recentActivities = [
-  { id: 1, text: 'New student registered: Asif Jawad (2107001)', time: '2 mins ago', type: 'success' },
-  { id: 2, text: 'Room 301 marked as occupied for CSE 3201', time: '15 mins ago', type: 'info' },
-  { id: 3, text: 'Exam schedule updated for 3rd Year', time: '1 hour ago', type: 'warning' },
-  { id: 4, text: 'Faculty meeting scheduled for tomorrow', time: '2 hours ago', type: 'info' },
-  { id: 5, text: 'Results published for CSE 2101', time: '3 hours ago', type: 'success' },
-];
-
-const upcomingEvents = [
-  { id: 1, title: 'Faculty Meeting', date: 'Jan 26, 2026', time: '10:00 AM', type: 'meeting' },
-  { id: 2, title: 'CT - CSE 3201', date: 'Jan 27, 2026', time: '09:00 AM', type: 'exam' },
-  { id: 3, title: 'Lab Viva - CSE 3202', date: 'Jan 28, 2026', time: '02:00 PM', type: 'exam' },
-  { id: 4, title: 'Department Seminar', date: 'Jan 30, 2026', time: '11:00 AM', type: 'event' },
-];
+interface DashboardStats {
+  totalStudents: number;
+  totalFaculty: number;
+  totalRooms: number;
+  activeCourses: number;
+  pendingUpgrades: number;
+  recentUpgrades: TermUpgradeRequestWithStudent[];
+}
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -93,20 +50,102 @@ const itemVariants = {
 export default function DashboardOverview({ onMenuChange }: DashboardOverviewProps) {
   const { user } = useAuth();
   const { theme } = useTheme();
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<DashboardStats>({
+    totalStudents: 0,
+    totalFaculty: 0,
+    totalRooms: 0,
+    activeCourses: 0,
+    pendingUpgrades: 0,
+    recentUpgrades: [],
+  });
 
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case 'success': return <CheckCircle className="w-4 h-4 text-emerald-500" />;
-      case 'warning': return <AlertCircle className="w-4 h-4 text-amber-500" />;
-      default: return <Bell className="w-4 h-4 text-blue-500" />;
+  const fetchDashboardData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [studentsRes, teachersRes, roomsRes, coursesRes, upgradesRes] = await Promise.all([
+        fetch('/api/students').then(r => r.ok ? r.json() : []).catch(() => []),
+        fetch('/api/teachers').then(r => r.ok ? r.json() : []).catch(() => []),
+        fetch('/api/rooms').then(r => r.ok ? r.json() : []).catch(() => []),
+        fetch('/api/courses').then(r => r.ok ? r.json() : []).catch(() => []),
+        fetch('/api/term-upgrades').then(r => r.ok ? r.json() : []).catch(() => []),
+      ]);
+
+      const activeRooms = Array.isArray(roomsRes)
+        ? roomsRes.filter((r: any) => r.is_active !== false)
+        : [];
+
+      const pendingUpgrades = Array.isArray(upgradesRes)
+        ? upgradesRes.filter((u: any) => u.status === 'pending')
+        : [];
+
+      setStats({
+        totalStudents: Array.isArray(studentsRes) ? studentsRes.length : 0,
+        totalFaculty: Array.isArray(teachersRes) ? teachersRes.length : 0,
+        totalRooms: activeRooms.length,
+        activeCourses: Array.isArray(coursesRes) ? coursesRes.length : 0,
+        pendingUpgrades: pendingUpgrades.length,
+        recentUpgrades: Array.isArray(upgradesRes) ? upgradesRes.slice(0, 5) : [],
+      });
+    } catch (error) {
+      console.error('Failed to fetch dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  const statCards = [
+    {
+      label: 'Total Students',
+      value: stats.totalStudents,
+      icon: Users,
+      color: 'from-[#8400ff] to-[#5c00b3]',
+      spotlightColor: 'rgba(132, 0, 255, 0.25)',
+      menuId: 'add-student',
+    },
+    {
+      label: 'Faculty Members',
+      value: stats.totalFaculty,
+      icon: GraduationCap,
+      color: 'from-[#00e5ff] to-[#00b3cc]',
+      spotlightColor: 'rgba(0, 229, 255, 0.25)',
+      menuId: 'faculty-info',
+    },
+    {
+      label: 'Available Rooms',
+      value: stats.totalRooms,
+      icon: Building2,
+      color: 'from-[#D9A299] to-[#c49088]',
+      spotlightColor: 'rgba(217, 162, 153, 0.25)',
+      menuId: 'room-allocation',
+    },
+    {
+      label: 'Active Courses',
+      value: stats.activeCourses,
+      icon: BookOpen,
+      color: 'from-[#00e5ff] to-[#00b3cc]',
+      spotlightColor: 'rgba(0, 229, 255, 0.25)',
+      menuId: 'course-info',
+    },
+  ];
+
+  const getUpgradeStatusColor = (status: string) => {
+    switch (status) {
+      case 'approved': return 'text-emerald-500';
+      case 'rejected': return 'text-red-500';
+      default: return 'text-amber-500';
     }
   };
 
-  const getEventColor = (type: string) => {
-    switch (type) {
-      case 'exam': return 'bg-red-500/10 text-red-400 border border-red-500/20';
-      case 'meeting': return 'bg-[#8400ff]/10 text-[#8400ff] border border-[#8400ff]/20';
-      default: return 'bg-[#00e5ff]/10 text-[#00e5ff] border border-[#00e5ff]/20';
+  const getUpgradeStatusIcon = (status: string) => {
+    switch (status) {
+      case 'approved': return <CheckCircle className="w-4 h-4 text-emerald-500" />;
+      case 'rejected': return <Bell className="w-4 h-4 text-red-500" />;
+      default: return <Clock className="w-4 h-4 text-amber-500" />;
     }
   };
 
@@ -118,13 +157,13 @@ export default function DashboardOverview({ onMenuChange }: DashboardOverviewPro
       className="space-y-6"
     >
       {/* Welcome Header */}
-      <motion.div 
+      <motion.div
         variants={itemVariants}
         className="bg-gradient-to-r from-[#D9A299] via-[#DCC5B2] to-[#D9A299] dark:from-[#8400ff] dark:via-[#5c00b3] dark:to-[#8400ff] rounded-2xl p-6 text-white relative overflow-hidden"
       >
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-20" />
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
-        
+
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="w-6 h-6 text-[#5D4E37] dark:text-[#00e5ff]" />
@@ -136,7 +175,7 @@ export default function DashboardOverview({ onMenuChange }: DashboardOverviewPro
             Here&apos;s what&apos;s happening in the CSE Department today.
           </p>
         </div>
-        
+
         <div className="absolute top-4 right-4 flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 border border-white/20">
           <Clock className="w-4 h-4 text-[#5D4E37] dark:text-[#00e5ff]" />
           <span className="text-sm font-medium">
@@ -146,11 +185,11 @@ export default function DashboardOverview({ onMenuChange }: DashboardOverviewPro
       </motion.div>
 
       {/* Stats Grid */}
-      <motion.div 
+      <motion.div
         variants={itemVariants}
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
       >
-        {stats.map((stat, index) => {
+        {statCards.map((stat, index) => {
           const Icon = stat.icon;
           return (
             <motion.div
@@ -159,24 +198,21 @@ export default function DashboardOverview({ onMenuChange }: DashboardOverviewPro
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
               whileHover={{ y: -4, transition: { duration: 0.2 } }}
+              onClick={() => onMenuChange?.(stat.menuId)}
+              className="cursor-pointer"
             >
               <SpotlightCard spotlightColor={stat.spotlightColor as `rgba(${number}, ${number}, ${number}, ${number})`} className="p-5">
                 <div className="flex items-start justify-between">
                   <div className={`p-3 rounded-xl bg-gradient-to-br ${stat.color} shadow-lg`}>
                     <Icon className="w-5 h-5 text-white" />
                   </div>
-                  <div className={`flex items-center gap-1 text-xs font-medium ${
-                    stat.changeType === 'increase' ? 'text-emerald-500' : 
-                    stat.changeType === 'decrease' ? 'text-red-500' : 'text-[#8B7355] dark:text-white/50'
-                  }`}>
-                    {stat.changeType !== 'neutral' && (
-                      <TrendingUp className={`w-3 h-3 ${stat.changeType === 'decrease' ? 'rotate-180' : ''}`} />
-                    )}
-                    {stat.change}
-                  </div>
                 </div>
                 <div className="mt-4">
-                  <p className="text-3xl font-bold text-[#5D4E37] dark:text-white">{stat.value}</p>
+                  {loading ? (
+                    <Loader2 className="w-6 h-6 text-[#D9A299] dark:text-[#8400ff] animate-spin" />
+                  ) : (
+                    <p className="text-3xl font-bold text-[#5D4E37] dark:text-white">{stat.value}</p>
+                  )}
                   <p className="text-sm text-[#8B7355] dark:text-white/60 mt-1">{stat.label}</p>
                 </div>
               </SpotlightCard>
@@ -185,81 +221,128 @@ export default function DashboardOverview({ onMenuChange }: DashboardOverviewPro
         })}
       </motion.div>
 
-      {/* Activity & Events Grid */}
+      {/* Pending Upgrades Banner + Recent Upgrades */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Activity */}
+        {/* Pending Term Upgrades */}
         <motion.div variants={itemVariants}>
-          <SpotlightCard spotlightColor="rgba(217, 162, 153, 0.25)" className="p-0 overflow-hidden">
-            <div className="p-5 border-b border-[#DCC5B2] dark:border-white/10">
+          <SpotlightCard spotlightColor="rgba(245, 158, 11, 0.2)" className="p-0 overflow-hidden">
+            <div className="p-5 border-b border-[#DCC5B2] dark:border-white/10 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-[#5D4E37] dark:text-white flex items-center gap-2">
-                <Bell className="w-5 h-5 text-[#D9A299]" />
-                Recent Activity
+                <TrendingUp className="w-5 h-5 text-amber-500" />
+                Term Upgrade Requests
               </h2>
+              {!loading && stats.pendingUpgrades > 0 && (
+                <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300">
+                  {stats.pendingUpgrades} pending
+                </span>
+              )}
             </div>
-            <div className="divide-y divide-[#DCC5B2] dark:divide-white/10">
-              {recentActivities.map((activity, index) => (
-                <motion.div
-                  key={activity.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="p-4 hover:bg-[#F0E4D3] dark:hover:bg-white/5 transition-colors"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5">{getActivityIcon(activity.type)}</div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-[#5D4E37] dark:text-white/80">{activity.text}</p>
-                      <p className="text-xs text-[#8B7355] dark:text-white/40 mt-1">{activity.time}</p>
+
+            {loading ? (
+              <div className="p-8 flex justify-center">
+                <Loader2 className="w-6 h-6 text-[#D9A299] dark:text-[#8400ff] animate-spin" />
+              </div>
+            ) : stats.recentUpgrades.length === 0 ? (
+              <div className="p-8 text-center">
+                <TrendingUp className="w-8 h-8 mx-auto text-[#DCC5B2] dark:text-white/20 mb-2" />
+                <p className="text-sm text-[#8B7355] dark:text-white/40">No upgrade requests yet</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-[#DCC5B2] dark:divide-white/10">
+                {stats.recentUpgrades.map((req, index) => (
+                  <motion.div
+                    key={req.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="p-4 hover:bg-[#F0E4D3] dark:hover:bg-white/5 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="mt-0.5">{getUpgradeStatusIcon(req.status)}</div>
+                        <div>
+                          <p className="text-sm font-medium text-[#5D4E37] dark:text-white/80">
+                            {req.students?.full_name || 'Unknown'}
+                          </p>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-xs text-[#8B7355] dark:text-white/40">
+                              {req.students?.roll_no}
+                            </span>
+                            <span className="text-xs text-[#8B7355] dark:text-white/40">•</span>
+                            <span className="text-xs text-[#8B7355] dark:text-white/50">
+                              Term {req.current_term}
+                            </span>
+                            <ArrowUpCircle className="w-3 h-3 text-[#D9A299] dark:text-[#8400ff]" />
+                            <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                              Term {req.requested_term}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <span className={`text-xs font-medium capitalize ${getUpgradeStatusColor(req.status)}`}>
+                        {req.status}
+                      </span>
                     </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+
             <div className="p-4 border-t border-[#DCC5B2] dark:border-white/10">
-              <button className="text-sm text-[#D9A299] font-medium hover:text-[#c49088] transition-colors">
-                View all activity →
+              <button
+                onClick={() => onMenuChange?.('term-upgrade')}
+                className="text-sm text-[#D9A299] font-medium hover:text-[#c49088] transition-colors"
+              >
+                Manage upgrades →
               </button>
             </div>
           </SpotlightCard>
         </motion.div>
 
-        {/* Upcoming Events */}
+        {/* Department Summary */}
         <motion.div variants={itemVariants}>
           <SpotlightCard spotlightColor="rgba(220, 197, 178, 0.3)" className="p-0 overflow-hidden">
             <div className="p-5 border-b border-[#DCC5B2] dark:border-white/10">
               <h2 className="text-lg font-semibold text-[#5D4E37] dark:text-white flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-[#DCC5B2]" />
-                Upcoming Events
+                Department Overview
               </h2>
             </div>
-            <div className="divide-y divide-[#DCC5B2] dark:divide-white/10">
-              {upcomingEvents.map((event, index) => (
-                <motion.div
-                  key={event.id}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="p-4 hover:bg-[#F0E4D3] dark:hover:bg-white/5 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-[#5D4E37] dark:text-white">{event.title}</p>
-                      <p className="text-xs text-[#8B7355] dark:text-white/50 mt-1">
-                        {event.date} • {event.time}
-                      </p>
-                    </div>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getEventColor(event.type)}`}>
-                      {event.type}
-                    </span>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-            <div className="p-4 border-t border-[#DCC5B2] dark:border-white/10">
-              <button className="text-sm text-[#D9A299] font-medium hover:text-[#c49088] transition-colors">
-                View calendar →
-              </button>
-            </div>
+
+            {loading ? (
+              <div className="p-8 flex justify-center">
+                <Loader2 className="w-6 h-6 text-[#D9A299] dark:text-[#8400ff] animate-spin" />
+              </div>
+            ) : (
+              <div className="divide-y divide-[#DCC5B2] dark:divide-white/10">
+                {[
+                  { label: 'Total Students Enrolled', value: stats.totalStudents, icon: Users, color: 'text-[#8400ff]' },
+                  { label: 'Faculty Members', value: stats.totalFaculty, icon: GraduationCap, color: 'text-[#00e5ff]' },
+                  { label: 'Classrooms & Labs', value: stats.totalRooms, icon: Building2, color: 'text-[#D9A299]' },
+                  { label: 'Courses in Curriculum', value: stats.activeCourses, icon: BookOpen, color: 'text-[#00e5ff]' },
+                  { label: 'Pending Upgrades', value: stats.pendingUpgrades, icon: TrendingUp, color: 'text-amber-500' },
+                ].map((item, index) => {
+                  const Icon = item.icon;
+                  return (
+                    <motion.div
+                      key={item.label}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="p-4 hover:bg-[#F0E4D3] dark:hover:bg-white/5 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Icon className={`w-4 h-4 ${item.color}`} />
+                          <span className="text-sm text-[#5D4E37] dark:text-white/70">{item.label}</span>
+                        </div>
+                        <span className="text-sm font-bold text-[#5D4E37] dark:text-white">{item.value}</span>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
           </SpotlightCard>
         </motion.div>
       </div>
@@ -268,12 +351,13 @@ export default function DashboardOverview({ onMenuChange }: DashboardOverviewPro
       <SpotlightCard className="rounded-2xl p-5" spotlightColor="rgba(217, 162, 153, 0.2)">
         <motion.div variants={itemVariants}>
           <h2 className="text-lg font-semibold text-[#5D4E37] dark:text-white mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             {[
               { label: 'Add Student', icon: Users, color: 'from-[#D9A299] to-[#DCC5B2]', menuId: 'add-student' },
               { label: 'Schedule', icon: Calendar, color: 'from-[#DCC5B2] to-[#F0E4D3]', menuId: 'schedule' },
               { label: 'Room Allocation', icon: Building2, color: 'from-[#D9A299] to-[#F0E4D3]', menuId: 'room-allocation' },
               { label: 'Courses', icon: BookOpen, color: 'from-[#DCC5B2] to-[#D9A299]', menuId: 'course-allocation' },
+              { label: 'Term Upgrade', icon: TrendingUp, color: 'from-[#8400ff] to-[#5c00b3]', menuId: 'term-upgrade' },
             ].map((action) => {
               const Icon = action.icon;
               return (

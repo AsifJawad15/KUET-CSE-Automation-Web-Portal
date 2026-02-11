@@ -11,6 +11,7 @@ import { ResultPage } from '@/modules/Result';
 import { RoomAllocationPage } from '@/modules/RoomAllocation';
 import { SchedulePage } from '@/modules/Schedule';
 import { ClassRoutinePage } from '@/modules/ClassRoutine';
+import { TermUpgradePage } from '@/modules/TermUpgrade';
 import { TVDisplayPage } from '@/modules/TVDisplay';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
@@ -18,14 +19,28 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 export default function Dashboard() {
-  const [activeMenu, setActiveMenu] = useState('dashboard');
+  // Persist active menu across refreshes using localStorage
+  const [activeMenu, setActiveMenu] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('dashboard_activeMenu') || 'dashboard';
+    }
+    return 'dashboard';
+  });
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { isAuthenticated, isLoading, user } = useAuth();
   const router = useRouter();
 
+  // Save active menu to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('dashboard_activeMenu', activeMenu);
+    }
+  }, [activeMenu]);
+
   // Redirect if not authenticated
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
+      localStorage.removeItem('dashboard_activeMenu');
       router.push('/');
     }
   }, [isAuthenticated, isLoading, router]);
@@ -94,6 +109,8 @@ export default function Dashboard() {
             );
           }
           return <AddStudentPage />;
+        case 'term-upgrade':
+          return <TermUpgradePage />;
         case 'result':
           return <ResultPage />;
         case 'website-cms':

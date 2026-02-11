@@ -151,3 +151,34 @@ export interface DBRoutineSlotWithDetails extends DBRoutineSlot {
   };
   rooms: { room_number: string; room_type: string | null };
 }
+
+// Term Upgrade Request
+export type TermUpgradeStatus = 'pending' | 'approved' | 'rejected';
+
+export interface TermUpgradeRequest {
+  id: string;
+  student_user_id: string;
+  current_term: string;
+  requested_term: string;
+  status: TermUpgradeStatus;
+  reason: string | null;
+  admin_user_id: string | null;
+  admin_remarks: string | null;
+  requested_at: string;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Term upgrade request with student details for admin view
+export interface TermUpgradeRequestWithStudent extends TermUpgradeRequest {
+  students: {
+    full_name: string;
+    roll_no: string;
+    term: string;
+    session: string;
+    batch: string | null;
+    section: string | null;
+    cgpa: number;
+  };
+}

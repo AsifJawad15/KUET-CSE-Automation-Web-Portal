@@ -20,6 +20,7 @@ import {
     Settings,
     Sparkles,
     Sun,
+    TrendingUp,
     UserPlus,
     Users
 } from 'lucide-react';
@@ -85,6 +86,7 @@ export default function Sidebar({ activeItem, onMenuChange, isCollapsed, onToggl
     { id: 'class-routine', label: 'Class Routine', icon: Clock },
     { id: 'schedule', label: 'Schedule', icon: Calendar },
     { id: 'add-student', label: 'Add Student', icon: UserPlus, adminOnly: true },
+    { id: 'term-upgrade', label: 'Term Upgrade', icon: TrendingUp },
     { id: 'result', label: 'Result', icon: FileText },
     { id: 'website-cms', label: 'Website CMS', icon: Globe, adminOnly: true },
   ];
