@@ -10,6 +10,7 @@ import { FacultyInfoPage } from '@/modules/FacultyInfo';
 import { ResultPage } from '@/modules/Result';
 import { RoomAllocationPage } from '@/modules/RoomAllocation';
 import { SchedulePage } from '@/modules/Schedule';
+import { ClassRoutinePage } from '@/modules/ClassRoutine';
 import { TVDisplayPage } from '@/modules/TVDisplay';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
@@ -71,6 +72,8 @@ export default function Dashboard() {
           return <CourseInfoPage />;
         case 'course-allocation':
           return <CourseAllocationPage />;
+        case 'class-routine':
+          return <ClassRoutinePage />;
         case 'schedule':
           return <SchedulePage />;
         case 'add-student':

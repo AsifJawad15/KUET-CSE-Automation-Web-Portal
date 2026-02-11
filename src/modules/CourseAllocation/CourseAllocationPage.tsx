@@ -602,9 +602,15 @@ export default function CourseAllocationPage() {
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={() => setAssignCourse(course)}
-                        className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[#D9A299]/20 text-[#5D4E37] border border-[#D9A299]/40 hover:bg-[#D9A299]/30 dark:bg-[#8400ff]/20 dark:text-[#a855f7] dark:border-[#8400ff]/30 dark:hover:bg-[#8400ff]/30 transition-all"
+                        disabled={courseOfferings.length >= 2}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
+                          courseOfferings.length >= 2
+                            ? 'bg-gray-200 text-gray-400 border border-gray-300 cursor-not-allowed dark:bg-white/5 dark:text-white/30 dark:border-white/10'
+                            : 'bg-[#D9A299]/20 text-[#5D4E37] border border-[#D9A299]/40 hover:bg-[#D9A299]/30 dark:bg-[#8400ff]/20 dark:text-[#a855f7] dark:border-[#8400ff]/30 dark:hover:bg-[#8400ff]/30'
+                        }`}
+                        title={courseOfferings.length >= 2 ? 'Maximum 2 teachers per course' : 'Assign teacher'}
                       >
-                        + Assign
+                        {courseOfferings.length >= 2 ? 'Max Reached' : '+ Assign'}
                       </motion.button>
                     </div>
                   </td>

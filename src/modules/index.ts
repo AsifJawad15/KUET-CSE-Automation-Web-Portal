@@ -10,4 +10,5 @@ export { ResultPage } from './Result';
 export { RoomAllocationPage } from './RoomAllocation';
 export { SchedulePage } from './Schedule';
 export { TVDisplayPage } from './TVDisplay';
+export { ClassRoutinePage } from './ClassRoutine';
 

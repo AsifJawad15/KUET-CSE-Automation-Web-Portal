@@ -99,6 +99,7 @@ export interface DBCourseOffering {
   term: string; // e.g. '3-2'
   session: string;
   batch: string | null;
+  section: string | null;
   academic_year: string | null;
   is_active: boolean;
   created_at: string;
@@ -112,4 +113,41 @@ export interface DBCourseOfferingWithTeacher extends DBCourseOffering {
 // Course with its offerings (for allocation view)
 export interface DBCourseWithOfferings extends DBCourse {
   course_offerings: DBCourseOfferingWithTeacher[];
+}
+
+// Room from DB
+export type DBRoomType = 'classroom' | 'lab' | 'seminar' | 'research';
+
+export interface DBRoom {
+  room_number: string; // Primary key
+  building_name: string | null;
+  capacity: number | null;
+  room_type: DBRoomType | null;
+  facilities: string[] | null;
+  is_active: boolean;
+}
+
+// Routine slot from DB
+export interface DBRoutineSlot {
+  id: string;
+  offering_id: string;
+  room_number: string;
+  day_of_week: number; // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+  start_time: string; // HH:MM:SS
+  end_time: string;
+  section: string | null; // 'A' | 'B'
+  created_at: string;
+}
+
+// Routine slot with all joined data for display
+export interface DBRoutineSlotWithDetails extends DBRoutineSlot {
+  course_offerings: {
+    id: string;
+    term: string;
+    session: string;
+    batch: string | null;
+    courses: { code: string; title: string; credit: number; course_type: string };
+    teachers: { full_name: string; teacher_uid: string };
+  };
+  rooms: { room_number: string; room_type: string | null };
 }
