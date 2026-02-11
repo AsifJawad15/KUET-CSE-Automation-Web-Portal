@@ -37,4 +37,9 @@ yarn-error.log*
 next-env.d.ts
 
 # documentation
+# Allow README files and important documentation
+!README.md
+!CONTRIBUTING.md
+!LICENSE.md
+!CODE_OF_CONDUCT.md
 *.md
