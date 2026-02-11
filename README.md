@@ -8,7 +8,6 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat&logo=typescript)](https://www.typescriptlang.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Ready-blue?style=flat&logo=postgresql)](https://www.postgresql.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=flat&logo=tailwind-css)](https://tailwindcss.com/)
-![License](https://img.shields.io/badge/License-MIT-green.svg)
 
 [Features](#-features) • [Installation](#-installation) • [Usage](#-usage) • [Documentation](#-documentation) • [Contributing](#-contributing)
 
@@ -419,7 +418,7 @@ If applicable, add screenshots.
 
 ## 📜 License
 
-This project is licensed under the MIT License. See the LICENSE file for details when available.
+This project is currently under development. License information will be added soon.
 
 ---
 
