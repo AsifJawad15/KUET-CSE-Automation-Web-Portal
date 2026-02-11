@@ -3,6 +3,7 @@
 import Sidebar from '@/components/Sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { AddStudentPage } from '@/modules/AddStudent';
+import { ClassRoutinePage } from '@/modules/ClassRoutine';
 import { CourseAllocationPage } from '@/modules/CourseAllocation';
 import { CourseInfoPage } from '@/modules/CourseInfo';
 import { DashboardOverview } from '@/modules/Dashboard';
@@ -10,9 +11,9 @@ import { FacultyInfoPage } from '@/modules/FacultyInfo';
 import { ResultPage } from '@/modules/Result';
 import { RoomAllocationPage } from '@/modules/RoomAllocation';
 import { SchedulePage } from '@/modules/Schedule';
-import { ClassRoutinePage } from '@/modules/ClassRoutine';
 import { TermUpgradePage } from '@/modules/TermUpgrade';
 import { TVDisplayPage } from '@/modules/TVDisplay';
+import { WebsiteCMSPage } from '@/modules/WebsiteCMS';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -122,13 +123,7 @@ export default function Dashboard() {
               </div>
             );
           }
-          return (
-            <div className="bg-white dark:bg-[#1A0F08] rounded-2xl shadow-lg p-8 border border-[#DCC5B2] dark:border-[#2C1810]">
-              <h2 className="text-2xl font-bold text-[#2C1810] dark:text-white mb-2">Website CMS</h2>
-              <p className="text-[#6B5744] dark:text-white/60 mb-6">Manage landing page content — hero slides, HOD message, news, stats, and more.</p>
-              <p className="text-sm text-[#8B7355]">Full CMS module coming soon. For now, manage content via <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer" className="text-[#D4A574] underline">Supabase Table Editor</a>.</p>
-            </div>
-          );
+          return <WebsiteCMSPage />;
         default:
           return <DashboardOverview />;
       }
