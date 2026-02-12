@@ -107,11 +107,11 @@ export default function SignInPage() {
               transition={{ duration: 0.5 }}
               className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#D9A299] to-[#DCC5B2] dark:from-[#8400ff] dark:to-[#5c00b3] flex items-center justify-center shadow-lg shadow-[#D9A299]/30 dark:shadow-[#8400ff]/30"
             >
-              <GraduationCap className="w-7 h-7 text-white" />
+              <img src="/kuet-logo.png" alt="KUET" className="w-7 h-7 object-contain" />
             </motion.div>
             <div className="text-left">
-              <h1 className="text-2xl font-bold text-[#5D4E37] dark:text-white">KUET CSE</h1>
-              <p className="text-xs text-[#8B7355] dark:text-white/60">Automation Portal</p>
+              <h1 className="text-2xl font-bold text-[#3E2723] dark:text-white">KUET CSE</h1>
+              <p className="text-xs text-[#5D4037] dark:text-white/60">Automation Portal</p>
             </div>
           </Link>
         </motion.div>
@@ -120,22 +120,22 @@ export default function SignInPage() {
         <motion.div variants={itemVariants}>
           <SpotlightCard className="p-8 bg-[#FAF7F3] dark:bg-transparent" spotlightColor="rgba(217, 162, 153, 0.3)">
             <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-[#5D4E37] dark:text-white mb-2">Welcome Back</h2>
-              <p className="text-[#8B7355] dark:text-white/60 text-sm">Sign in to access your portal</p>
+              <h2 className="text-2xl font-bold text-[#3E2723] dark:text-white mb-2">Welcome Back</h2>
+              <p className="text-[#5D4037] dark:text-white/60 text-sm">Sign in to access your portal</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* Email Input */}
               <div className="space-y-2">
-                <label className="text-sm text-[#5D4E37] dark:text-white/80 font-medium">Email</label>
+                <label className="text-sm text-[#3E2723] dark:text-white/80 font-medium">Email</label>
                 <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#8B7355] dark:text-white/40" />
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#5D4037] dark:text-white/40" />
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Enter your email"
-                    className="w-full pl-12 pr-4 py-3.5 bg-[#F0E4D3] dark:bg-white/5 border border-[#DCC5B2] dark:border-[#392e4e] rounded-xl text-[#5D4E37] dark:text-white placeholder:text-[#8B7355] dark:placeholder:text-white/30 focus:outline-none focus:border-[#D9A299] dark:focus:border-[#8400ff] focus:ring-1 focus:ring-[#D9A299]/50 dark:focus:ring-[#8400ff]/50 transition-all"
+                    className="w-full pl-12 pr-4 py-3.5 bg-[#F0E4D3] dark:bg-white/5 border border-[#DCC5B2] dark:border-[#392e4e] rounded-xl text-[#3E2723] dark:text-white placeholder:text-[#6B5744] dark:placeholder:text-white/30 focus:outline-none focus:border-[#D9A299] dark:focus:border-[#8400ff] focus:ring-1 focus:ring-[#D9A299]/50 dark:focus:ring-[#8400ff]/50 transition-all"
                     required
                   />
                 </div>
@@ -143,15 +143,15 @@ export default function SignInPage() {
 
               {/* Password Input */}
               <div className="space-y-2">
-                <label className="text-sm text-[#5D4E37] dark:text-white/80 font-medium">Password</label>
+                <label className="text-sm text-[#3E2723] dark:text-white/80 font-medium">Password</label>
                 <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#8B7355] dark:text-white/40" />
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#5D4037] dark:text-white/40" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
-                    className="w-full pl-12 pr-12 py-3.5 bg-[#F0E4D3] dark:bg-white/5 border border-[#DCC5B2] dark:border-[#392e4e] rounded-xl text-[#5D4E37] dark:text-white placeholder:text-[#8B7355] dark:placeholder:text-white/30 focus:outline-none focus:border-[#D9A299] dark:focus:border-[#8400ff] focus:ring-1 focus:ring-[#D9A299]/50 dark:focus:ring-[#8400ff]/50 transition-all"
+                    className="w-full pl-12 pr-12 py-3.5 bg-[#F0E4D3] dark:bg-white/5 border border-[#DCC5B2] dark:border-[#392e4e] rounded-xl text-[#3E2723] dark:text-white placeholder:text-[#6B5744] dark:placeholder:text-white/30 focus:outline-none focus:border-[#D9A299] dark:focus:border-[#8400ff] focus:ring-1 focus:ring-[#D9A299]/50 dark:focus:ring-[#8400ff]/50 transition-all"
                     required
                   />
                   <button
@@ -234,8 +234,8 @@ export default function SignInPage() {
                     <demo.icon className="w-5 h-5" />
                   </div>
                   <div className="flex-1 text-left">
-                    <div className="text-[#5D4E37] dark:text-white font-medium text-sm">{demo.role}</div>
-                    <div className="text-[#8B7355] dark:text-white/50 text-xs">{demo.email}</div>
+                    <div className="text-[#3E2723] dark:text-white font-medium text-sm">{demo.role}</div>
+                    <div className="text-[#5D4037] dark:text-white/50 text-xs">{demo.email}</div>
                   </div>
                   <ArrowRight className="w-4 h-4 text-[#8B7355] dark:text-white/30 group-hover:text-[#D9A299] dark:group-hover:text-white/60 group-hover:translate-x-1 transition-all" />
                 </motion.button>
@@ -243,7 +243,7 @@ export default function SignInPage() {
             </div>
 
             {/* Sign Up Link */}
-            <p className="text-center text-[#8B7355] dark:text-white/60 text-sm mt-6">
+            <p className="text-center text-[#5D4037] dark:text-white/60 text-sm mt-6">
               Don&apos;t have an account?{' '}
               <Link 
                 href="/auth/signup" 

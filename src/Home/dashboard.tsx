@@ -55,7 +55,13 @@ export default function Dashboard() {
           animate={{ opacity: 1, scale: 1 }}
           className="flex flex-col items-center gap-4"
         >
-          <Loader2 className="w-10 h-10 text-[#D9A299] animate-spin" />
+          <motion.img
+            src="/kuet-logo.png"
+            alt="KUET"
+            className="w-16 h-16 object-contain"
+            animate={{ y: [0, -14, 0] }}
+            transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
+          />
           <p className="text-[#8B7355] dark:text-white/60 font-medium">Loading dashboard...</p>
         </motion.div>
       </div>
