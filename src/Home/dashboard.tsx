@@ -15,7 +15,6 @@ import { TermUpgradePage } from '@/modules/TermUpgrade';
 import { TVDisplayPage } from '@/modules/TVDisplay';
 import { WebsiteCMSPage } from '@/modules/WebsiteCMS';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 

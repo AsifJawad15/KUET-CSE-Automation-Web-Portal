@@ -9,7 +9,6 @@ import {
     ArrowRight,
     Eye,
     EyeOff,
-    GraduationCap,
     Lock,
     Mail,
     Shield,
