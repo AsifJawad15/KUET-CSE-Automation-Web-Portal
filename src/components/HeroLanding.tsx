@@ -2,6 +2,7 @@
 
 import LightRays from '@/components/ui/LightRays';
 import MatrixGrid from '@/components/ui/MatrixGrid';
+import { supabase } from '@/lib/supabase';
 import { fetchLandingPageData, getImageUrl } from '@/services/cmsService';
 import type { CmsNavigationLink, CmsPageSection, LandingPageData } from '@/types/cms';
 import { AnimatePresence, motion, useInView } from 'framer-motion';
@@ -108,12 +109,36 @@ const HeroLanding: React.FC = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [navScrolled, setNavScrolled] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
+  const [dbStats, setDbStats] = useState<{students: number; faculty: number; courses: number; labs: number; alumni: number; papers: number} | null>(null);
 
   // Fetch CMS data
   useEffect(() => {
     fetchLandingPageData()
       .then(d => { setData(d); setLoading(false); })
       .catch(() => setLoading(false));
+  }, []);
+
+  // Fetch dynamic stats from main database
+  useEffect(() => {
+    async function fetchDbStats() {
+      try {
+        const [studentsRes, teachersRes, coursesRes, roomsRes] = await Promise.all([
+          supabase.from('students').select('*', { count: 'exact', head: true }),
+          supabase.from('teachers').select('*', { count: 'exact', head: true }),
+          supabase.from('courses').select('*', { count: 'exact', head: true }),
+          supabase.from('rooms').select('*', { count: 'exact', head: true }).eq('room_type', 'lab'),
+        ]);
+        setDbStats({
+          students: studentsRes.count || 0,
+          faculty: teachersRes.count || 0,
+          courses: coursesRes.count || 0,
+          labs: roomsRes.count || 0,
+          alumni: 5000, // static — no alumni table yet
+          papers: 500,  // static — no papers table yet
+        });
+      } catch { /* fallback to CMS stats */ }
+    }
+    fetchDbStats();
   }, []);
 
   // Hero auto‑slide
@@ -134,8 +159,13 @@ const HeroLanding: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0F0A06] flex items-center justify-center">
-        <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.2, ease: 'linear' }}>
-          <GraduationCap className="w-12 h-12 text-[#D4A574]" />
+        <motion.div
+          animate={{ y: [0, -18, 0] }}
+          transition={{ repeat: Infinity, duration: 2.2, ease: 'easeInOut' }}
+          className="flex flex-col items-center gap-4"
+        >
+          <img src="/kuet-logo.png" alt="KUET" className="w-20 h-20 object-contain drop-shadow-lg" />
+          <span className="text-[#D4A574] text-sm font-medium tracking-wide">Loading...</span>
         </motion.div>
       </div>
     );
@@ -171,11 +201,7 @@ const HeroLanding: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 md:px-8 flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 group">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-              navScrolled ? 'bg-[#5D4037]' : 'bg-white/15 backdrop-blur-md border border-white/20'
-            }`}>
-              <GraduationCap className="w-5 h-5 text-white" />
-            </div>
+            <img src="/kuet-logo.png" alt="KUET" className="w-10 h-10 object-contain" />
             <span className={`text-lg font-bold transition-colors ${navScrolled ? 'text-[#2C1810]' : 'text-white'}`}>
               {shortName}
             </span>
@@ -365,44 +391,62 @@ const HeroLanding: React.FC = () => {
       )}
 
       {/* ═══════════════════════════════════════
-          STATS — animated counters
+          STATS — animated counters (dynamic from main DB)
           ═══════════════════════════════════════ */}
-      {vis('stats') && data.stats.length > 0 && (
-        <section className="py-16 bg-[#F5EDE4]">
-          <div className="max-w-7xl mx-auto px-6 md:px-8">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-              {data.stats.map((s, i) => {
-                const Icon = getIcon(s.icon);
-                return (
-                  <Reveal key={s.id} delay={i * 0.08}>
-                    <div className="text-center group">
-                      <div className="w-14 h-14 mx-auto mb-3 rounded-xl bg-white shadow-warm flex items-center justify-center
-                        group-hover:shadow-warm-lg group-hover:scale-110 transition-all duration-300">
-                        <Icon className="w-6 h-6 text-[#5D4037]" />
+      {vis('stats') && (() => {
+        // Build stats array: prefer live DB counts, fall back to CMS values
+        const dynamicStats = dbStats ? [
+          { id: 'db-students', icon: 'graduation-cap', value: `${dbStats.students}+`, label: 'Students' },
+          { id: 'db-faculty', icon: 'users', value: `${dbStats.faculty}+`, label: 'Faculty Members' },
+          { id: 'db-courses', icon: 'book-open', value: `${dbStats.courses}+`, label: 'Courses' },
+          { id: 'db-labs', icon: 'flask-conical', value: `${dbStats.labs}+`, label: 'Research Labs' },
+          { id: 'db-alumni', icon: 'globe', value: `${dbStats.alumni}+`, label: 'Alumni Worldwide' },
+          { id: 'db-papers', icon: 'file-text', value: `${dbStats.papers}+`, label: 'Research Papers' },
+        ] : data.stats.map(s => ({ id: s.id, icon: s.icon || 'graduation-cap', value: s.value, label: s.label }));
+
+        return dynamicStats.length > 0 ? (
+          <section className="py-16 bg-[#F5EDE4]">
+            <div className="max-w-7xl mx-auto px-6 md:px-8">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+                {dynamicStats.map((s, i) => {
+                  const Icon = getIcon(s.icon);
+                  return (
+                    <Reveal key={s.id} delay={i * 0.08}>
+                      <div className="text-center group">
+                        <div className="w-14 h-14 mx-auto mb-3 rounded-xl bg-white shadow-warm flex items-center justify-center
+                          group-hover:shadow-warm-lg group-hover:scale-110 transition-all duration-300">
+                          <Icon className="w-6 h-6 text-[#5D4037]" />
+                        </div>
+                        <div className="text-3xl md:text-4xl font-bold text-[#5D4037]">
+                          <AnimatedCounter value={s.value} />
+                        </div>
+                        <p className="text-sm text-[#6B5744] mt-1">{s.label}</p>
                       </div>
-                      <div className="text-3xl md:text-4xl font-bold text-[#5D4037]">
-                        <AnimatedCounter value={s.value} />
-                      </div>
-                      <p className="text-sm text-[#6B5744] mt-1">{s.label}</p>
-                    </div>
-                  </Reveal>
-                );
-              })}
+                    </Reveal>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        </section>
-      )}
+          </section>
+        ) : null;
+      })()}
 
       {/* ═══════════════════════════════════════
           QUICK NAVIGATION — "Find Your Way"
           ═══════════════════════════════════════ */}
       {vis('quick_nav') && quickNavLinks.length > 0 && (
-        <section className="py-20 md:py-28 bg-[#FDF8F3]">
-          <div className="max-w-7xl mx-auto px-6 md:px-8">
+        <section className="relative py-20 md:py-28 overflow-hidden">
+          {/* Background image with beige overlay */}
+          <div className="absolute inset-0 bg-cover bg-center bg-fixed"
+            style={{ backgroundImage: `url(${getImageUrl(data.heroSlides[1]?.image_path || data.heroSlides[0]?.image_path)})` }} />
+          <div className="absolute inset-0 bg-[#F5EDE4]/85" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#FDF8F3] via-transparent to-[#FDF8F3]" />
+
+          <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-8">
             <Reveal>
               <SectionHeading
                 title={sec('quick_nav')?.title || 'Find Your Way'}
-                subtitle={sec('quick_nav')?.subtitle || 'Explore the paths and opportunities CSE, KUET has to offer'}
+                subtitle={sec('quick_nav')?.subtitle || 'Explore the countless paths and opportunities that CSE, KUET has to offer'}
               />
             </Reveal>
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-5">
@@ -411,9 +455,10 @@ const HeroLanding: React.FC = () => {
                 return (
                   <Reveal key={l.id} delay={i * 0.08}>
                     <Link href={l.url}
-                      className="group flex items-center gap-4 p-5 md:p-6 bg-white rounded-2xl border border-[#E8DDD1]
-                        hover:border-[#D4A574] hover:shadow-warm-lg hover:-translate-y-1 transition-all duration-300">
-                      <div className="w-12 h-12 rounded-xl bg-[#5D4037]/10 flex items-center justify-center flex-shrink-0
+                      className="group flex items-center gap-4 p-5 md:p-6 rounded-2xl
+                        bg-white/60 backdrop-blur-xl border border-white/70 shadow-lg shadow-[#5D4037]/5
+                        hover:bg-white/80 hover:border-[#D4A574]/50 hover:shadow-warm-lg hover:-translate-y-1 transition-all duration-300">
+                      <div className="w-12 h-12 rounded-xl bg-[#F5EDE4]/80 backdrop-blur-md flex items-center justify-center flex-shrink-0
                         group-hover:bg-[#5D4037] transition-colors">
                         <Icon className="w-5 h-5 text-[#5D4037] group-hover:text-white transition-colors" />
                       </div>
@@ -694,42 +739,6 @@ const HeroLanding: React.FC = () => {
           </Reveal>
         </div>
       </section>
-
-      {/* ═══════════════════════════════════════
-          CTA
-          ═══════════════════════════════════════ */}
-      {vis('cta') && (
-        <section className="py-20 md:py-28 bg-[#FDF8F3]">
-          <div className="max-w-7xl mx-auto px-6 md:px-8">
-            <Reveal>
-              <div className="relative rounded-3xl overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#5D4037] via-[#3E2723] to-[#1A0F08]" />
-                <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'20\' height=\'20\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cdefs%3E%3Cpattern id=\'g\' width=\'20\' height=\'20\' patternUnits=\'userSpaceOnUse\'%3E%3Cpath d=\'M 20 0 L 0 0 0 20\' fill=\'none\' stroke=\'white\' stroke-width=\'0.5\'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width=\'100%25\' height=\'100%25\' fill=\'url(%23g)\'/%3E%3C/svg%3E")' }} />
-                <div className="relative z-10 px-8 md:px-16 py-16 md:py-24 text-center">
-                  <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
-                    {sec('cta')?.title || 'Ready to Begin Your Journey?'}
-                  </h2>
-                  <p className="text-white/70 max-w-xl mx-auto mb-8 text-lg">
-                    {sec('cta')?.subtitle || 'Join the CSE KUET community today'}
-                  </p>
-                  <div className="flex flex-col sm:flex-row justify-center gap-4">
-                    <Link href="/programs"
-                      className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-[#D4A574] text-[#2C1810] font-semibold rounded-full
-                        hover:bg-[#C4956A] transition-all hover:scale-105 active:scale-95">
-                      Explore Programs <ArrowRight className="w-5 h-5" />
-                    </Link>
-                    <Link href="/contact"
-                      className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/10 border border-white/25 text-white font-semibold rounded-full
-                        hover:bg-white/20 transition-all hover:scale-105 active:scale-95">
-                      Contact Us
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </Reveal>
-          </div>
-        </section>
-      )}
 
       {/* ═══════════════════════════════════════
           FOOTER
