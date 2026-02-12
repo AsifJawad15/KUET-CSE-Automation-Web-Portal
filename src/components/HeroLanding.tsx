@@ -2,8 +2,8 @@
 
 import LightRays from '@/components/ui/LightRays';
 import MatrixGrid from '@/components/ui/MatrixGrid';
-import { fetchLandingPageData, getImageUrl } from '@/services/cmsService';
 import { supabase } from '@/lib/supabase';
+import { fetchLandingPageData, getImageUrl } from '@/services/cmsService';
 import type { CmsNavigationLink, CmsPageSection, LandingPageData } from '@/types/cms';
 import { AnimatePresence, motion, useInView } from 'framer-motion';
 import {
@@ -201,11 +201,7 @@ const HeroLanding: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 md:px-8 flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 group">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-              navScrolled ? 'bg-[#5D4037]' : 'bg-white/15 backdrop-blur-md border border-white/20'
-            }`}>
-              <img src="/kuet-logo.png" alt="KUET" className="w-6 h-6 object-contain" />
-            </div>
+            <img src="/kuet-logo.png" alt="KUET" className="w-10 h-10 object-contain" />
             <span className={`text-lg font-bold transition-colors ${navScrolled ? 'text-[#2C1810]' : 'text-white'}`}>
               {shortName}
             </span>
@@ -743,42 +739,6 @@ const HeroLanding: React.FC = () => {
           </Reveal>
         </div>
       </section>
-
-      {/* ═══════════════════════════════════════
-          CTA
-          ═══════════════════════════════════════ */}
-      {vis('cta') && (
-        <section className="py-20 md:py-28 bg-[#FDF8F3]">
-          <div className="max-w-7xl mx-auto px-6 md:px-8">
-            <Reveal>
-              <div className="relative rounded-3xl overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#5D4037] via-[#3E2723] to-[#1A0F08]" />
-                <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'20\' height=\'20\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cdefs%3E%3Cpattern id=\'g\' width=\'20\' height=\'20\' patternUnits=\'userSpaceOnUse\'%3E%3Cpath d=\'M 20 0 L 0 0 0 20\' fill=\'none\' stroke=\'white\' stroke-width=\'0.5\'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width=\'100%25\' height=\'100%25\' fill=\'url(%23g)\'/%3E%3C/svg%3E")' }} />
-                <div className="relative z-10 px-8 md:px-16 py-16 md:py-24 text-center">
-                  <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
-                    {sec('cta')?.title || 'Ready to Begin Your Journey?'}
-                  </h2>
-                  <p className="text-white/70 max-w-xl mx-auto mb-8 text-lg">
-                    {sec('cta')?.subtitle || 'Join the CSE KUET community today'}
-                  </p>
-                  <div className="flex flex-col sm:flex-row justify-center gap-4">
-                    <Link href="/programs"
-                      className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-[#D4A574] text-[#2C1810] font-semibold rounded-full
-                        hover:bg-[#C4956A] transition-all hover:scale-105 active:scale-95">
-                      Explore Programs <ArrowRight className="w-5 h-5" />
-                    </Link>
-                    <Link href="/contact"
-                      className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/10 border border-white/25 text-white font-semibold rounded-full
-                        hover:bg-white/20 transition-all hover:scale-105 active:scale-95">
-                      Contact Us
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </Reveal>
-          </div>
-        </section>
-      )}
 
       {/* ═══════════════════════════════════════
           FOOTER
