@@ -3,9 +3,11 @@
 import SpotlightCard from '@/components/ui/SpotlightCard';
 import { DBRoutineSlotWithDetails } from '@/lib/supabase';
 import { getRoutineSlots, deleteRoutineSlot } from '@/services/routineService';
+import { groupSlotsForDisplay, formatCombinedTeacherNames, formatCombinedTeacherInitials } from '@/modules/ClassRoutine/helpers';
+import { DisplaySlot } from '@/modules/ClassRoutine/types';
 import { motion } from 'framer-motion';
 import { Loader2, Trash2, RefreshCw } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
 const DAY_MAP: Record<number, string> = { 0: 'Sunday', 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday' };
@@ -19,7 +21,7 @@ function formatTime(t: string) {
 }
 
 export default function SchedulePage() {
-  const [slots, setSlots] = useState<DBRoutineSlotWithDetails[]>([]);
+  const [rawSlots, setRawSlots] = useState<DBRoutineSlotWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [filterDay, setFilterDay] = useState<string>('all');
@@ -27,32 +29,44 @@ export default function SchedulePage() {
   const [session, setSession] = useState('2024-25');
   const [deleting, setDeleting] = useState<string | null>(null);
 
+  // Group combined slots
+  const displaySlots = useMemo(() => groupSlotsForDisplay(rawSlots), [rawSlots]);
+
   const fetchSlots = useCallback(async () => {
     setLoading(true);
     const data = await getRoutineSlots(term, session);
-    setSlots(data);
+    setRawSlots(data);
     setLoading(false);
   }, [term, session]);
 
   useEffect(() => { fetchSlots(); }, [fetchSlots]);
 
-  const handleDelete = async (id: string) => {
+  /**
+   * Delete all slot IDs in a combined group.
+   */
+  const handleDelete = async (slotIds: string[]) => {
     if (!confirm('Delete this schedule entry?')) return;
-    setDeleting(id);
-    const res = await deleteRoutineSlot(id);
-    if (res.success) setSlots(prev => prev.filter(s => s.id !== id));
-    else alert(res.error || 'Failed to delete');
+    setDeleting(slotIds[0]);
+    for (const id of slotIds) {
+      const res = await deleteRoutineSlot(id);
+      if (!res.success) {
+        alert(res.error || 'Failed to delete');
+        setDeleting(null);
+        return;
+      }
+    }
+    setRawSlots(prev => prev.filter(s => !slotIds.includes(s.id)));
     setDeleting(null);
   };
 
   const filteredSlots = filterDay === 'all'
-    ? slots
-    : slots.filter(s => DAY_MAP[s.day_of_week] === filterDay);
+    ? displaySlots
+    : displaySlots.filter(s => DAY_MAP[s.day_of_week] === filterDay);
 
-  const getScheduleForSlot = (dayName: string, time: string) => {
+  const getScheduleForSlot = (dayName: string, time: string): DisplaySlot[] => {
     const dayIndex = Object.entries(DAY_MAP).find(([, v]) => v === dayName)?.[0];
     if (dayIndex === undefined) return [];
-    return slots.filter(s => s.day_of_week === Number(dayIndex) && formatTime(s.start_time) === time);
+    return displaySlots.filter(s => s.day_of_week === Number(dayIndex) && formatTime(s.start_time) === time);
   };
 
   return (
@@ -138,7 +152,7 @@ export default function SchedulePage() {
       )}
 
       {/* Empty State */}
-      {!loading && slots.length === 0 && (
+      {!loading && displaySlots.length === 0 && (
         <div className="text-center py-16 text-[#8B7355] dark:text-white/40">
           <p className="text-lg">No schedule entries found for Term {term}, Session {session}</p>
           <p className="text-sm mt-2">Add classes via the Class Routine page first.</p>
@@ -146,7 +160,7 @@ export default function SchedulePage() {
       )}
 
       {/* Table View */}
-      {!loading && slots.length > 0 && viewMode === 'table' && (
+      {!loading && displaySlots.length > 0 && viewMode === 'table' && (
         <SpotlightCard className="rounded-xl border border-[#DCC5B2] dark:border-[#392e4e] overflow-hidden bg-[#FAF7F3] dark:bg-transparent" spotlightColor="rgba(217, 162, 153, 0.2)">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -155,7 +169,7 @@ export default function SchedulePage() {
                   <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase">Day</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase">Time</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase">Course</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase">Teacher</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase">Teacher(s)</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase">Room</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase">Section</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase">Actions</th>
@@ -177,18 +191,23 @@ export default function SchedulePage() {
                     <td className="px-6 py-4">
                       <div>
                         <span className="font-medium text-[#5D4E37] dark:text-white">
-                          {slot.course_offerings?.courses?.code}
+                          {slot.course_code}
                         </span>
                         <p className="text-sm text-[#8B7355] dark:text-white/50">
-                          {slot.course_offerings?.courses?.title}
+                          {slot.course_title}
                         </p>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-[#5D4E37] dark:text-white/70">
-                      {slot.course_offerings?.teachers?.full_name || '—'}
+                    <td className="px-6 py-4">
+                      <div className="text-[#5D4E37] dark:text-white/70">
+                        {formatCombinedTeacherNames(slot.teachers)}
+                      </div>
+                      {slot.isCombined && (
+                        <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">Combined</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-[#8B7355] dark:text-white/60">
-                      {slot.rooms?.room_number || slot.room_number}
+                      {slot.room_number}
                     </td>
                     <td className="px-6 py-4">
                       {slot.section && (
@@ -199,7 +218,7 @@ export default function SchedulePage() {
                     </td>
                     <td className="px-6 py-4">
                       <button
-                        onClick={() => handleDelete(slot.id)}
+                        onClick={() => handleDelete(slot.slotIds)}
                         disabled={deleting === slot.id}
                         className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50"
                         title="Delete"
@@ -219,7 +238,7 @@ export default function SchedulePage() {
       )}
 
       {/* Grid View */}
-      {!loading && slots.length > 0 && viewMode === 'grid' && (
+      {!loading && displaySlots.length > 0 && viewMode === 'grid' && (
         <SpotlightCard className="rounded-xl border border-[#DCC5B2] dark:border-[#392e4e] overflow-hidden bg-[#FAF7F3] dark:bg-transparent" spotlightColor="rgba(217, 162, 153, 0.2)">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[900px]">
@@ -246,8 +265,11 @@ export default function SchedulePage() {
                               key={s.id}
                               className="bg-[#D9A299]/20 dark:bg-[#8400ff]/20 text-[#5D4E37] dark:text-white rounded p-2 text-xs mb-1 border border-[#D9A299]/30 dark:border-[#8400ff]/30"
                             >
-                              <p className="font-semibold">{s.course_offerings?.courses?.code}</p>
-                              <p className="text-[#D9A299] dark:text-[#00e5ff]">{s.rooms?.room_number}</p>
+                              <p className="font-semibold">{s.course_code}</p>
+                              <p className="text-[10px] text-[#8B7355] dark:text-white/50">
+                                ({formatCombinedTeacherInitials(s.teachers)})
+                              </p>
+                              <p className="text-[#D9A299] dark:text-[#00e5ff]">{s.room_number}</p>
                               {s.section && <p className="text-[#8B7355] dark:text-white/50">Sec {s.section}</p>}
                             </div>
                           ))}
