@@ -16,12 +16,14 @@ export interface RoutineSlotResponse {
 }
 
 export async function getRoutineSlots(
-  term: string,
-  session: string,
+  term?: string,
+  session?: string,
   section?: string
 ): Promise<DBRoutineSlotWithDetails[]> {
   try {
-    const params = new URLSearchParams({ term, session });
+    const params = new URLSearchParams();
+    if (term) params.set('term', term);
+    if (session) params.set('session', session);
     if (section) params.set('section', section);
 
     const response = await fetch(`/api/routine-slots?${params}`);

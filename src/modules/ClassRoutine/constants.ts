@@ -22,15 +22,15 @@ export const DAYS = [
 ];
 
 export const PERIODS = [
-  { id: 1, start: '08:00', end: '08:50', label: '08:00-08:50' },
-  { id: 2, start: '08:50', end: '09:40', label: '08:50-09:40' },
-  { id: 3, start: '09:40', end: '10:30', label: '09:40-10:30' },
-  { id: 4, start: '10:40', end: '11:30', label: '10:40-11:30' },
-  { id: 5, start: '11:30', end: '12:20', label: '11:30-12:20' },
-  { id: 6, start: '12:20', end: '13:10', label: '12:20-01:10' },
-  { id: 7, start: '14:30', end: '15:20', label: '02:30-03:20' },
-  { id: 8, start: '15:20', end: '16:10', label: '03:20-04:10' },
-  { id: 9, start: '16:10', end: '17:00', label: '04:10-05:00' },
+  { id: 1, start: '08:00', end: '08:50', label: '8:00 AM – 8:50 AM' },
+  { id: 2, start: '08:50', end: '09:40', label: '8:50 AM – 9:40 AM' },
+  { id: 3, start: '09:40', end: '10:30', label: '9:40 AM – 10:30 AM' },
+  { id: 4, start: '10:40', end: '11:30', label: '10:40 AM – 11:30 AM' },
+  { id: 5, start: '11:30', end: '12:20', label: '11:30 AM – 12:20 PM' },
+  { id: 6, start: '12:20', end: '13:10', label: '12:20 PM – 1:10 PM' },
+  { id: 7, start: '14:30', end: '15:20', label: '2:30 PM – 3:20 PM' },
+  { id: 8, start: '15:20', end: '16:10', label: '3:20 PM – 4:10 PM' },
+  { id: 9, start: '16:10', end: '17:00', label: '4:10 PM – 5:00 PM' },
 ];
 
 export const SECTIONS = ['A', 'B'];
