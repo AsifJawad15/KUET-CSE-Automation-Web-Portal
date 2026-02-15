@@ -128,6 +128,60 @@ export async function GET() {
   }
 }
 
+// PATCH - Directly update student term (admin action — no pending workflow)
+export async function PATCH(request: NextRequest) {
+  try {
+    if (!isSupabaseConfigured()) {
+      return NextResponse.json(
+        { success: false, error: 'Supabase is not configured' },
+        { status: 500 }
+      );
+    }
+
+    const body = await request.json();
+    const { user_id, term } = body;
+
+    if (!user_id || !term) {
+      return NextResponse.json(
+        { success: false, error: 'user_id and term are required' },
+        { status: 400 }
+      );
+    }
+
+    const validTerms = ['1-1', '1-2', '2-1', '2-2', '3-1', '3-2', '4-1', '4-2'];
+    if (!validTerms.includes(term)) {
+      return NextResponse.json(
+        { success: false, error: `Invalid term "${term}". Must be one of: ${validTerms.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
+    const { error } = await supabase
+      .from('students')
+      .update({
+        term,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', user_id);
+
+    if (error) {
+      console.error('Error updating student term:', error);
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true, user_id, term });
+  } catch (error: any) {
+    console.error('Error in PATCH /api/students:', error);
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to update student term' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
