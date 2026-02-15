@@ -15,6 +15,15 @@ export function getNextTerm(currentTerm: string): string | null {
 }
 
 /**
+ * Get the previous term in sequence
+ */
+export function getPreviousTerm(currentTerm: string): string | null {
+  const idx = TERM_ORDER.indexOf(currentTerm);
+  if (idx <= 0) return null;
+  return TERM_ORDER[idx - 1];
+}
+
+/**
  * Get all valid terms
  */
 export function getAllTerms(): string[] {
@@ -28,6 +37,63 @@ export function isValidUpgrade(currentTerm: string, requestedTerm: string): bool
   const currentIdx = TERM_ORDER.indexOf(currentTerm);
   const requestedIdx = TERM_ORDER.indexOf(requestedTerm);
   return currentIdx !== -1 && requestedIdx !== -1 && requestedIdx > currentIdx;
+}
+
+/**
+ * Check if a term is a valid term string
+ */
+export function isValidTerm(term: string): boolean {
+  return TERM_ORDER.includes(term);
+}
+
+/**
+ * Directly update a student's term (admin action — no pending workflow).
+ * Supports both upgrade and downgrade.
+ */
+export async function directTermChange(
+  studentUserId: string,
+  newTerm: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const response = await fetch('/api/students', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: studentUserId,
+        term: newTerm,
+      }),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      return { success: false, error: result.error || 'Failed to update term' };
+    }
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Network error' };
+  }
+}
+
+/**
+ * Bulk update multiple students' terms at once (admin action).
+ */
+export async function bulkDirectTermChange(
+  studentUserIds: string[],
+  newTerm: string
+): Promise<{ successCount: number; failedCount: number; errors: { studentId: string; error: string }[] }> {
+  let successCount = 0;
+  const errors: { studentId: string; error: string }[] = [];
+
+  for (const studentId of studentUserIds) {
+    const result = await directTermChange(studentId, newTerm);
+    if (result.success) {
+      successCount++;
+    } else {
+      errors.push({ studentId, error: result.error || 'Unknown error' });
+    }
+  }
+
+  return { successCount, failedCount: errors.length, errors };
 }
 
 /**
