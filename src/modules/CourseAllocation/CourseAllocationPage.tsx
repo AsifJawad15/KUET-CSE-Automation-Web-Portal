@@ -77,20 +77,20 @@ function AssignTeacherModal({
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.9, y: 40 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="w-full max-w-md bg-[#FAF7F3] dark:bg-[#0d0d1a] border border-[#DCC5B2] dark:border-[#392e4e] rounded-2xl shadow-2xl overflow-hidden"
+        className="w-full max-w-md bg-[#FAF7F3] dark:bg-[#161a1d] border border-[#DCC5B2] dark:border-[#3d4951] rounded-2xl shadow-2xl overflow-hidden"
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-[#DCC5B2] dark:border-[#392e4e] bg-[#F0E4D3] dark:bg-white/5">
+        <div className="px-6 py-4 border-b border-[#DCC5B2] dark:border-[#3d4951] bg-[#F0E4D3] dark:bg-[#0b090a]">
           <h2 className="text-lg font-bold text-[#5D4E37] dark:text-white">Assign Teacher</h2>
-          <p className="text-sm text-[#8B7355] dark:text-white/50 mt-0.5">
-            <span className="font-medium text-[#5D4E37] dark:text-white/70">{course.code}</span> — {course.title}
+          <p className="text-sm text-[#8B7355] dark:text-[#b1a7a6] mt-0.5">
+            <span className="font-medium text-[#5D4E37] dark:text-[#d3d3d3]">{course.code}</span> — {course.title}
           </p>
         </div>
 
         {/* Search */}
         <div className="px-6 pt-4">
           <div className="relative">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B7355] dark:text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B7355] dark:text-[#b1a7a6]/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <input
@@ -98,7 +98,7 @@ function AssignTeacherModal({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search teachers..."
-              className="w-full pl-10 pr-4 py-2 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-white dark:bg-white/5 text-[#5D4E37] dark:text-white placeholder-[#8B7355]/50 dark:placeholder-white/30 focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#8400ff] focus:border-transparent text-sm transition-all"
+              className="w-full pl-10 pr-4 py-2 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-white dark:bg-[#0b090a] text-[#5D4E37] dark:text-white placeholder-[#8B7355]/50 dark:placeholder-[#b1a7a6]/50 focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent text-sm transition-all"
             />
           </div>
         </div>
@@ -106,7 +106,7 @@ function AssignTeacherModal({
         {/* Teacher List */}
         <div className="px-6 py-4 max-h-[40vh] overflow-y-auto space-y-2 [&::-webkit-scrollbar]:w-[4px] [&::-webkit-scrollbar-thumb]:bg-[#DCC5B2] dark:[&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full">
           {filteredTeachers.length === 0 ? (
-            <p className="text-sm text-[#8B7355] dark:text-white/40 text-center py-4">
+            <p className="text-sm text-[#8B7355] dark:text-[#b1a7a6]/70 text-center py-4">
               {allTeachers.length === 0 ? 'No teachers found in the system' : 'All teachers are already assigned or on leave'}
             </p>
           ) : (
@@ -120,28 +120,28 @@ function AssignTeacherModal({
                   onClick={() => setSelectedTeacherId(isSelected ? null : teacher.user_id)}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-200 text-left ${
                     isSelected
-                      ? 'bg-[#D9A299]/20 border-[#D9A299]/50 dark:bg-[#8400ff]/20 dark:border-[#8400ff]/40'
-                      : 'bg-white dark:bg-white/[0.02] border-[#DCC5B2] dark:border-[#392e4e] hover:border-[#D9A299]/50 dark:hover:border-[#8400ff]/30'
+                      ? 'bg-[#D9A299]/20 border-[#D9A299]/50 dark:bg-[#ba181b]/20 dark:border-[#ba181b]/40'
+                      : 'bg-white dark:bg-white/[0.02] border-[#DCC5B2] dark:border-[#3d4951] hover:border-[#D9A299]/50 dark:hover:border-[#ba181b]/30'
                   }`}
                 >
                   {/* Radio */}
                   <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
                     isSelected
-                      ? 'bg-[#D9A299] dark:bg-[#8400ff] border-[#D9A299] dark:border-[#8400ff]'
-                      : 'border-[#DCC5B2] dark:border-[#392e4e]'
+                      ? 'bg-[#D9A299] dark:bg-[#ba181b] border-[#D9A299] dark:border-[#ba181b]'
+                      : 'border-[#DCC5B2] dark:border-[#3d4951]'
                   }`}>
                     {isSelected && (
                       <div className="w-2 h-2 rounded-full bg-white" />
                     )}
                   </div>
                   {/* Avatar */}
-                  <div className="w-9 h-9 rounded-full bg-[#D9A299]/30 dark:bg-[#8400ff]/30 border border-[#D9A299]/50 dark:border-[#8400ff]/40 flex items-center justify-center text-[#5D4E37] dark:text-white text-sm font-semibold flex-shrink-0">
+                  <div className="w-9 h-9 rounded-full bg-[#D9A299]/30 dark:bg-[#ba181b]/30 border border-[#D9A299]/50 dark:border-[#ba181b]/40 flex items-center justify-center text-[#5D4E37] dark:text-white text-sm font-semibold flex-shrink-0">
                     {teacher.full_name.charAt(0)}
                   </div>
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-[#5D4E37] dark:text-white truncate">{teacher.full_name}</p>
-                    <p className="text-xs text-[#8B7355] dark:text-white/50">{teacher.designation}</p>
+                    <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6]">{teacher.designation}</p>
                   </div>
                 </motion.button>
               );
@@ -157,10 +157,10 @@ function AssignTeacherModal({
         )}
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-[#DCC5B2] dark:border-[#392e4e] bg-[#F0E4D3]/50 dark:bg-white/[0.02] flex items-center justify-end gap-3">
+        <div className="px-6 py-4 border-t border-[#DCC5B2] dark:border-[#3d4951] bg-[#F0E4D3]/50 dark:bg-white/[0.02] flex items-center justify-end gap-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg border border-[#DCC5B2] dark:border-[#392e4e] text-[#5D4E37] dark:text-white/70 hover:bg-[#DCC5B2]/30 dark:hover:bg-white/5 transition-colors text-sm font-medium"
+            className="px-4 py-2 rounded-lg border border-[#DCC5B2] dark:border-[#3d4951] text-[#5D4E37] dark:text-[#d3d3d3] hover:bg-[#DCC5B2]/30 dark:hover:bg-[#0b090a] transition-colors text-sm font-medium"
           >
             Cancel
           </button>
@@ -169,7 +169,7 @@ function AssignTeacherModal({
             whileTap={{ scale: 0.98 }}
             onClick={() => selectedTeacherId && onAssign(selectedTeacherId)}
             disabled={!selectedTeacherId || assigning}
-            className="px-5 py-2 rounded-lg bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#8400ff] dark:to-[#a855f7] text-white font-medium text-sm shadow-lg shadow-[#D9A299]/25 dark:shadow-[#8400ff]/25 hover:from-[#C88989] hover:to-[#CCB5A2] dark:hover:from-[#9933ff] dark:hover:to-[#b366ff] transition-all disabled:opacity-50"
+            className="px-5 py-2 rounded-lg bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#ba181b] dark:to-[#e5383b] text-white font-medium text-sm shadow-lg shadow-[#D9A299]/25 dark:shadow-[#ba181b]/25 hover:from-[#C88989] hover:to-[#CCB5A2] dark:hover:from-[#e32a2d] dark:hover:to-[#ea5f62] transition-all disabled:opacity-50"
           >
             {assigning ? 'Assigning...' : 'Assign Teacher'}
           </motion.button>
@@ -209,7 +209,7 @@ function RemoveTeacherModal({
         initial={{ scale: 0.9, y: 20 }}
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.9, y: 20 }}
-        className="w-full max-w-sm bg-[#FAF7F3] dark:bg-[#0d0d1a] border border-[#DCC5B2] dark:border-[#392e4e] rounded-2xl shadow-2xl overflow-hidden"
+        className="w-full max-w-sm bg-[#FAF7F3] dark:bg-[#161a1d] border border-[#DCC5B2] dark:border-[#3d4951] rounded-2xl shadow-2xl overflow-hidden"
       >
         <div className="p-6 text-center">
           <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-amber-500/10 flex items-center justify-center">
@@ -218,17 +218,17 @@ function RemoveTeacherModal({
             </svg>
           </div>
           <h3 className="text-lg font-bold text-[#5D4E37] dark:text-white mb-1">Remove Teacher</h3>
-          <p className="text-sm text-[#8B7355] dark:text-white/60">
+          <p className="text-sm text-[#8B7355] dark:text-[#b1a7a6]">
             Remove <span className="font-semibold text-[#5D4E37] dark:text-white">{teacherName}</span> from
           </p>
           <p className="text-sm font-semibold text-[#5D4E37] dark:text-white mt-0.5">
             {courseCode} — {courseTitle}?
           </p>
         </div>
-        <div className="px-6 py-4 border-t border-[#DCC5B2] dark:border-[#392e4e] flex gap-3">
+        <div className="px-6 py-4 border-t border-[#DCC5B2] dark:border-[#3d4951] flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 rounded-lg border border-[#DCC5B2] dark:border-[#392e4e] text-[#5D4E37] dark:text-white/70 hover:bg-[#DCC5B2]/30 dark:hover:bg-white/5 transition-colors text-sm font-medium"
+            className="flex-1 px-4 py-2 rounded-lg border border-[#DCC5B2] dark:border-[#3d4951] text-[#5D4E37] dark:text-[#d3d3d3] hover:bg-[#DCC5B2]/30 dark:hover:bg-[#0b090a] transition-colors text-sm font-medium"
           >
             Cancel
           </button>
@@ -416,14 +416,14 @@ export default function CourseAllocationPage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[#5D4E37] dark:text-white">Course Allocation</h1>
-          <p className="text-[#8B7355] dark:text-white/60 mt-1">Assign teachers to courses</p>
+          <p className="text-[#8B7355] dark:text-[#b1a7a6] mt-1">Assign teachers to courses</p>
         </div>
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={fetchData}
           disabled={loading}
-          className="px-4 py-2 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg text-[#5D4E37] dark:text-white/70 hover:bg-[#DCC5B2]/30 dark:hover:bg-white/5 transition-colors text-sm font-medium disabled:opacity-50"
+          className="px-4 py-2 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg text-[#5D4E37] dark:text-[#d3d3d3] hover:bg-[#DCC5B2]/30 dark:hover:bg-[#0b090a] transition-colors text-sm font-medium disabled:opacity-50"
         >
           {loading ? 'Loading...' : 'Refresh'}
         </motion.button>
@@ -483,14 +483,14 @@ export default function CourseAllocationPage() {
         ].map((stat) => (
           <SpotlightCard
             key={stat.label}
-            className={`rounded-xl border p-4 bg-[#FAF7F3] dark:bg-transparent ${stat.alert ? 'border-amber-400/50 dark:border-amber-400/30' : 'border-[#DCC5B2] dark:border-[#392e4e]'}`}
+            className={`rounded-xl border p-4 bg-[#FAF7F3] dark:bg-transparent ${stat.alert ? 'border-amber-400/50 dark:border-amber-400/30' : 'border-[#DCC5B2] dark:border-[#3d4951]'}`}
             spotlightColor={stat.alert ? 'rgba(245, 158, 11, 0.15)' : 'rgba(217, 162, 153, 0.15)'}
           >
             <div className="flex items-center gap-3">
               <span className="text-2xl">{stat.icon}</span>
               <div>
                 <p className={`text-2xl font-bold ${stat.alert ? 'text-amber-500' : 'text-[#5D4E37] dark:text-white'}`}>{stat.value}</p>
-                <p className="text-xs text-[#8B7355] dark:text-white/50">{stat.label}</p>
+                <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6]">{stat.label}</p>
               </div>
             </div>
           </SpotlightCard>
@@ -502,44 +502,44 @@ export default function CourseAllocationPage() {
         <select
           value={filterType}
           onChange={(e) => setFilterType(e.target.value)}
-          className="px-4 py-2 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-[#FAF7F3] dark:bg-white/5 text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#8400ff] focus:border-transparent"
+          className="px-4 py-2 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent"
         >
-          <option value="all" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">All Types</option>
-          <option value="Theory" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">Theory</option>
-          <option value="Lab" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">Lab / Sessional</option>
-          <option value="Thesis" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">Thesis</option>
-          <option value="Project" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">Project</option>
+          <option value="all" className="bg-[#FAF7F3] dark:bg-[#161a1d]">All Types</option>
+          <option value="Theory" className="bg-[#FAF7F3] dark:bg-[#161a1d]">Theory</option>
+          <option value="Lab" className="bg-[#FAF7F3] dark:bg-[#161a1d]">Lab / Sessional</option>
+          <option value="Thesis" className="bg-[#FAF7F3] dark:bg-[#161a1d]">Thesis</option>
+          <option value="Project" className="bg-[#FAF7F3] dark:bg-[#161a1d]">Project</option>
         </select>
       </div>
 
       {/* Allocation Table */}
-      <SpotlightCard className="rounded-xl border border-[#DCC5B2] dark:border-[#392e4e] overflow-hidden bg-[#FAF7F3] dark:bg-transparent" spotlightColor="rgba(217, 162, 153, 0.2)">
+      <SpotlightCard className="rounded-xl border border-[#DCC5B2] dark:border-[#3d4951] overflow-hidden bg-[#FAF7F3] dark:bg-transparent" spotlightColor="rgba(217, 162, 153, 0.2)">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-[#F0E4D3] dark:bg-white/5">
+            <thead className="bg-[#F0E4D3] dark:bg-[#0b090a]">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase tracking-wider">Code</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase tracking-wider">Title</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase tracking-wider">Type</th>
-                <th className="px-6 py-4 text-center text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase tracking-wider">Credit</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase tracking-wider">Assigned Teachers</th>
-                <th className="px-6 py-4 text-right text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-[#b1a7a6] uppercase tracking-wider">Code</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-[#b1a7a6] uppercase tracking-wider">Title</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-[#b1a7a6] uppercase tracking-wider">Type</th>
+                <th className="px-6 py-4 text-center text-xs font-semibold text-[#5D4E37] dark:text-[#b1a7a6] uppercase tracking-wider">Credit</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-[#b1a7a6] uppercase tracking-wider">Assigned Teachers</th>
+                <th className="px-6 py-4 text-right text-xs font-semibold text-[#5D4E37] dark:text-[#b1a7a6] uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#DCC5B2] dark:divide-[#392e4e]">
+            <tbody className="divide-y divide-[#DCC5B2] dark:divide-[#3d4951]">
               {loading ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-16 text-center">
                     <div className="flex flex-col items-center gap-2">
-                      <div className="w-8 h-8 border-2 border-[#D9A299] dark:border-[#8400ff] border-t-transparent rounded-full animate-spin" />
-                      <p className="text-[#8B7355] dark:text-white/40 text-sm">Loading courses & assignments...</p>
+                      <div className="w-8 h-8 border-2 border-[#D9A299] dark:border-[#ba181b] border-t-transparent rounded-full animate-spin" />
+                      <p className="text-[#8B7355] dark:text-[#b1a7a6]/70 text-sm">Loading courses & assignments...</p>
                     </div>
                   </td>
                 </tr>
               ) : filteredCourses.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-16 text-center">
-                    <p className="text-[#8B7355] dark:text-white/40 text-sm">
+                    <p className="text-[#8B7355] dark:text-[#b1a7a6]/70 text-sm">
                       {courses.length === 0 ? 'No courses yet. Add courses from the Course Info page first.' : 'No courses match your filter'}
                     </p>
                   </td>
@@ -548,7 +548,7 @@ export default function CourseAllocationPage() {
               filteredCourses.map((course) => {
                 const courseOfferings = getOfferingsForCourse(course.id);
                 return (
-                <tr key={course.id} className="hover:bg-[#F0E4D3] dark:hover:bg-white/5 transition-colors">
+                <tr key={course.id} className="hover:bg-[#F0E4D3] dark:hover:bg-[#0b090a] transition-colors">
                   <td className="px-6 py-4">
                     <span className="font-semibold text-[#5D4E37] dark:text-white">{course.code}</span>
                   </td>
@@ -556,13 +556,13 @@ export default function CourseAllocationPage() {
                   <td className="px-6 py-4">
                     <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
                       (course.course_type || 'Theory') === 'Theory'
-                        ? 'bg-[#D9A299]/30 text-[#5D4E37] border border-[#D9A299]/50 dark:bg-[#00e5ff]/20 dark:text-[#00e5ff] dark:border-[#00e5ff]/30'
-                        : 'bg-[#DCC5B2]/40 text-[#5D4E37] border border-[#DCC5B2]/60 dark:bg-[#8400ff]/20 dark:text-[#a855f7] dark:border-[#8400ff]/30'
+                        ? 'bg-[#D9A299]/30 text-[#5D4E37] border border-[#D9A299]/50 dark:bg-[#d3d3d3]/20 dark:text-[#d3d3d3] dark:border-[#d3d3d3]/30'
+                        : 'bg-[#DCC5B2]/40 text-[#5D4E37] border border-[#DCC5B2]/60 dark:bg-[#ba181b]/20 dark:text-[#e5383b] dark:border-[#ba181b]/30'
                     }`}>
                       {course.course_type || 'Theory'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-center text-[#8B7355] dark:text-white/60">{course.credit}</td>
+                  <td className="px-6 py-4 text-center text-[#8B7355] dark:text-[#b1a7a6]">{course.credit}</td>
                   <td className="px-6 py-4">
                     {courseOfferings.length === 0 ? (
                       <span className="text-xs text-amber-500 italic">No teacher assigned</span>
@@ -572,10 +572,10 @@ export default function CourseAllocationPage() {
                           const name = offering.teachers?.full_name || 'Unknown';
                           return (
                             <div key={offering.id} className="flex items-center gap-2 group">
-                              <div className="w-7 h-7 rounded-full bg-[#D9A299]/30 dark:bg-[#8400ff]/30 border border-[#D9A299]/50 dark:border-[#8400ff]/40 flex items-center justify-center text-xs font-semibold text-[#5D4E37] dark:text-white flex-shrink-0">
+                              <div className="w-7 h-7 rounded-full bg-[#D9A299]/30 dark:bg-[#ba181b]/30 border border-[#D9A299]/50 dark:border-[#ba181b]/40 flex items-center justify-center text-xs font-semibold text-[#5D4E37] dark:text-white flex-shrink-0">
                                 {name.charAt(0)}
                               </div>
-                              <span className="text-sm text-[#5D4E37] dark:text-white/70 flex-1">{name}</span>
+                              <span className="text-sm text-[#5D4E37] dark:text-[#d3d3d3] flex-1">{name}</span>
                               <button
                                 onClick={() => setRemoveInfo({
                                   offeringId: offering.id,
@@ -605,8 +605,8 @@ export default function CourseAllocationPage() {
                         disabled={courseOfferings.length >= 2}
                         className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
                           courseOfferings.length >= 2
-                            ? 'bg-gray-200 text-gray-400 border border-gray-300 cursor-not-allowed dark:bg-white/5 dark:text-white/30 dark:border-white/10'
-                            : 'bg-[#D9A299]/20 text-[#5D4E37] border border-[#D9A299]/40 hover:bg-[#D9A299]/30 dark:bg-[#8400ff]/20 dark:text-[#a855f7] dark:border-[#8400ff]/30 dark:hover:bg-[#8400ff]/30'
+                            ? 'bg-gray-200 text-gray-400 border border-gray-300 cursor-not-allowed dark:bg-[#0b090a] dark:text-[#b1a7a6]/50 dark:border-[#3d4951]/50'
+                            : 'bg-[#D9A299]/20 text-[#5D4E37] border border-[#D9A299]/40 hover:bg-[#D9A299]/30 dark:bg-[#ba181b]/20 dark:text-[#e5383b] dark:border-[#ba181b]/30 dark:hover:bg-[#ba181b]/30'
                         }`}
                         title={courseOfferings.length >= 2 ? 'Maximum 2 teachers per course' : 'Assign teacher'}
                       >
@@ -623,8 +623,8 @@ export default function CourseAllocationPage() {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 border-t border-[#DCC5B2] dark:border-[#392e4e] bg-[#F0E4D3]/50 dark:bg-white/[0.02]">
-          <p className="text-xs text-[#8B7355] dark:text-white/40">
+        <div className="px-6 py-3 border-t border-[#DCC5B2] dark:border-[#3d4951] bg-[#F0E4D3]/50 dark:bg-white/[0.02]">
+          <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6]/70">
             Showing {filteredCourses.length} of {courses.length} courses  •  {totalAssignments} total assignments
           </p>
         </div>

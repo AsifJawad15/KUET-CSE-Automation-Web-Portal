@@ -58,8 +58,8 @@ function getTeacherInitials(fullName: string): string {
 // Helper: Color based on course type
 // ==========================================
 function getSlotColor(courseType: string | null): string {
-  if (courseType === 'Lab') return 'bg-[#8400ff]/15 border-[#8400ff]/30 text-[#a855f7]';
-  return 'bg-[#00e5ff]/15 border-[#00e5ff]/30 text-[#00e5ff]';
+  if (courseType === 'Lab') return 'bg-[#ba181b]/15 border-[#ba181b]/30 text-[#e5383b]';
+  return 'bg-[#d3d3d3]/15 border-[#d3d3d3]/30 text-[#d3d3d3]';
 }
 
 function getSlotColorLight(courseType: string | null): string {
@@ -154,7 +154,7 @@ export default function ClassRoutinePage() {
   if (!isSupabaseConfigured()) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-[#8B7355] dark:text-white/60">Supabase not configured.</p>
+        <p className="text-[#8B7355] dark:text-[#b1a7a6]">Supabase not configured.</p>
       </div>
     );
   }
@@ -165,13 +165,13 @@ export default function ClassRoutinePage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[#5D4E37] dark:text-white">Class Routine</h1>
-          <p className="text-[#8B7355] dark:text-white/60 mt-1">Manage weekly class schedules for all semesters</p>
+          <p className="text-[#8B7355] dark:text-[#b1a7a6] mt-1">Manage weekly class schedules for all semesters</p>
         </div>
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={openAddModal}
-          className="px-4 py-2 bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#8400ff] dark:to-[#a855f7] text-white rounded-lg transition-all flex items-center gap-2 shadow-lg shadow-[#D9A299]/25 dark:shadow-[#8400ff]/25 self-start"
+          className="px-4 py-2 bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#ba181b] dark:to-[#e5383b] text-white rounded-lg transition-all flex items-center gap-2 shadow-lg shadow-[#D9A299]/25 dark:shadow-[#ba181b]/25 self-start"
         >
           <Plus className="w-5 h-5" />
           Add Slot
@@ -185,15 +185,15 @@ export default function ClassRoutinePage() {
           <select
             value={selectedTerm}
             onChange={(e) => setSelectedTerm(e.target.value)}
-            className="appearance-none pl-4 pr-10 py-2.5 border border-[#DCC5B2] dark:border-[#392e4e] rounded-xl bg-[#FAF7F3] dark:bg-white/5 text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#8400ff] focus:border-transparent font-medium text-sm cursor-pointer"
+            className="appearance-none pl-4 pr-10 py-2.5 border border-[#DCC5B2] dark:border-[#3d4951] rounded-xl bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent font-medium text-sm cursor-pointer"
           >
             {TERMS.map(t => (
-              <option key={t.value} value={t.value} className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">
+              <option key={t.value} value={t.value} className="bg-[#FAF7F3] dark:bg-[#161a1d]">
                 {t.label}
               </option>
             ))}
           </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B7355] dark:text-white/40 pointer-events-none" />
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B7355] dark:text-[#b1a7a6]/70 pointer-events-none" />
         </div>
 
         {/* Session */}
@@ -201,25 +201,25 @@ export default function ClassRoutinePage() {
           <select
             value={selectedSession}
             onChange={(e) => setSelectedSession(e.target.value)}
-            className="appearance-none pl-4 pr-10 py-2.5 border border-[#DCC5B2] dark:border-[#392e4e] rounded-xl bg-[#FAF7F3] dark:bg-white/5 text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#8400ff] focus:border-transparent font-medium text-sm cursor-pointer"
+            className="appearance-none pl-4 pr-10 py-2.5 border border-[#DCC5B2] dark:border-[#3d4951] rounded-xl bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent font-medium text-sm cursor-pointer"
           >
             {['2021-2022', '2022-2023', '2023-2024', '2024-2025', '2025-2026'].map(s => (
-              <option key={s} value={s} className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">{s}</option>
+              <option key={s} value={s} className="bg-[#FAF7F3] dark:bg-[#161a1d]">{s}</option>
             ))}
           </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B7355] dark:text-white/40 pointer-events-none" />
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B7355] dark:text-[#b1a7a6]/70 pointer-events-none" />
         </div>
 
         {/* Section Toggle */}
-        <div className="flex rounded-xl overflow-hidden border border-[#DCC5B2] dark:border-[#392e4e]">
+        <div className="flex rounded-xl overflow-hidden border border-[#DCC5B2] dark:border-[#3d4951]">
           {SECTIONS.map(sec => (
             <button
               key={sec}
               onClick={() => setSelectedSection(sec)}
               className={`px-5 py-2.5 text-sm font-medium transition-colors ${
                 selectedSection === sec
-                  ? 'bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#8400ff] dark:to-[#a855f7] text-white'
-                  : 'bg-[#FAF7F3] dark:bg-white/5 text-[#8B7355] dark:text-white/60 hover:bg-[#F0E4D3] dark:hover:bg-white/10'
+                  ? 'bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#ba181b] dark:to-[#e5383b] text-white'
+                  : 'bg-[#FAF7F3] dark:bg-[#0b090a] text-[#8B7355] dark:text-[#b1a7a6] hover:bg-[#F0E4D3] dark:hover:bg-[#3d4951]/30'
               }`}
             >
               SEC - {sec}
@@ -237,11 +237,11 @@ export default function ClassRoutinePage() {
       )}
 
       {/* Routine Title Banner */}
-      <SpotlightCard className="rounded-xl p-4 border border-[#DCC5B2] dark:border-[#392e4e] text-center" spotlightColor="rgba(217, 162, 153, 0.2)">
+      <SpotlightCard className="rounded-xl p-4 border border-[#DCC5B2] dark:border-[#3d4951] text-center" spotlightColor="rgba(217, 162, 153, 0.2)">
         <h2 className="text-lg font-bold text-[#5D4E37] dark:text-white">
           Class Routine – {TERMS.find(t => t.value === selectedTerm)?.label}
         </h2>
-        <p className="text-sm text-[#8B7355] dark:text-white/50 mt-1">
+        <p className="text-sm text-[#8B7355] dark:text-[#b1a7a6] mt-1">
           Session: {selectedSession} &nbsp;•&nbsp; Section: {selectedSection}
         </p>
       </SpotlightCard>
@@ -249,7 +249,7 @@ export default function ClassRoutinePage() {
       {/* Loading */}
       {loading ? (
         <div className="flex items-center justify-center h-48">
-          <Loader2 className="w-8 h-8 animate-spin text-[#D9A299] dark:text-[#8400ff]" />
+          <Loader2 className="w-8 h-8 animate-spin text-[#D9A299] dark:text-[#ba181b]" />
         </div>
       ) : (
         /* Timetable Grid */
@@ -258,21 +258,21 @@ export default function ClassRoutinePage() {
             {/* Header: Period numbers */}
             <thead>
               <tr>
-                <th className="p-2 border border-[#DCC5B2] dark:border-[#392e4e] bg-[#F0E4D3] dark:bg-white/5 text-[#5D4E37] dark:text-white/70 text-xs font-semibold w-24 sticky left-0 z-10">
+                <th className="p-2 border border-[#DCC5B2] dark:border-[#3d4951] bg-[#F0E4D3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-[#d3d3d3] text-xs font-semibold w-24 sticky left-0 z-10">
                   Day / Period
                 </th>
                 {PERIODS.map((p, i) => (
                   <React.Fragment key={`period-header-${p.id}`}>
                     <th
-                      className="p-2 border border-[#DCC5B2] dark:border-[#392e4e] bg-[#F0E4D3] dark:bg-white/5 text-[#5D4E37] dark:text-white/70 text-xs font-semibold min-w-[110px]"
+                      className="p-2 border border-[#DCC5B2] dark:border-[#3d4951] bg-[#F0E4D3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-[#d3d3d3] text-xs font-semibold min-w-[110px]"
                     >
                       <div>{p.id}</div>
-                      <div className="text-[10px] font-normal text-[#8B7355] dark:text-white/40 mt-0.5">{p.label}</div>
+                      <div className="text-[10px] font-normal text-[#8B7355] dark:text-[#b1a7a6]/70 mt-0.5">{p.label}</div>
                     </th>
                     {/* Break column */}
                     {BREAK_AFTER_PERIOD.includes(p.id) && (
                       <th
-                        className="p-1 border border-[#DCC5B2] dark:border-[#392e4e] bg-amber-50 dark:bg-amber-500/5 text-amber-600 dark:text-amber-400 text-[10px] font-medium w-8 writing-mode-vertical"
+                        className="p-1 border border-[#DCC5B2] dark:border-[#3d4951] bg-amber-50 dark:bg-amber-500/5 text-amber-600 dark:text-amber-400 text-[10px] font-medium w-8 writing-mode-vertical"
                       >
                         <div className="rotate-0 whitespace-nowrap">B<br/>R<br/>E<br/>A<br/>K</div>
                       </th>
@@ -286,7 +286,7 @@ export default function ClassRoutinePage() {
               {DAYS.map(day => (
                 <tr key={day.value}>
                   {/* Day name */}
-                  <td className="p-2 border border-[#DCC5B2] dark:border-[#392e4e] bg-[#F0E4D3] dark:bg-white/5 text-[#5D4E37] dark:text-white font-semibold text-sm text-center sticky left-0 z-10">
+                  <td className="p-2 border border-[#DCC5B2] dark:border-[#3d4951] bg-[#F0E4D3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white font-semibold text-sm text-center sticky left-0 z-10">
                     {day.label}
                   </td>
 
@@ -298,7 +298,7 @@ export default function ClassRoutinePage() {
                         <React.Fragment key={`covered-${day.value}-${period.id}`}>
                           {/* still need break column placeholder */}
                           {BREAK_AFTER_PERIOD.includes(period.id) && (
-                            <td className="border border-[#DCC5B2] dark:border-[#392e4e] bg-amber-50 dark:bg-amber-500/5" />
+                            <td className="border border-[#DCC5B2] dark:border-[#3d4951] bg-amber-50 dark:bg-amber-500/5" />
                           )}
                         </React.Fragment>
                       );
@@ -311,10 +311,10 @@ export default function ClassRoutinePage() {
                       <React.Fragment key={`cell-${day.value}-${period.id}`}>
                         <td
                           colSpan={span}
-                          className={`border border-[#DCC5B2] dark:border-[#392e4e] p-1 text-center align-top ${
+                          className={`border border-[#DCC5B2] dark:border-[#3d4951] p-1 text-center align-top ${
                             slot
                               ? ''
-                              : 'bg-[#FAF7F3] dark:bg-transparent hover:bg-[#F0E4D3] dark:hover:bg-white/5'
+                              : 'bg-[#FAF7F3] dark:bg-transparent hover:bg-[#F0E4D3] dark:hover:bg-[#0b090a]'
                           }`}
                         >
                           {slot ? (
@@ -326,10 +326,10 @@ export default function ClassRoutinePage() {
                               <div className="font-bold text-[11px] text-[#5D4E37] dark:text-white">
                                 {slot.course_offerings.courses.code}
                               </div>
-                              <div className="text-[10px] text-[#8B7355] dark:text-white/50 mt-0.5">
+                              <div className="text-[10px] text-[#8B7355] dark:text-[#b1a7a6] mt-0.5">
                                 ({getTeacherInitials(slot.course_offerings.teachers.full_name)})
                               </div>
-                              <div className="text-[9px] text-[#8B7355] dark:text-white/40 mt-0.5">
+                              <div className="text-[9px] text-[#8B7355] dark:text-[#b1a7a6]/70 mt-0.5">
                                 {slot.rooms?.room_number}
                               </div>
                               {/* Delete button on hover */}
@@ -344,7 +344,7 @@ export default function ClassRoutinePage() {
                         </td>
                         {/* Break column */}
                         {BREAK_AFTER_PERIOD.includes(period.id) && (
-                          <td className="border border-[#DCC5B2] dark:border-[#392e4e] bg-amber-50 dark:bg-amber-500/5" />
+                          <td className="border border-[#DCC5B2] dark:border-[#3d4951] bg-amber-50 dark:bg-amber-500/5" />
                         )}
                       </React.Fragment>
                     );
@@ -359,32 +359,32 @@ export default function ClassRoutinePage() {
       {/* Empty state */}
       {!loading && slots.length === 0 && (
         <div className="text-center py-12">
-          <p className="text-[#8B7355] dark:text-white/50">No routine slots found for this selection.</p>
-          <p className="text-sm text-[#8B7355] dark:text-white/40 mt-1">Click &quot;Add Slot&quot; to create the first entry.</p>
+          <p className="text-[#8B7355] dark:text-[#b1a7a6]">No routine slots found for this selection.</p>
+          <p className="text-sm text-[#8B7355] dark:text-[#b1a7a6]/70 mt-1">Click &quot;Add Slot&quot; to create the first entry.</p>
         </div>
       )}
 
       {/* Stats */}
       {!loading && slots.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <SpotlightCard className="rounded-xl p-4 border border-[#DCC5B2] dark:border-[#392e4e]" spotlightColor="rgba(217, 162, 153, 0.2)">
-            <p className="text-sm text-[#8B7355] dark:text-white/50">Total Slots</p>
+          <SpotlightCard className="rounded-xl p-4 border border-[#DCC5B2] dark:border-[#3d4951]" spotlightColor="rgba(217, 162, 153, 0.2)">
+            <p className="text-sm text-[#8B7355] dark:text-[#b1a7a6]">Total Slots</p>
             <p className="text-2xl font-bold text-[#5D4E37] dark:text-white">{slots.length}</p>
           </SpotlightCard>
-          <SpotlightCard className="rounded-xl p-4 border border-[#DCC5B2] dark:border-[#392e4e]" spotlightColor="rgba(217, 162, 153, 0.2)">
-            <p className="text-sm text-[#8B7355] dark:text-white/50">Courses</p>
-            <p className="text-2xl font-bold text-[#D9A299] dark:text-[#00e5ff]">
+          <SpotlightCard className="rounded-xl p-4 border border-[#DCC5B2] dark:border-[#3d4951]" spotlightColor="rgba(217, 162, 153, 0.2)">
+            <p className="text-sm text-[#8B7355] dark:text-[#b1a7a6]">Courses</p>
+            <p className="text-2xl font-bold text-[#D9A299] dark:text-[#d3d3d3]">
               {new Set(slots.map(s => s.course_offerings.courses.code)).size}
             </p>
           </SpotlightCard>
-          <SpotlightCard className="rounded-xl p-4 border border-[#DCC5B2] dark:border-[#392e4e]" spotlightColor="rgba(217, 162, 153, 0.2)">
-            <p className="text-sm text-[#8B7355] dark:text-white/50">Rooms Used</p>
-            <p className="text-2xl font-bold text-[#D9A299] dark:text-[#8400ff]">
+          <SpotlightCard className="rounded-xl p-4 border border-[#DCC5B2] dark:border-[#3d4951]" spotlightColor="rgba(217, 162, 153, 0.2)">
+            <p className="text-sm text-[#8B7355] dark:text-[#b1a7a6]">Rooms Used</p>
+            <p className="text-2xl font-bold text-[#D9A299] dark:text-[#ba181b]">
               {new Set(slots.map(s => s.room_number)).size}
             </p>
           </SpotlightCard>
-          <SpotlightCard className="rounded-xl p-4 border border-[#DCC5B2] dark:border-[#392e4e]" spotlightColor="rgba(217, 162, 153, 0.2)">
-            <p className="text-sm text-[#8B7355] dark:text-white/50">Teachers</p>
+          <SpotlightCard className="rounded-xl p-4 border border-[#DCC5B2] dark:border-[#3d4951]" spotlightColor="rgba(217, 162, 153, 0.2)">
+            <p className="text-sm text-[#8B7355] dark:text-[#b1a7a6]">Teachers</p>
             <p className="text-2xl font-bold text-emerald-500 dark:text-emerald-400">
               {new Set(slots.map(s => s.course_offerings.teachers.full_name)).size}
             </p>

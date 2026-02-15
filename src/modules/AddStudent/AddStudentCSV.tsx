@@ -209,13 +209,13 @@ export default function AddStudentCSV({ onComplete }: AddStudentCSVProps) {
         <div className="flex items-center justify-between mb-5">
           <div>
             <h2 className="text-xl font-bold text-[#5D4E37] dark:text-white">Import Students from CSV</h2>
-            <p className="text-sm text-[#8B7355] dark:text-white/50 mt-1">Columns: Full Name, Email, Phone (optional), Roll No, Term, Session</p>
+            <p className="text-sm text-[#8B7355] dark:text-[#b1a7a6] mt-1">Columns: Full Name, Email, Phone (optional), Roll No, Term, Session</p>
           </div>
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={handleDownloadTemplate}
-            className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg border border-[#DCC5B2] dark:border-[#392e4e] text-[#5D4E37] dark:text-white/70 hover:bg-[#F0E4D3] dark:hover:bg-white/5 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg border border-[#DCC5B2] dark:border-[#3d4951] text-[#5D4E37] dark:text-[#d3d3d3] hover:bg-[#F0E4D3] dark:hover:bg-[#0b090a] transition-colors"
           >
             <Download className="w-4 h-4" />
             Template
@@ -227,11 +227,11 @@ export default function AddStudentCSV({ onComplete }: AddStudentCSVProps) {
           <motion.div
             whileHover={{ borderColor: 'rgba(132, 0, 255, 0.5)' }}
             onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed border-[#DCC5B2] dark:border-[#392e4e] rounded-xl p-10 flex flex-col items-center justify-center cursor-pointer hover:bg-[#F0E4D3]/30 dark:hover:bg-white/[0.02] transition-colors"
+            className="border-2 border-dashed border-[#DCC5B2] dark:border-[#3d4951] rounded-xl p-10 flex flex-col items-center justify-center cursor-pointer hover:bg-[#F0E4D3]/30 dark:hover:bg-white/[0.02] transition-colors"
           >
-            <Upload className="w-10 h-10 text-[#D9A299] dark:text-[#8400ff] mb-3" />
+            <Upload className="w-10 h-10 text-[#D9A299] dark:text-[#ba181b] mb-3" />
             <p className="text-[#5D4E37] dark:text-white font-medium">Click to upload CSV file</p>
-            <p className="text-sm text-[#8B7355] dark:text-white/40 mt-1">or drag and drop</p>
+            <p className="text-sm text-[#8B7355] dark:text-[#b1a7a6]/70 mt-1">or drag and drop</p>
           </motion.div>
         ) : (
           <>
@@ -248,7 +248,7 @@ export default function AddStudentCSV({ onComplete }: AddStudentCSVProps) {
 
             {/* Summary Bar */}
             <div className="flex items-center justify-between mb-4 text-sm">
-              <span className="text-[#8B7355] dark:text-white/60">
+              <span className="text-[#8B7355] dark:text-[#b1a7a6]">
                 {results.length} row{results.length > 1 ? 's' : ''} parsed
                 {uploadDone && (
                   <span className="ml-2">
@@ -258,47 +258,47 @@ export default function AddStudentCSV({ onComplete }: AddStudentCSVProps) {
                 )}
               </span>
               <div className="flex gap-2">
-                <button onClick={handleClear} className="text-xs text-[#8B7355] dark:text-white/40 hover:text-red-400 transition-colors">
+                <button onClick={handleClear} className="text-xs text-[#8B7355] dark:text-[#b1a7a6]/70 hover:text-red-400 transition-colors">
                   Clear All
                 </button>
-                <button onClick={() => fileInputRef.current?.click()} className="text-xs text-[#D9A299] dark:text-[#8400ff] hover:underline">
+                <button onClick={() => fileInputRef.current?.click()} className="text-xs text-[#D9A299] dark:text-[#ba181b] hover:underline">
                   Re-upload
                 </button>
               </div>
             </div>
 
             {/* Table */}
-            <div className="border border-[#DCC5B2] dark:border-[#392e4e] rounded-xl overflow-hidden mb-4">
+            <div className="border border-[#DCC5B2] dark:border-[#3d4951] rounded-xl overflow-hidden mb-4">
               <div className="overflow-x-auto max-h-[45vh] overflow-y-auto [&::-webkit-scrollbar]:w-[4px] [&::-webkit-scrollbar-thumb]:bg-[#DCC5B2] dark:[&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full">
                 <table className="w-full text-sm">
-                  <thead className="bg-[#F0E4D3] dark:bg-white/5 sticky top-0">
+                  <thead className="bg-[#F0E4D3] dark:bg-[#0b090a] sticky top-0">
                     <tr>
-                      <th className="px-3 py-3 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/70 uppercase tracking-wider">#</th>
-                      <th className="px-3 py-3 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/70 uppercase tracking-wider">Name</th>
-                      <th className="px-3 py-3 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/70 uppercase tracking-wider">Roll</th>
-                      <th className="px-3 py-3 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/70 uppercase tracking-wider">Email</th>
-                      <th className="px-3 py-3 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/70 uppercase tracking-wider">Term</th>
-                      <th className="px-3 py-3 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/70 uppercase tracking-wider">Session</th>
-                      <th className="px-3 py-3 text-center text-xs font-semibold text-[#5D4E37] dark:text-white/70 uppercase tracking-wider">Status</th>
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-[#5D4E37] dark:text-[#d3d3d3] uppercase tracking-wider">#</th>
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-[#5D4E37] dark:text-[#d3d3d3] uppercase tracking-wider">Name</th>
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-[#5D4E37] dark:text-[#d3d3d3] uppercase tracking-wider">Roll</th>
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-[#5D4E37] dark:text-[#d3d3d3] uppercase tracking-wider">Email</th>
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-[#5D4E37] dark:text-[#d3d3d3] uppercase tracking-wider">Term</th>
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-[#5D4E37] dark:text-[#d3d3d3] uppercase tracking-wider">Session</th>
+                      <th className="px-3 py-3 text-center text-xs font-semibold text-[#5D4E37] dark:text-[#d3d3d3] uppercase tracking-wider">Status</th>
                       <th className="px-3 py-3 w-10" />
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#DCC5B2]/30 dark:divide-[#392e4e]/50">
+                  <tbody className="divide-y divide-[#DCC5B2]/30 dark:divide-[#3d4951]/50">
                     {results.map((r, idx) => (
                       <tr key={idx} className={`transition-colors ${r.status === 'error' ? 'bg-red-500/5' : r.status === 'success' ? 'bg-emerald-500/5' : 'hover:bg-[#F0E4D3]/30 dark:hover:bg-white/[0.02]'}`}>
-                        <td className="px-3 py-2.5 text-[#8B7355] dark:text-white/40 font-mono text-xs">{idx + 1}</td>
+                        <td className="px-3 py-2.5 text-[#8B7355] dark:text-[#b1a7a6]/70 font-mono text-xs">{idx + 1}</td>
                         <td className="px-3 py-2.5 text-[#5D4E37] dark:text-white font-medium whitespace-nowrap">{r.row.full_name}</td>
-                        <td className="px-3 py-2.5 text-[#8B7355] dark:text-white/60 font-mono text-xs">{r.row.roll_no}</td>
-                        <td className="px-3 py-2.5 text-[#8B7355] dark:text-white/60 text-xs">{r.row.email}</td>
+                        <td className="px-3 py-2.5 text-[#8B7355] dark:text-[#b1a7a6] font-mono text-xs">{r.row.roll_no}</td>
+                        <td className="px-3 py-2.5 text-[#8B7355] dark:text-[#b1a7a6] text-xs">{r.row.email}</td>
                         <td className="px-3 py-2.5">
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-[#00e5ff]/10 text-[#00e5ff] border border-[#00e5ff]/20">
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-[#d3d3d3]/10 text-[#d3d3d3] border border-[#d3d3d3]/20">
                             {getTermLabel(r.row.term)}
                           </span>
                         </td>
-                        <td className="px-3 py-2.5 text-[#8B7355] dark:text-white/60 text-xs">{r.row.session}</td>
+                        <td className="px-3 py-2.5 text-[#8B7355] dark:text-[#b1a7a6] text-xs">{r.row.session}</td>
                         <td className="px-3 py-2.5 text-center">
-                          {r.status === 'pending' && <span className="text-xs text-[#8B7355] dark:text-white/40">Pending</span>}
-                          {r.status === 'uploading' && <Loader2 className="w-4 h-4 animate-spin text-[#8400ff] mx-auto" />}
+                          {r.status === 'pending' && <span className="text-xs text-[#8B7355] dark:text-[#b1a7a6]/70">Pending</span>}
+                          {r.status === 'uploading' && <Loader2 className="w-4 h-4 animate-spin text-[#ba181b] mx-auto" />}
                           {r.status === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-400 mx-auto" />}
                           {r.status === 'error' && (
                             <span className="text-xs text-red-400" title={r.error}>
@@ -308,7 +308,7 @@ export default function AddStudentCSV({ onComplete }: AddStudentCSVProps) {
                         </td>
                         <td className="px-3 py-2.5">
                           {r.status === 'pending' && (
-                            <button onClick={() => removeRow(idx)} className="text-[#8B7355] dark:text-white/30 hover:text-red-400 transition-colors">
+                            <button onClick={() => removeRow(idx)} className="text-[#8B7355] dark:text-[#b1a7a6]/50 hover:text-red-400 transition-colors">
                               <Trash2 className="w-4 h-4" />
                             </button>
                           )}
@@ -338,7 +338,7 @@ export default function AddStudentCSV({ onComplete }: AddStudentCSVProps) {
                 whileTap={{ scale: 0.98 }}
                 onClick={handleUploadAll}
                 disabled={uploading}
-                className="w-full py-3 rounded-full bg-gradient-to-r from-[#00e5ff] to-[#8400ff] text-white font-semibold flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-[#8400ff]/20"
+                className="w-full py-3 rounded-full bg-gradient-to-r from-[#d3d3d3] to-[#ba181b] text-white font-semibold flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-[#ba181b]/20"
               >
                 {uploading ? (
                   <>
@@ -379,15 +379,15 @@ export default function AddStudentCSV({ onComplete }: AddStudentCSVProps) {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-[#FAF7F3] dark:bg-[#1a1a2e] border border-[#DCC5B2] dark:border-white/10 rounded-2xl p-6 w-full max-w-lg shadow-2xl max-h-[80vh] overflow-hidden flex flex-col"
+              className="bg-[#FAF7F3] dark:bg-[#161a1d] border border-[#DCC5B2] dark:border-[#3d4951]/50 rounded-2xl p-6 w-full max-w-lg shadow-2xl max-h-[80vh] overflow-hidden flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-[#5D4E37] dark:text-white flex items-center gap-2">
-                  <FileSpreadsheet className="w-5 h-5 text-[#D9A299] dark:text-[#8400ff]" />
+                  <FileSpreadsheet className="w-5 h-5 text-[#D9A299] dark:text-[#ba181b]" />
                   Initial Passwords
                 </h3>
-                <button onClick={() => setShowPasswords(false)} className="text-[#8B7355] dark:text-white/50 hover:text-[#5D4E37] dark:hover:text-white">
+                <button onClick={() => setShowPasswords(false)} className="text-[#8B7355] dark:text-[#b1a7a6] hover:text-[#5D4E37] dark:hover:text-white">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -398,12 +398,12 @@ export default function AddStudentCSV({ onComplete }: AddStudentCSVProps) {
 
               <div className="overflow-y-auto flex-1 space-y-2 mb-4 [&::-webkit-scrollbar]:w-[4px] [&::-webkit-scrollbar-thumb]:bg-[#DCC5B2] dark:[&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full">
                 {passwordResults.map((p, i) => (
-                  <div key={i} className="flex items-center justify-between px-3 py-2.5 bg-white/50 dark:bg-white/5 border border-[#DCC5B2]/50 dark:border-white/10 rounded-lg">
+                  <div key={i} className="flex items-center justify-between px-3 py-2.5 bg-white/50 dark:bg-[#0b090a] border border-[#DCC5B2]/50 dark:border-[#3d4951]/50 rounded-lg">
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-[#5D4E37] dark:text-white truncate">{p.name}</p>
-                      <p className="text-xs text-[#8B7355] dark:text-white/40 truncate">Roll: {p.roll}</p>
+                      <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6]/70 truncate">Roll: {p.roll}</p>
                     </div>
-                    <span className="font-mono text-lg tracking-widest text-[#8400ff] dark:text-[#a855f7] ml-4">{p.password}</span>
+                    <span className="font-mono text-lg tracking-widest text-[#ba181b] dark:text-[#e5383b] ml-4">{p.password}</span>
                   </div>
                 ))}
               </div>
@@ -412,7 +412,7 @@ export default function AddStudentCSV({ onComplete }: AddStudentCSVProps) {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={handleCopyAllPasswords}
-                className="w-full py-2.5 rounded-full bg-gradient-to-r from-[#8400ff] to-[#a855f7] text-white font-medium flex items-center justify-center gap-2"
+                className="w-full py-2.5 rounded-full bg-gradient-to-r from-[#ba181b] to-[#e5383b] text-white font-medium flex items-center justify-center gap-2"
               >
                 Copy All Passwords
               </motion.button>

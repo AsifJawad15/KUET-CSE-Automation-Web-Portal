@@ -31,26 +31,26 @@
 }
 
 .dark {
-  /* Dark Theme Variables */
-  --background: #0F0A06;
-  --foreground: #FDF8F3;
-  --card: #1A0F08;
-  --card-foreground: #FDF8F3;
-  --primary: #D4A574;
-  --primary-foreground: #0F0A06;
-  --secondary: #C4956A;
-  --secondary-foreground: #0F0A06;
-  --accent: #8B6914;
-  --muted: #1A0F08;
-  --muted-foreground: #8B7355;
-  --border: #2C1810;
-  --input: #2C1810;
-  --ring: #D4A574;
+  /* Dark Theme Variables — Onyx/Garnet/Mahogany */
+  --background: #0b090a;
+  --foreground: #f5f3f4;
+  --card: #161a1d;
+  --card-foreground: #f5f3f4;
+  --primary: #e5383b;
+  --primary-foreground: #0b090a;
+  --secondary: #ba181b;
+  --secondary-foreground: #f5f3f4;
+  --accent: #a4161a;
+  --muted: #161a1d;
+  --muted-foreground: #b1a7a6;
+  --border: #3d4951;
+  --input: #161a1d;
+  --ring: #e5383b;
 
   /* Gradient Colors */
-  --gradient-start: #D4A574;
-  --gradient-mid: #C4956A;
-  --gradient-end: #8B6914;
+  --gradient-start: #e5383b;
+  --gradient-mid: #ba181b;
+  --gradient-end: #660708;
 }
 
 * {
@@ -168,8 +168,8 @@ body {
 }
 
 .dark .glass {
-  background: rgba(15, 10, 6, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(11, 9, 10, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .glass-card {
@@ -179,8 +179,8 @@ body {
 }
 
 .dark .glass-card {
-  background: rgba(15, 10, 6, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(22, 26, 29, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* ==========================================
@@ -309,29 +309,29 @@ body {
 }
 
 .btn-secondary {
-  @apply px-6 py-3 bg-white dark:bg-[#1A0F08]
-         text-[#5D4037] dark:text-[#D4A574] font-semibold rounded-xl
-         border-2 border-[#DCC5B2] dark:border-[#2C1810]
+  @apply px-6 py-3 bg-white dark:bg-[#161a1d]
+         text-[#5D4037] dark:text-[#f5f3f4] font-semibold rounded-xl
+         border-2 border-[#DCC5B2] dark:border-[#3d4951]
          hover:border-[#D4A574] hover:text-[#3E2723] dark:hover:text-white
          transform hover:scale-[1.02] active:scale-[0.98]
          transition-all duration-300;
 }
 
 .btn-ghost {
-  @apply px-4 py-2 text-[#6B5744] dark:text-[#8B7355] font-medium rounded-lg
-         hover:bg-[#F5EDE4] dark:hover:bg-[#1A0F08]
+  @apply px-4 py-2 text-[#6B5744] dark:text-[#b1a7a6] font-medium rounded-lg
+         hover:bg-[#F5EDE4] dark:hover:bg-[#161a1d]
          transition-all duration-200;
 }
 
 /* Input styles */
 .input-primary {
   @apply w-full px-4 py-3
-         bg-[#FAF7F3] dark:bg-[#1A0F08]/50
-         border-2 border-[#DCC5B2] dark:border-[#2C1810]
+         bg-[#FAF7F3] dark:bg-[#161a1d]/50
+         border-2 border-[#DCC5B2] dark:border-[#3d4951]
          rounded-xl
-         focus:outline-none focus:ring-2 focus:ring-[#D4A574] dark:focus:ring-[#D4A574] focus:border-transparent
+         focus:outline-none focus:ring-2 focus:ring-[#D4A574] dark:focus:ring-[#e5383b] focus:border-transparent
          text-[#2C1810] dark:text-white
-         placeholder-[#8B7355] dark:placeholder-[#6B5744]
+         placeholder-[#8B7355] dark:placeholder-[#b1a7a6]
          transition-all duration-200;
 }
 

@@ -213,8 +213,8 @@ export default function AddRoutineSlot({ show, onClose, onSave, term, session, s
 
   // Styles
   const selectClass =
-    'w-full px-3 py-2.5 mt-1 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-white dark:bg-[#1a1a2e] text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#8400ff] focus:border-transparent transition-colors';
-  const optionClass = 'bg-white dark:bg-[#1a1a2e] text-[#5D4E37] dark:text-white';
+    'w-full px-3 py-2.5 mt-1 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-white dark:bg-[#161a1d] text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-colors';
+  const optionClass = 'bg-white dark:bg-[#161a1d] text-[#5D4E37] dark:text-white';
 
   return (
     <AnimatePresence>
@@ -232,21 +232,21 @@ export default function AddRoutineSlot({ show, onClose, onSave, term, session, s
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#FAF7F3] dark:bg-[#0d0d1a] rounded-2xl p-6 w-full max-w-lg border border-[#DCC5B2] dark:border-[#392e4e] shadow-2xl max-h-[90vh] overflow-y-auto"
+            className="bg-[#FAF7F3] dark:bg-[#161a1d] rounded-2xl p-6 w-full max-w-lg border border-[#DCC5B2] dark:border-[#3d4951] shadow-2xl max-h-[90vh] overflow-y-auto"
           >
             {/* Header */}
             <div className="flex justify-between items-center mb-5">
               <h2 className="text-xl font-bold text-[#5D4E37] dark:text-white">Add Routine Slot</h2>
-              <button onClick={onClose} className="p-1.5 hover:bg-[#F0E4D3] dark:hover:bg-white/10 rounded-lg transition-colors">
-                <X className="w-5 h-5 text-[#8B7355] dark:text-white/60" />
+              <button onClick={onClose} className="p-1.5 hover:bg-[#F0E4D3] dark:hover:bg-[#3d4951]/30 rounded-lg transition-colors">
+                <X className="w-5 h-5 text-[#8B7355] dark:text-[#b1a7a6]" />
               </button>
             </div>
 
             {/* Loading */}
             {loadingData && (
               <div className="flex flex-col items-center justify-center py-12 gap-3">
-                <Loader2 className="w-8 h-8 animate-spin text-[#D9A299] dark:text-[#8400ff]" />
-                <p className="text-sm text-[#8B7355] dark:text-white/50">Loading courses & rooms...</p>
+                <Loader2 className="w-8 h-8 animate-spin text-[#D9A299] dark:text-[#ba181b]" />
+                <p className="text-sm text-[#8B7355] dark:text-[#b1a7a6]">Loading courses & rooms...</p>
               </div>
             )}
 
@@ -257,7 +257,7 @@ export default function AddRoutineSlot({ show, onClose, onSave, term, session, s
                 <p className="text-red-400 text-sm">{fetchError}</p>
                 <button
                   onClick={fetchData}
-                  className="px-4 py-2 text-sm bg-[#D9A299] dark:bg-[#8400ff] text-white rounded-lg hover:opacity-90 transition"
+                  className="px-4 py-2 text-sm bg-[#D9A299] dark:bg-[#ba181b] text-white rounded-lg hover:opacity-90 transition"
                 >
                   Retry
                 </button>
@@ -269,7 +269,7 @@ export default function AddRoutineSlot({ show, onClose, onSave, term, session, s
               <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Course */}
                 <div>
-                  <label className="text-sm font-medium text-[#8B7355] dark:text-white/60">Course</label>
+                  <label className="text-sm font-medium text-[#8B7355] dark:text-[#b1a7a6]">Course</label>
                   {uniqueCourses.length === 0 ? (
                     <div className="mt-1 p-3 border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 rounded-lg">
                       <p className="text-sm text-amber-700 dark:text-amber-400">
@@ -299,7 +299,7 @@ export default function AddRoutineSlot({ show, onClose, onSave, term, session, s
                 {/* Teacher */}
                 {selectedCourseId && (
                   <div>
-                    <label className="text-sm font-medium text-[#8B7355] dark:text-white/60">Teacher</label>
+                    <label className="text-sm font-medium text-[#8B7355] dark:text-[#b1a7a6]">Teacher</label>
                     {teacherOptions.length === 0 ? (
                       <div className="mt-1 p-3 border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 rounded-lg">
                         <p className="text-sm text-amber-700 dark:text-amber-400">
@@ -331,7 +331,7 @@ export default function AddRoutineSlot({ show, onClose, onSave, term, session, s
 
                 {/* Room */}
                 <div>
-                  <label className="text-sm font-medium text-[#8B7355] dark:text-white/60">Room</label>
+                  <label className="text-sm font-medium text-[#8B7355] dark:text-[#b1a7a6]">Room</label>
                   {rooms.length === 0 ? (
                     <div className="mt-1 p-3 border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 rounded-lg">
                       <p className="text-sm text-amber-700 dark:text-amber-400">
@@ -357,7 +357,7 @@ export default function AddRoutineSlot({ show, onClose, onSave, term, session, s
 
                 {/* Day */}
                 <div>
-                  <label className="text-sm font-medium text-[#8B7355] dark:text-white/60">Day</label>
+                  <label className="text-sm font-medium text-[#8B7355] dark:text-[#b1a7a6]">Day</label>
                   <select
                     value={formData.day_of_week}
                     onChange={(e) => setFormData({ ...formData, day_of_week: parseInt(e.target.value) })}
@@ -374,7 +374,7 @@ export default function AddRoutineSlot({ show, onClose, onSave, term, session, s
                 {/* Period Range */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-[#8B7355] dark:text-white/60">From Period</label>
+                    <label className="text-sm font-medium text-[#8B7355] dark:text-[#b1a7a6]">From Period</label>
                     <select
                       value={formData.period_start}
                       onChange={(e) => {
@@ -391,7 +391,7 @@ export default function AddRoutineSlot({ show, onClose, onSave, term, session, s
                     </select>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-[#8B7355] dark:text-white/60">To Period</label>
+                    <label className="text-sm font-medium text-[#8B7355] dark:text-[#b1a7a6]">To Period</label>
                     <select
                       value={formData.period_end}
                       onChange={(e) => setFormData({ ...formData, period_end: parseInt(e.target.value) })}
@@ -407,7 +407,7 @@ export default function AddRoutineSlot({ show, onClose, onSave, term, session, s
                 </div>
 
                 {/* Info */}
-                <div className="text-xs text-[#8B7355] dark:text-white/40 bg-[#F0E4D3] dark:bg-white/5 rounded-lg p-3 border border-[#DCC5B2] dark:border-[#392e4e]">
+                <div className="text-xs text-[#8B7355] dark:text-[#b1a7a6]/70 bg-[#F0E4D3] dark:bg-[#0b090a] rounded-lg p-3 border border-[#DCC5B2] dark:border-[#3d4951]">
                   Adding to: <span className="font-medium text-[#5D4E37] dark:text-white">Term {term}</span>
                   &nbsp;•&nbsp;Session: <span className="font-medium text-[#5D4E37] dark:text-white">{session}</span>
                   &nbsp;•&nbsp;Section: <span className="font-medium text-[#5D4E37] dark:text-white">{section}</span>
@@ -417,7 +417,7 @@ export default function AddRoutineSlot({ show, onClose, onSave, term, session, s
                 <button
                   type="submit"
                   disabled={submitting || !canSubmit}
-                  className="w-full py-2.5 bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#8400ff] dark:to-[#a855f7] text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-opacity flex items-center justify-center gap-2"
+                  className="w-full py-2.5 bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#ba181b] dark:to-[#e5383b] text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-opacity flex items-center justify-center gap-2"
                 >
                   {submitting ? (
                     <>

@@ -202,10 +202,10 @@ export default function TermUpgradePage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[#5D4E37] dark:text-white flex items-center gap-2">
-            <TrendingUp className="w-7 h-7 text-[#D9A299] dark:text-[#8400ff]" />
+            <TrendingUp className="w-7 h-7 text-[#D9A299] dark:text-[#ba181b]" />
             Term Upgrade
           </h1>
-          <p className="text-[#8B7355] dark:text-white/50 text-sm mt-1">
+          <p className="text-[#8B7355] dark:text-[#b1a7a6] text-sm mt-1">
             Manage student term upgrade requests
           </p>
         </div>
@@ -215,7 +215,7 @@ export default function TermUpgradePage() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={fetchRequests}
-            className="p-2 rounded-xl bg-[#F0E4D3] dark:bg-white/5 border border-[#DCC5B2] dark:border-white/10 text-[#8B7355] dark:text-white/60 hover:bg-[#D9A299]/20 transition-colors"
+            className="p-2 rounded-xl bg-[#F0E4D3] dark:bg-[#0b090a] border border-[#DCC5B2] dark:border-[#3d4951]/50 text-[#8B7355] dark:text-[#b1a7a6] hover:bg-[#D9A299]/20 transition-colors"
             title="Refresh"
           >
             <RefreshCw className="w-5 h-5" />
@@ -226,7 +226,7 @@ export default function TermUpgradePage() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setShowSubmitForm(!showSubmitForm)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#D9A299] dark:bg-[#8400ff] text-white font-medium hover:opacity-90 transition-opacity"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#D9A299] dark:bg-[#ba181b] text-white font-medium hover:opacity-90 transition-opacity"
             >
               <UserPlus className="w-4 h-4" />
               Submit Request
@@ -244,7 +244,7 @@ export default function TermUpgradePage() {
             </div>
             <div>
               <p className="text-2xl font-bold text-[#5D4E37] dark:text-white">{pendingCount}</p>
-              <p className="text-xs text-[#8B7355] dark:text-white/50">Pending Requests</p>
+              <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6]">Pending Requests</p>
             </div>
           </div>
         </SpotlightCard>
@@ -256,7 +256,7 @@ export default function TermUpgradePage() {
             </div>
             <div>
               <p className="text-2xl font-bold text-[#5D4E37] dark:text-white">{approvedCount}</p>
-              <p className="text-xs text-[#8B7355] dark:text-white/50">Approved</p>
+              <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6]">Approved</p>
             </div>
           </div>
         </SpotlightCard>
@@ -268,7 +268,7 @@ export default function TermUpgradePage() {
             </div>
             <div>
               <p className="text-2xl font-bold text-[#5D4E37] dark:text-white">{rejectedCount}</p>
-              <p className="text-xs text-[#8B7355] dark:text-white/50">Rejected</p>
+              <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6]">Rejected</p>
             </div>
           </div>
         </SpotlightCard>
@@ -285,29 +285,29 @@ export default function TermUpgradePage() {
           >
             <SpotlightCard className="p-6" spotlightColor="rgba(132, 0, 255, 0.1)">
               <h3 className="text-lg font-semibold text-[#5D4E37] dark:text-white mb-4 flex items-center gap-2">
-                <Send className="w-5 h-5 text-[#D9A299] dark:text-[#8400ff]" />
+                <Send className="w-5 h-5 text-[#D9A299] dark:text-[#ba181b]" />
                 Submit Upgrade Request
               </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Student Select */}
                 <div>
-                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-white/70 mb-1">
+                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-1">
                     Select Student
                   </label>
                   <select
                     value={selectedStudentId}
                     onChange={(e) => handleStudentSelect(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-[#DCC5B2] dark:border-white/10 bg-white dark:bg-[#1a1a2e] text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#8400ff] outline-none"
+                    className="w-full px-3 py-2 rounded-lg border border-[#DCC5B2] dark:border-[#3d4951]/50 bg-white dark:bg-[#161a1d] text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] outline-none"
                   >
-                    <option value="" className="bg-white dark:bg-[#1a1a2e] text-[#5D4E37] dark:text-white">
+                    <option value="" className="bg-white dark:bg-[#161a1d] text-[#5D4E37] dark:text-white">
                       -- Select a student --
                     </option>
                     {students.map((s) => (
                       <option
                         key={s.user_id}
                         value={s.user_id}
-                        className="bg-white dark:bg-[#1a1a2e] text-[#5D4E37] dark:text-white"
+                        className="bg-white dark:bg-[#161a1d] text-[#5D4E37] dark:text-white"
                       >
                         {s.roll_no} - {s.full_name} (Term {s.term})
                       </option>
@@ -317,30 +317,30 @@ export default function TermUpgradePage() {
 
                 {/* Current Term (read-only) */}
                 <div>
-                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-white/70 mb-1">
+                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-1">
                     Current Term
                   </label>
                   <input
                     type="text"
                     value={selectedStudentTerm ? `Term ${selectedStudentTerm}` : ''}
                     readOnly
-                    className="w-full px-3 py-2 rounded-lg border border-[#DCC5B2] dark:border-white/10 bg-[#F0E4D3]/50 dark:bg-white/5 text-[#5D4E37] dark:text-white/60 cursor-not-allowed"
+                    className="w-full px-3 py-2 rounded-lg border border-[#DCC5B2] dark:border-[#3d4951]/50 bg-[#F0E4D3]/50 dark:bg-[#0b090a] text-[#5D4E37] dark:text-[#b1a7a6] cursor-not-allowed"
                     placeholder="Auto-filled from student"
                   />
                 </div>
 
                 {/* Requested Term */}
                 <div>
-                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-white/70 mb-1">
+                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-1">
                     Upgrade To
                   </label>
                   <select
                     value={requestedTerm}
                     onChange={(e) => setRequestedTerm(e.target.value)}
                     disabled={!selectedStudentTerm}
-                    className="w-full px-3 py-2 rounded-lg border border-[#DCC5B2] dark:border-white/10 bg-white dark:bg-[#1a1a2e] text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#8400ff] outline-none disabled:opacity-50"
+                    className="w-full px-3 py-2 rounded-lg border border-[#DCC5B2] dark:border-[#3d4951]/50 bg-white dark:bg-[#161a1d] text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] outline-none disabled:opacity-50"
                   >
-                    <option value="" className="bg-white dark:bg-[#1a1a2e] text-[#5D4E37] dark:text-white">
+                    <option value="" className="bg-white dark:bg-[#161a1d] text-[#5D4E37] dark:text-white">
                       -- Select target term --
                     </option>
                     {getAllTerms()
@@ -349,7 +349,7 @@ export default function TermUpgradePage() {
                         <option
                           key={t}
                           value={t}
-                          className="bg-white dark:bg-[#1a1a2e] text-[#5D4E37] dark:text-white"
+                          className="bg-white dark:bg-[#161a1d] text-[#5D4E37] dark:text-white"
                         >
                           Term {t}
                         </option>
@@ -359,7 +359,7 @@ export default function TermUpgradePage() {
 
                 {/* Reason */}
                 <div>
-                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-white/70 mb-1">
+                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-1">
                     Reason (Optional)
                   </label>
                   <input
@@ -367,7 +367,7 @@ export default function TermUpgradePage() {
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                     placeholder="e.g., Completed all requirements"
-                    className="w-full px-3 py-2 rounded-lg border border-[#DCC5B2] dark:border-white/10 bg-white dark:bg-[#1a1a2e] text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#8400ff] outline-none"
+                    className="w-full px-3 py-2 rounded-lg border border-[#DCC5B2] dark:border-[#3d4951]/50 bg-white dark:bg-[#161a1d] text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] outline-none"
                   />
                 </div>
               </div>
@@ -379,10 +379,10 @@ export default function TermUpgradePage() {
                   animate={{ opacity: 1, y: 0 }}
                   className="mt-4 flex items-center justify-center gap-4"
                 >
-                  <div className="px-4 py-2 rounded-xl bg-[#F0E4D3] dark:bg-white/10 border border-[#DCC5B2] dark:border-white/10 text-[#5D4E37] dark:text-white font-semibold">
+                  <div className="px-4 py-2 rounded-xl bg-[#F0E4D3] dark:bg-[#3d4951]/30 border border-[#DCC5B2] dark:border-[#3d4951]/50 text-[#5D4E37] dark:text-white font-semibold">
                     Term {selectedStudentTerm}
                   </div>
-                  <ArrowUpCircle className="w-6 h-6 text-[#D9A299] dark:text-[#8400ff] animate-bounce" />
+                  <ArrowUpCircle className="w-6 h-6 text-[#D9A299] dark:text-[#ba181b] animate-bounce" />
                   <div className="px-4 py-2 rounded-xl bg-emerald-100 dark:bg-emerald-500/20 border border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 font-semibold">
                     Term {requestedTerm}
                   </div>
@@ -392,14 +392,14 @@ export default function TermUpgradePage() {
               <div className="mt-4 flex justify-end gap-3">
                 <button
                   onClick={() => setShowSubmitForm(false)}
-                  className="px-4 py-2 rounded-lg border border-[#DCC5B2] dark:border-white/10 text-[#8B7355] dark:text-white/60 hover:bg-[#F0E4D3] dark:hover:bg-white/5 transition-colors"
+                  className="px-4 py-2 rounded-lg border border-[#DCC5B2] dark:border-[#3d4951]/50 text-[#8B7355] dark:text-[#b1a7a6] hover:bg-[#F0E4D3] dark:hover:bg-[#0b090a] transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSubmitRequest}
                   disabled={!selectedStudentId || !requestedTerm || submitting}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#D9A299] dark:bg-[#8400ff] text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#D9A299] dark:bg-[#ba181b] text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {submitting ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -415,7 +415,7 @@ export default function TermUpgradePage() {
       </AnimatePresence>
 
       {/* Tab Filters */}
-      <div className="flex gap-2 border-b border-[#DCC5B2] dark:border-white/10 pb-0">
+      <div className="flex gap-2 border-b border-[#DCC5B2] dark:border-[#3d4951]/50 pb-0">
         {tabs.map((tab) => (
           <button
             key={tab.key}
@@ -423,7 +423,7 @@ export default function TermUpgradePage() {
             className={`relative px-4 py-2.5 text-sm font-medium transition-colors ${
               tabFilter === tab.key
                 ? 'text-[#5D4E37] dark:text-white'
-                : 'text-[#8B7355] dark:text-white/40 hover:text-[#5D4E37] dark:hover:text-white/70'
+                : 'text-[#8B7355] dark:text-[#b1a7a6]/70 hover:text-[#5D4E37] dark:hover:text-white/70'
             }`}
           >
             <span className="flex items-center gap-1.5">
@@ -431,8 +431,8 @@ export default function TermUpgradePage() {
               {tab.count !== undefined && (
                 <span className={`text-xs px-1.5 py-0.5 rounded-full ${
                   tabFilter === tab.key
-                    ? 'bg-[#D9A299]/30 dark:bg-[#8400ff]/30 text-[#5D4E37] dark:text-white'
-                    : 'bg-[#F0E4D3] dark:bg-white/5 text-[#8B7355] dark:text-white/40'
+                    ? 'bg-[#D9A299]/30 dark:bg-[#ba181b]/30 text-[#5D4E37] dark:text-white'
+                    : 'bg-[#F0E4D3] dark:bg-[#0b090a] text-[#8B7355] dark:text-[#b1a7a6]/70'
                 }`}>
                   {tab.count}
                 </span>
@@ -441,7 +441,7 @@ export default function TermUpgradePage() {
             {tabFilter === tab.key && (
               <motion.div
                 layoutId="termUpgradeTab"
-                className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#D9A299] dark:bg-[#8400ff]"
+                className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#D9A299] dark:bg-[#ba181b]"
               />
             )}
           </button>
@@ -451,12 +451,12 @@ export default function TermUpgradePage() {
       {/* Requests List */}
       {loading ? (
         <div className="flex items-center justify-center py-16">
-          <Loader2 className="w-8 h-8 text-[#D9A299] dark:text-[#8400ff] animate-spin" />
+          <Loader2 className="w-8 h-8 text-[#D9A299] dark:text-[#ba181b] animate-spin" />
         </div>
       ) : requests.length === 0 ? (
         <div className="text-center py-16">
           <ChevronUp className="w-12 h-12 mx-auto text-[#DCC5B2] dark:text-white/20 mb-3" />
-          <p className="text-[#8B7355] dark:text-white/40 font-medium">No {tabFilter !== 'all' ? tabFilter : ''} requests found</p>
+          <p className="text-[#8B7355] dark:text-[#b1a7a6]/70 font-medium">No {tabFilter !== 'all' ? tabFilter : ''} requests found</p>
           <p className="text-sm text-[#8B7355]/70 dark:text-white/25 mt-1">
             {tabFilter === 'pending' ? 'All caught up!' : 'Term upgrade requests will appear here.'}
           </p>
@@ -485,35 +485,35 @@ export default function TermUpgradePage() {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     {/* Student Info */}
                     <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-full bg-[#D9A299]/20 dark:bg-[#8400ff]/20 flex items-center justify-center text-[#5D4E37] dark:text-white font-semibold text-sm flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-[#D9A299]/20 dark:bg-[#ba181b]/20 flex items-center justify-center text-[#5D4E37] dark:text-white font-semibold text-sm flex-shrink-0">
                         {req.students.full_name.charAt(0)}
                       </div>
                       <div>
                         <p className="font-semibold text-[#5D4E37] dark:text-white">
                           {req.students.full_name}
                         </p>
-                        <p className="text-sm text-[#8B7355] dark:text-white/50">
+                        <p className="text-sm text-[#8B7355] dark:text-[#b1a7a6]">
                           Roll: {req.students.roll_no} | Session: {req.students.session}
                           {req.students.section && ` | Sec: ${req.students.section}`}
                           {req.students.cgpa > 0 && ` | CGPA: ${req.students.cgpa}`}
                         </p>
                         <div className="flex items-center gap-2 mt-1.5">
-                          <span className="text-xs px-2 py-0.5 rounded bg-[#F0E4D3] dark:bg-white/10 text-[#5D4E37] dark:text-white/70 font-medium">
+                          <span className="text-xs px-2 py-0.5 rounded bg-[#F0E4D3] dark:bg-[#3d4951]/30 text-[#5D4E37] dark:text-[#d3d3d3] font-medium">
                             Term {req.current_term}
                           </span>
-                          <ArrowUpCircle className="w-4 h-4 text-[#D9A299] dark:text-[#8400ff]" />
+                          <ArrowUpCircle className="w-4 h-4 text-[#D9A299] dark:text-[#ba181b]" />
                           <span className="text-xs px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-medium">
                             Term {req.requested_term}
                           </span>
                         </div>
                         {req.reason && (
-                          <p className="text-xs text-[#8B7355] dark:text-white/40 mt-1 flex items-center gap-1">
+                          <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6]/70 mt-1 flex items-center gap-1">
                             <MessageSquare className="w-3 h-3" />
                             {req.reason}
                           </p>
                         )}
                         {req.admin_remarks && req.status !== 'pending' && (
-                          <p className="text-xs text-[#8B7355] dark:text-white/40 mt-1 italic">
+                          <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6]/70 mt-1 italic">
                             Admin: {req.admin_remarks}
                           </p>
                         )}
@@ -523,7 +523,7 @@ export default function TermUpgradePage() {
                     {/* Right side: Status + Actions */}
                     <div className="flex items-center gap-3 sm:flex-col sm:items-end">
                       {statusBadge(req.status)}
-                      <span className="text-xs text-[#8B7355] dark:text-white/30">
+                      <span className="text-xs text-[#8B7355] dark:text-[#b1a7a6]/50">
                         {new Date(req.requested_at).toLocaleDateString('en-US', {
                           year: 'numeric',
                           month: 'short',
@@ -580,7 +580,7 @@ export default function TermUpgradePage() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md mx-4 bg-white dark:bg-[#0d0d1a] rounded-2xl border border-[#DCC5B2] dark:border-white/10 shadow-2xl p-6"
+              className="w-full max-w-md mx-4 bg-white dark:bg-[#161a1d] rounded-2xl border border-[#DCC5B2] dark:border-[#3d4951]/50 shadow-2xl p-6"
             >
               <h3 className="text-lg font-bold text-[#5D4E37] dark:text-white mb-4">
                 Review Upgrade Request
@@ -588,28 +588,28 @@ export default function TermUpgradePage() {
 
               <div className="space-y-3 mb-4">
                 <div className="flex justify-between">
-                  <span className="text-sm text-[#8B7355] dark:text-white/50">Student</span>
+                  <span className="text-sm text-[#8B7355] dark:text-[#b1a7a6]">Student</span>
                   <span className="text-sm font-medium text-[#5D4E37] dark:text-white">
                     {reviewingRequest.students.full_name}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-[#8B7355] dark:text-white/50">Roll No</span>
+                  <span className="text-sm text-[#8B7355] dark:text-[#b1a7a6]">Roll No</span>
                   <span className="text-sm font-medium text-[#5D4E37] dark:text-white">
                     {reviewingRequest.students.roll_no}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-[#8B7355] dark:text-white/50">Upgrade</span>
+                  <span className="text-sm text-[#8B7355] dark:text-[#b1a7a6]">Upgrade</span>
                   <span className="flex items-center gap-2 text-sm font-medium text-[#5D4E37] dark:text-white">
                     Term {reviewingRequest.current_term}
-                    <ArrowUpCircle className="w-4 h-4 text-[#D9A299] dark:text-[#8400ff]" />
+                    <ArrowUpCircle className="w-4 h-4 text-[#D9A299] dark:text-[#ba181b]" />
                     Term {reviewingRequest.requested_term}
                   </span>
                 </div>
                 {reviewingRequest.students.cgpa > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-sm text-[#8B7355] dark:text-white/50">CGPA</span>
+                    <span className="text-sm text-[#8B7355] dark:text-[#b1a7a6]">CGPA</span>
                     <span className="text-sm font-medium text-[#5D4E37] dark:text-white">
                       {reviewingRequest.students.cgpa}
                     </span>
@@ -617,8 +617,8 @@ export default function TermUpgradePage() {
                 )}
                 {reviewingRequest.reason && (
                   <div>
-                    <span className="text-sm text-[#8B7355] dark:text-white/50">Reason</span>
-                    <p className="text-sm text-[#5D4E37] dark:text-white/80 mt-0.5">
+                    <span className="text-sm text-[#8B7355] dark:text-[#b1a7a6]">Reason</span>
+                    <p className="text-sm text-[#5D4E37] dark:text-[#f5f3f4] mt-0.5">
                       {reviewingRequest.reason}
                     </p>
                   </div>
@@ -626,7 +626,7 @@ export default function TermUpgradePage() {
               </div>
 
               <div className="mb-4">
-                <label className="block text-sm font-medium text-[#5D4E37] dark:text-white/70 mb-1">
+                <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-1">
                   Admin Remarks (Optional)
                 </label>
                 <textarea
@@ -634,7 +634,7 @@ export default function TermUpgradePage() {
                   onChange={(e) => setAdminRemarks(e.target.value)}
                   rows={2}
                   placeholder="Add any remarks..."
-                  className="w-full px-3 py-2 rounded-lg border border-[#DCC5B2] dark:border-white/10 bg-white dark:bg-[#1a1a2e] text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#8400ff] outline-none resize-none"
+                  className="w-full px-3 py-2 rounded-lg border border-[#DCC5B2] dark:border-[#3d4951]/50 bg-white dark:bg-[#161a1d] text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] outline-none resize-none"
                 />
               </div>
 
@@ -642,7 +642,7 @@ export default function TermUpgradePage() {
                 <button
                   onClick={() => !reviewing && setReviewingRequest(null)}
                   disabled={reviewing}
-                  className="px-4 py-2 rounded-lg border border-[#DCC5B2] dark:border-white/10 text-[#8B7355] dark:text-white/60 hover:bg-[#F0E4D3] dark:hover:bg-white/5 transition-colors disabled:opacity-50"
+                  className="px-4 py-2 rounded-lg border border-[#DCC5B2] dark:border-[#3d4951]/50 text-[#8B7355] dark:text-[#b1a7a6] hover:bg-[#F0E4D3] dark:hover:bg-[#0b090a] transition-colors disabled:opacity-50"
                 >
                   Cancel
                 </button>

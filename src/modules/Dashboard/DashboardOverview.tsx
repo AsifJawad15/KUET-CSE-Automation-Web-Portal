@@ -103,16 +103,16 @@ export default function DashboardOverview({ onMenuChange }: DashboardOverviewPro
       label: 'Total Students',
       value: stats.totalStudents,
       icon: Users,
-      color: 'from-[#8400ff] to-[#5c00b3]',
-      spotlightColor: 'rgba(132, 0, 255, 0.25)',
+      color: 'from-[#ba181b] to-[#660708]',
+      spotlightColor: 'rgba(186, 24, 27, 0.25)',
       menuId: 'add-student',
     },
     {
       label: 'Faculty Members',
       value: stats.totalFaculty,
       icon: GraduationCap,
-      color: 'from-[#00e5ff] to-[#00b3cc]',
-      spotlightColor: 'rgba(0, 229, 255, 0.25)',
+      color: 'from-[#5D4037] to-[#3E2723]',
+      spotlightColor: 'rgba(93, 64, 55, 0.25)',
       menuId: 'faculty-info',
     },
     {
@@ -127,8 +127,8 @@ export default function DashboardOverview({ onMenuChange }: DashboardOverviewPro
       label: 'Active Courses',
       value: stats.activeCourses,
       icon: BookOpen,
-      color: 'from-[#00e5ff] to-[#00b3cc]',
-      spotlightColor: 'rgba(0, 229, 255, 0.25)',
+      color: 'from-[#e5383b] to-[#ba181b]',
+      spotlightColor: 'rgba(229, 56, 59, 0.25)',
       menuId: 'course-info',
     },
   ];
@@ -159,14 +159,14 @@ export default function DashboardOverview({ onMenuChange }: DashboardOverviewPro
       {/* Welcome Header */}
       <motion.div
         variants={itemVariants}
-        className="bg-gradient-to-r from-[#D9A299] via-[#DCC5B2] to-[#D9A299] dark:from-[#8400ff] dark:via-[#5c00b3] dark:to-[#8400ff] rounded-2xl p-6 text-white relative overflow-hidden"
+        className="bg-gradient-to-r from-[#D9A299] via-[#DCC5B2] to-[#D9A299] dark:from-[#ba181b] dark:via-[#660708] dark:to-[#ba181b] rounded-2xl p-6 text-white relative overflow-hidden"
       >
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-20" />
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
 
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="w-6 h-6 text-[#5D4E37] dark:text-[#00e5ff]" />
+            <Sparkles className="w-6 h-6 text-[#5D4E37] dark:text-[#d3d3d3]" />
             <h1 className="text-2xl font-bold">
               Welcome back, {user?.name?.split(' ')[0] || 'User'}!
             </h1>
@@ -177,7 +177,7 @@ export default function DashboardOverview({ onMenuChange }: DashboardOverviewPro
         </div>
 
         <div className="absolute top-4 right-4 flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 border border-white/20">
-          <Clock className="w-4 h-4 text-[#5D4E37] dark:text-[#00e5ff]" />
+          <Clock className="w-4 h-4 text-[#5D4E37] dark:text-[#d3d3d3]" />
           <span className="text-sm font-medium">
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
           </span>
@@ -209,11 +209,11 @@ export default function DashboardOverview({ onMenuChange }: DashboardOverviewPro
                 </div>
                 <div className="mt-4">
                   {loading ? (
-                    <Loader2 className="w-6 h-6 text-[#D9A299] dark:text-[#8400ff] animate-spin" />
+                    <Loader2 className="w-6 h-6 text-[#D9A299] dark:text-[#ba181b] animate-spin" />
                   ) : (
                     <p className="text-3xl font-bold text-[#5D4E37] dark:text-white">{stat.value}</p>
                   )}
-                  <p className="text-sm text-[#8B7355] dark:text-white/60 mt-1">{stat.label}</p>
+                  <p className="text-sm text-[#8B7355] dark:text-[#b1a7a6] mt-1">{stat.label}</p>
                 </div>
               </SpotlightCard>
             </motion.div>
@@ -226,7 +226,7 @@ export default function DashboardOverview({ onMenuChange }: DashboardOverviewPro
         {/* Pending Term Upgrades */}
         <motion.div variants={itemVariants}>
           <SpotlightCard spotlightColor="rgba(245, 158, 11, 0.2)" className="p-0 overflow-hidden">
-            <div className="p-5 border-b border-[#DCC5B2] dark:border-white/10 flex items-center justify-between">
+            <div className="p-5 border-b border-[#DCC5B2] dark:border-[#3d4951]/50 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-[#5D4E37] dark:text-white flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-amber-500" />
                 Term Upgrade Requests
@@ -240,12 +240,12 @@ export default function DashboardOverview({ onMenuChange }: DashboardOverviewPro
 
             {loading ? (
               <div className="p-8 flex justify-center">
-                <Loader2 className="w-6 h-6 text-[#D9A299] dark:text-[#8400ff] animate-spin" />
+                <Loader2 className="w-6 h-6 text-[#D9A299] dark:text-[#ba181b] animate-spin" />
               </div>
             ) : stats.recentUpgrades.length === 0 ? (
               <div className="p-8 text-center">
                 <TrendingUp className="w-8 h-8 mx-auto text-[#DCC5B2] dark:text-white/20 mb-2" />
-                <p className="text-sm text-[#8B7355] dark:text-white/40">No upgrade requests yet</p>
+                <p className="text-sm text-[#8B7355] dark:text-[#b1a7a6]/70">No upgrade requests yet</p>
               </div>
             ) : (
               <div className="divide-y divide-[#DCC5B2] dark:divide-white/10">
@@ -255,24 +255,24 @@ export default function DashboardOverview({ onMenuChange }: DashboardOverviewPro
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    className="p-4 hover:bg-[#F0E4D3] dark:hover:bg-white/5 transition-colors"
+                    className="p-4 hover:bg-[#F0E4D3] dark:hover:bg-[#0b090a] transition-colors"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="mt-0.5">{getUpgradeStatusIcon(req.status)}</div>
                         <div>
-                          <p className="text-sm font-medium text-[#5D4E37] dark:text-white/80">
+                          <p className="text-sm font-medium text-[#5D4E37] dark:text-[#f5f3f4]">
                             {req.students?.full_name || 'Unknown'}
                           </p>
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="text-xs text-[#8B7355] dark:text-white/40">
+                            <span className="text-xs text-[#8B7355] dark:text-[#b1a7a6]/70">
                               {req.students?.roll_no}
                             </span>
-                            <span className="text-xs text-[#8B7355] dark:text-white/40">•</span>
-                            <span className="text-xs text-[#8B7355] dark:text-white/50">
+                            <span className="text-xs text-[#8B7355] dark:text-[#b1a7a6]/70">•</span>
+                            <span className="text-xs text-[#8B7355] dark:text-[#b1a7a6]">
                               Term {req.current_term}
                             </span>
-                            <ArrowUpCircle className="w-3 h-3 text-[#D9A299] dark:text-[#8400ff]" />
+                            <ArrowUpCircle className="w-3 h-3 text-[#D9A299] dark:text-[#ba181b]" />
                             <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
                               Term {req.requested_term}
                             </span>
@@ -288,7 +288,7 @@ export default function DashboardOverview({ onMenuChange }: DashboardOverviewPro
               </div>
             )}
 
-            <div className="p-4 border-t border-[#DCC5B2] dark:border-white/10">
+            <div className="p-4 border-t border-[#DCC5B2] dark:border-[#3d4951]/50">
               <button
                 onClick={() => onMenuChange?.('term-upgrade')}
                 className="text-sm text-[#D9A299] font-medium hover:text-[#c49088] transition-colors"
@@ -302,7 +302,7 @@ export default function DashboardOverview({ onMenuChange }: DashboardOverviewPro
         {/* Department Summary */}
         <motion.div variants={itemVariants}>
           <SpotlightCard spotlightColor="rgba(220, 197, 178, 0.3)" className="p-0 overflow-hidden">
-            <div className="p-5 border-b border-[#DCC5B2] dark:border-white/10">
+            <div className="p-5 border-b border-[#DCC5B2] dark:border-[#3d4951]/50">
               <h2 className="text-lg font-semibold text-[#5D4E37] dark:text-white flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-[#DCC5B2]" />
                 Department Overview
@@ -311,15 +311,15 @@ export default function DashboardOverview({ onMenuChange }: DashboardOverviewPro
 
             {loading ? (
               <div className="p-8 flex justify-center">
-                <Loader2 className="w-6 h-6 text-[#D9A299] dark:text-[#8400ff] animate-spin" />
+                <Loader2 className="w-6 h-6 text-[#D9A299] dark:text-[#ba181b] animate-spin" />
               </div>
             ) : (
               <div className="divide-y divide-[#DCC5B2] dark:divide-white/10">
                 {[
-                  { label: 'Total Students Enrolled', value: stats.totalStudents, icon: Users, color: 'text-[#8400ff]' },
-                  { label: 'Faculty Members', value: stats.totalFaculty, icon: GraduationCap, color: 'text-[#00e5ff]' },
+                  { label: 'Total Students Enrolled', value: stats.totalStudents, icon: Users, color: 'text-[#ba181b]' },
+                  { label: 'Faculty Members', value: stats.totalFaculty, icon: GraduationCap, color: 'text-[#5D4037]' },
                   { label: 'Classrooms & Labs', value: stats.totalRooms, icon: Building2, color: 'text-[#D9A299]' },
-                  { label: 'Courses in Curriculum', value: stats.activeCourses, icon: BookOpen, color: 'text-[#00e5ff]' },
+                  { label: 'Courses in Curriculum', value: stats.activeCourses, icon: BookOpen, color: 'text-[#8B6914]' },
                   { label: 'Pending Upgrades', value: stats.pendingUpgrades, icon: TrendingUp, color: 'text-amber-500' },
                 ].map((item, index) => {
                   const Icon = item.icon;
@@ -329,12 +329,12 @@ export default function DashboardOverview({ onMenuChange }: DashboardOverviewPro
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.05 }}
-                      className="p-4 hover:bg-[#F0E4D3] dark:hover:bg-white/5 transition-colors"
+                      className="p-4 hover:bg-[#F0E4D3] dark:hover:bg-[#0b090a] transition-colors"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <Icon className={`w-4 h-4 ${item.color}`} />
-                          <span className="text-sm text-[#5D4E37] dark:text-white/70">{item.label}</span>
+                          <span className="text-sm text-[#5D4E37] dark:text-[#d3d3d3]">{item.label}</span>
                         </div>
                         <span className="text-sm font-bold text-[#5D4E37] dark:text-white">{item.value}</span>
                       </div>
@@ -357,7 +357,7 @@ export default function DashboardOverview({ onMenuChange }: DashboardOverviewPro
               { label: 'Schedule', icon: Calendar, color: 'from-[#DCC5B2] to-[#F0E4D3]', menuId: 'schedule' },
               { label: 'Room Allocation', icon: Building2, color: 'from-[#D9A299] to-[#F0E4D3]', menuId: 'room-allocation' },
               { label: 'Courses', icon: BookOpen, color: 'from-[#DCC5B2] to-[#D9A299]', menuId: 'course-allocation' },
-              { label: 'Term Upgrade', icon: TrendingUp, color: 'from-[#8400ff] to-[#5c00b3]', menuId: 'term-upgrade' },
+              { label: 'Term Upgrade', icon: TrendingUp, color: 'from-[#ba181b] to-[#660708]', menuId: 'term-upgrade' },
             ].map((action) => {
               const Icon = action.icon;
               return (
@@ -366,12 +366,12 @@ export default function DashboardOverview({ onMenuChange }: DashboardOverviewPro
                   onClick={() => onMenuChange?.(action.menuId)}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="flex flex-col items-center gap-2 p-4 rounded-xl bg-[#F0E4D3] dark:bg-white/5 hover:bg-[#DCC5B2] dark:hover:bg-white/10 border border-[#DCC5B2] dark:border-white/10 transition-colors group"
+                  className="flex flex-col items-center gap-2 p-4 rounded-xl bg-[#F0E4D3] dark:bg-[#0b090a] hover:bg-[#DCC5B2] dark:hover:bg-[#3d4951]/30 border border-[#DCC5B2] dark:border-[#3d4951]/50 transition-colors group"
                 >
                   <div className={`p-3 rounded-xl bg-gradient-to-br ${action.color} shadow-lg group-hover:shadow-xl group-hover:shadow-[#D9A299]/30 transition-shadow`}>
                     <Icon className="w-5 h-5 text-white" />
                   </div>
-                  <span className="text-sm font-medium text-[#5D4E37] dark:text-white/80">{action.label}</span>
+                  <span className="text-sm font-medium text-[#5D4E37] dark:text-[#f5f3f4]">{action.label}</span>
                 </motion.button>
               );
             })}

@@ -56,8 +56,8 @@ export default function StudentInfoPage() {
   const getSessionColor = (session: string) => {
     const year = parseInt(session);
     const colors = [
-      'bg-[#8400ff]/20 text-[#a855f7] border border-[#8400ff]/30',
-      'bg-[#00e5ff]/20 text-[#00e5ff] border border-[#00e5ff]/30',
+      'bg-[#ba181b]/20 text-[#e5383b] border border-[#ba181b]/30',
+      'bg-[#d3d3d3]/20 text-[#d3d3d3] border border-[#d3d3d3]/30',
       'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
       'bg-amber-500/20 text-amber-400 border border-amber-500/30',
     ];
@@ -108,10 +108,10 @@ export default function StudentInfoPage() {
       >
         <div>
           <h1 className="text-2xl font-bold text-[#5D4E37] dark:text-white">Student Directory</h1>
-          <p className="text-[#8B7355] dark:text-white/60 mt-1">View all enrolled students</p>
+          <p className="text-[#8B7355] dark:text-[#b1a7a6] mt-1">View all enrolled students</p>
         </div>
         
-        <div className="flex items-center gap-2 text-sm text-[#8B7355] dark:text-white/60">
+        <div className="flex items-center gap-2 text-sm text-[#8B7355] dark:text-[#b1a7a6]">
           <UserCog className="w-4 h-4" />
           <span>{filteredStudents.length} students</span>
         </div>
@@ -130,13 +130,13 @@ export default function StudentInfoPage() {
             placeholder="Search by name, roll, or email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-[#FAF7F3] dark:bg-[#0d0d1a] text-[#5D4E37] dark:text-white placeholder:text-[#8B7355] dark:placeholder:text-white/40 focus:border-[#D9A299] dark:focus:border-[#8400ff] focus:outline-none focus:ring-1 focus:ring-[#D9A299] dark:focus:ring-[#8400ff]"
+            className="w-full px-4 py-2 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#161a1d] text-[#5D4E37] dark:text-white placeholder:text-[#8B7355] dark:placeholder:text-white/40 focus:border-[#D9A299] dark:focus:border-[#ba181b] focus:outline-none focus:ring-1 focus:ring-[#D9A299] dark:focus:ring-[#ba181b]"
           />
         </div>
         <select
           value={filterSession}
           onChange={(e) => setFilterSession(e.target.value)}
-          className="px-4 py-2 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-[#FAF7F3] dark:bg-[#0d0d1a] text-[#5D4E37] dark:text-white focus:border-[#D9A299] dark:focus:border-[#8400ff] focus:outline-none"
+          className="px-4 py-2 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#161a1d] text-[#5D4E37] dark:text-white focus:border-[#D9A299] dark:focus:border-[#ba181b] focus:outline-none"
         >
           <option value="all">All Sessions</option>
           {uniqueSessions.map(session => (
@@ -146,7 +146,7 @@ export default function StudentInfoPage() {
         <select
           value={filterTerm}
           onChange={(e) => setFilterTerm(e.target.value)}
-          className="px-4 py-2 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-[#FAF7F3] dark:bg-[#0d0d1a] text-[#5D4E37] dark:text-white focus:border-[#D9A299] dark:focus:border-[#8400ff] focus:outline-none"
+          className="px-4 py-2 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#161a1d] text-[#5D4E37] dark:text-white focus:border-[#D9A299] dark:focus:border-[#ba181b] focus:outline-none"
         >
           <option value="all">All Terms</option>
           {uniqueTerms.map(term => (
@@ -158,8 +158,8 @@ export default function StudentInfoPage() {
       {/* Student Grid */}
       {loading && students.length === 0 ? (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-[#D9A299] dark:text-[#8400ff]" />
-          <span className="ml-3 text-[#8B7355] dark:text-white/60">Loading students...</span>
+          <Loader2 className="w-8 h-8 animate-spin text-[#D9A299] dark:text-[#ba181b]" />
+          <span className="ml-3 text-[#8B7355] dark:text-[#b1a7a6]">Loading students...</span>
         </div>
       ) : filteredStudents.length === 0 ? (
         <motion.div
@@ -168,7 +168,7 @@ export default function StudentInfoPage() {
           className="text-center py-12"
         >
           <GraduationCap className="w-16 h-16 mx-auto text-[#DCC5B2] dark:text-white/20 mb-4" />
-          <p className="text-[#8B7355] dark:text-white/60">
+          <p className="text-[#8B7355] dark:text-[#b1a7a6]">
             {searchTerm || filterSession !== 'all' || filterTerm !== 'all' 
               ? 'No students match your filters' 
               : 'No students found. Add students to get started!'}
@@ -203,7 +203,7 @@ export default function StudentInfoPage() {
                         <h3 className="font-semibold text-[#5D4E37] dark:text-white">
                           {student.full_name}
                         </h3>
-                        <p className="text-sm text-[#8B7355] dark:text-white/60">
+                        <p className="text-sm text-[#8B7355] dark:text-[#b1a7a6]">
                           Roll: {student.roll_no}
                         </p>
                       </div>
@@ -218,11 +218,11 @@ export default function StudentInfoPage() {
 
                   {/* Contact Info */}
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-[#8B7355] dark:text-white/60">
+                    <div className="flex items-center gap-2 text-sm text-[#8B7355] dark:text-[#b1a7a6]">
                       <Mail className="w-4 h-4 flex-shrink-0" />
                       <span className="truncate">{student.profile.email}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-[#8B7355] dark:text-white/60">
+                    <div className="flex items-center gap-2 text-sm text-[#8B7355] dark:text-[#b1a7a6]">
                       <Phone className="w-4 h-4 flex-shrink-0" />
                       <span>{student.phone}</span>
                     </div>
@@ -234,14 +234,14 @@ export default function StudentInfoPage() {
                       <Calendar className="w-3 h-3 inline mr-1" />
                       Session {student.session}
                     </span>
-                    <span className="px-2.5 py-1 bg-[#5D4E37]/10 dark:bg-white/10 text-[#5D4E37] dark:text-white text-xs rounded-full">
+                    <span className="px-2.5 py-1 bg-[#5D4E37]/10 dark:bg-[#3d4951]/30 text-[#5D4E37] dark:text-white text-xs rounded-full">
                       <GraduationCap className="w-3 h-3 inline mr-1" />
                       {getTermLabel(student.term)}
                     </span>
                   </div>
 
                   {/* Actions */}
-                  <div className="pt-4 border-t border-[#DCC5B2]/50 dark:border-[#392e4e]/50">
+                  <div className="pt-4 border-t border-[#DCC5B2]/50 dark:border-[#3d4951]/50">
                     <button
                       onClick={() => handleDelete(student.user_id)}
                       disabled={loading}

@@ -48,7 +48,7 @@ export default function Dashboard() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#FAF7F3] dark:bg-[#060010] flex items-center justify-center transition-colors">
+      <div className="min-h-screen bg-[#FAF7F3] dark:bg-[#0b090a] flex items-center justify-center transition-colors">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -61,7 +61,7 @@ export default function Dashboard() {
             animate={{ y: [0, -14, 0] }}
             transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
           />
-          <p className="text-[#8B7355] dark:text-white/60 font-medium">Loading dashboard...</p>
+          <p className="text-[#8B7355] dark:text-[#b1a7a6] font-medium">Loading dashboard...</p>
         </motion.div>
       </div>
     );
@@ -101,7 +101,7 @@ export default function Dashboard() {
           // Only admin can access
           if (user?.role !== 'admin') {
             return (
-              <div className="bg-[#0d0d1a] rounded-2xl shadow-lg p-8 border border-[#392e4e] text-center">
+              <div className="bg-[#161a1d] rounded-2xl shadow-lg p-8 border border-[#3d4951] text-center">
                 <div className="w-16 h-16 mx-auto bg-red-500/10 rounded-full flex items-center justify-center mb-4">
                   <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -122,9 +122,9 @@ export default function Dashboard() {
         case 'website-cms':
           if (user?.role !== 'admin') {
             return (
-              <div className="bg-white dark:bg-[#1A0F08] rounded-2xl shadow-lg p-8 border border-[#DCC5B2] dark:border-[#2C1810] text-center">
+              <div className="bg-white dark:bg-[#161a1d] rounded-2xl shadow-lg p-8 border border-[#DCC5B2] dark:border-[#161a1d] text-center">
                 <h2 className="text-xl font-bold text-[#2C1810] dark:text-white mb-2">Access Restricted</h2>
-                <p className="text-[#6B5744] dark:text-white/60">Website CMS is only accessible to administrators.</p>
+                <p className="text-[#6B5744] dark:text-[#b1a7a6]">Website CMS is only accessible to administrators.</p>
               </div>
             );
           }
@@ -151,7 +151,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF7F3] dark:bg-[#060010] transition-colors duration-300">
+    <div className="min-h-screen bg-[#FAF7F3] dark:bg-[#0b090a] transition-colors duration-300">
       <Sidebar 
         activeItem={activeMenu} 
         onMenuChange={setActiveMenu}

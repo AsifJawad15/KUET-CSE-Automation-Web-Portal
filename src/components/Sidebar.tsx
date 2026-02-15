@@ -108,10 +108,10 @@ export default function Sidebar({ activeItem, onMenuChange, isCollapsed, onToggl
       variants={sidebarVariants}
       animate={isCollapsed ? 'collapsed' : 'expanded'}
       transition={{ duration: 0.3, ease: 'easeInOut' }}
-      className="bg-[#FAF7F3] dark:bg-[#060010]/80 backdrop-blur-xl border-r border-[#DCC5B2] dark:border-white/10 h-screen fixed left-0 top-0 flex flex-col z-40 shadow-xl shadow-[#DCC5B2]/30 dark:shadow-[#8400ff]/5 transition-colors"
+      className="bg-white dark:bg-[#161a1d] border-r border-[#E8DDD1] dark:border-[#3d4951]/50 h-screen fixed left-0 top-0 flex flex-col z-40 shadow-sm transition-colors"
     >
       {/* Header */}
-      <div className={`p-4 border-b border-slate-200 dark:border-white/10 ${isCollapsed ? 'px-3' : ''}`}>
+      <div className={`p-4 border-b border-[#E8DDD1] dark:border-[#3d4951]/50 ${isCollapsed ? 'px-3' : ''}`}>
         <div className="flex items-center justify-between">
           <AnimatePresence mode="wait">
             {!isCollapsed && (
@@ -122,12 +122,12 @@ export default function Sidebar({ activeItem, onMenuChange, isCollapsed, onToggl
                 transition={{ duration: 0.2 }}
                 className="flex items-center gap-3"
               >
-                <div className="w-10 h-10 rounded-xl bg-[#D9A299]/30 dark:bg-[#8400ff]/30 backdrop-blur-sm border border-[#D9A299]/50 dark:border-[#8400ff]/40 flex items-center justify-center shadow-lg shadow-[#D9A299]/20">
-                  <Sparkles className="w-5 h-5 text-[#D9A299] dark:text-white" />
+                <div className="w-10 h-10 rounded-xl bg-[#5D4037] dark:bg-[#ba181b] flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 text-white" />
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-[#5D4E37] dark:text-white">KUET CSE</h2>
-                  <p className="text-xs text-[#8B7355] dark:text-white/50">Automation Portal</p>
+                  <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6]">Automation Portal</p>
                 </div>
               </motion.div>
             )}
@@ -137,7 +137,7 @@ export default function Sidebar({ activeItem, onMenuChange, isCollapsed, onToggl
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={onToggleCollapse}
-            className={`p-2 rounded-xl bg-[#F0E4D3] dark:bg-white/5 backdrop-blur-sm border border-[#DCC5B2] dark:border-white/15 text-[#8B7355] dark:text-white/60 hover:bg-[#D9A299]/30 hover:border-[#D9A299] hover:text-[#5D4E37] transition-colors ${isCollapsed ? 'mx-auto' : ''}`}
+            className={`p-2 rounded-xl bg-[#F5EDE4] dark:bg-[#0b090a] border border-[#E8DDD1] dark:border-[#3d4951] text-[#8B7355] dark:text-[#b1a7a6] hover:bg-[#E8DDD1] hover:text-[#5D4E37] dark:hover:text-white transition-colors ${isCollapsed ? 'mx-auto' : ''}`}
             title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {isCollapsed ? (
@@ -150,13 +150,13 @@ export default function Sidebar({ activeItem, onMenuChange, isCollapsed, onToggl
       </div>
 
       {/* User Info */}
-      <div className={`p-4 border-b border-[#DCC5B2] dark:border-white/10 ${isCollapsed ? 'px-3' : ''}`}>
+      <div className={`p-4 border-b border-[#E8DDD1] dark:border-[#3d4951]/50 ${isCollapsed ? 'px-3' : ''}`}>
         <div className={`flex items-center gap-3 ${isCollapsed ? 'justify-center' : ''}`}>
           <div className="relative">
-            <div className="w-10 h-10 rounded-full bg-[#D9A299]/30 dark:bg-[#8400ff]/30 backdrop-blur-sm border border-[#D9A299]/50 dark:border-[#8400ff]/40 flex items-center justify-center text-[#5D4E37] dark:text-white font-semibold text-sm shadow-md shadow-[#D9A299]/20">
+            <div className="w-10 h-10 rounded-full bg-[#5D4037] dark:bg-[#ba181b] flex items-center justify-center text-white font-semibold text-sm">
               {user?.name?.charAt(0) || 'U'}
             </div>
-            <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#FAF7F3] dark:border-[#060010]/80 ${user?.role === 'admin' ? 'bg-[#D9A299]' : 'bg-[#00e5ff]'}`} />
+            <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white dark:border-[#161a1d] ${user?.role === 'admin' ? 'bg-emerald-500' : 'bg-[#b1a7a6]'}`} />
           </div>
           <AnimatePresence mode="wait">
             {!isCollapsed && (
@@ -169,7 +169,7 @@ export default function Sidebar({ activeItem, onMenuChange, isCollapsed, onToggl
                 <p className="text-sm font-semibold text-[#5D4E37] dark:text-white truncate">
                   {user?.name || 'User'}
                 </p>
-                <p className="text-xs text-[#8B7355] dark:text-white/50 capitalize">
+                <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6] capitalize">
                   {user?.role || 'Guest'}
                 </p>
               </motion.div>
@@ -191,13 +191,13 @@ export default function Sidebar({ activeItem, onMenuChange, isCollapsed, onToggl
               onClick={() => onMenuChange(item.id)}
             >
               <div
-                className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 group relative ${
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative ${
                   isActive
-                    ? 'bg-[#D9A299]/30 dark:bg-[#8400ff]/30 backdrop-blur-sm border border-[#D9A299]/50 dark:border-[#8400ff]/40 text-[#5D4E37] dark:text-white shadow-lg shadow-[#D9A299]/15'
-                    : 'text-[#8B7355] dark:text-white/60 hover:bg-[#F0E4D3] dark:hover:bg-white/5 hover:text-[#5D4E37] dark:hover:text-white border border-transparent'
+                    ? 'bg-[#5D4037] dark:bg-[#ba181b] text-white shadow-sm'
+                    : 'text-[#6B5744] dark:text-[#b1a7a6] hover:bg-[#F5EDE4] dark:hover:bg-[#0b090a] hover:text-[#5D4E37] dark:hover:text-white border border-transparent'
                 } ${isCollapsed ? 'justify-center px-2' : ''}`}
               >
-                <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-[#5D4E37] dark:text-white' : 'text-[#8B7355] dark:text-white/50 group-hover:text-[#D9A299]'} transition-colors`} />
+                <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-white' : 'text-[#8B7355] dark:text-[#b1a7a6] group-hover:text-[#5D4037] dark:group-hover:text-[#e5383b]'} transition-colors`} />
                 
                 <AnimatePresence mode="wait">
                   {!isCollapsed && (
@@ -222,7 +222,7 @@ export default function Sidebar({ activeItem, onMenuChange, isCollapsed, onToggl
 
                 {/* Tooltip for collapsed state */}
                 {isCollapsed && (
-                  <div className="absolute left-full ml-3 px-3 py-2 bg-[#FAF7F3] dark:bg-[#0d0d1a]/90 backdrop-blur-md border border-[#DCC5B2] dark:border-white/15 text-[#5D4E37] dark:text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 shadow-xl">
+                  <div className="absolute left-full ml-3 px-3 py-2 bg-[#FAF7F3] dark:bg-[#161a1d]/90 backdrop-blur-md border border-[#DCC5B2] dark:border-white/15 text-[#5D4E37] dark:text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 shadow-xl">
                     {item.label}
                   </div>
                 )}
@@ -233,19 +233,19 @@ export default function Sidebar({ activeItem, onMenuChange, isCollapsed, onToggl
       </nav>
 
       {/* Footer Actions */}
-      <div className={`p-3 border-t border-[#DCC5B2] dark:border-white/10 space-y-1 ${isCollapsed ? 'px-2' : ''}`}>
+      <div className={`p-3 border-t border-[#E8DDD1] dark:border-[#3d4951]/50 space-y-1 ${isCollapsed ? 'px-2' : ''}`}>
         {/* Theme Toggle */}
         <motion.button
           whileHover={{ x: isCollapsed ? 0 : 4 }}
           whileTap={{ scale: 0.98 }}
           onClick={toggleTheme}
-          className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-[#8B7355] dark:text-white/60 hover:bg-[#F0E4D3] dark:hover:bg-white/5 hover:text-[#5D4E37] dark:hover:text-white transition-all ${isCollapsed ? 'justify-center px-2' : ''}`}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#6B5744] dark:text-[#b1a7a6] hover:bg-[#F5EDE4] dark:hover:bg-[#0b090a] hover:text-[#5D4037] dark:hover:text-white transition-all ${isCollapsed ? 'justify-center px-2' : ''}`}
           title={isCollapsed ? 'Toggle Theme' : ''}
         >
           {theme === 'dark' ? (
-            <Sun className="w-5 h-5 text-amber-500" />
+            <Sun className="w-5 h-5 text-amber-400" />
           ) : (
-            <Moon className="w-5 h-5 text-[#D9A299]" />
+            <Moon className="w-5 h-5 text-[#5D4037]" />
           )}
           <AnimatePresence mode="wait">
             {!isCollapsed && (
@@ -265,7 +265,7 @@ export default function Sidebar({ activeItem, onMenuChange, isCollapsed, onToggl
         <motion.button
           whileHover={{ x: isCollapsed ? 0 : 4 }}
           whileTap={{ scale: 0.98 }}
-          className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-[#8B7355] dark:text-white/60 hover:bg-[#F0E4D3] dark:hover:bg-white/5 hover:text-[#5D4E37] dark:hover:text-white transition-all ${isCollapsed ? 'justify-center px-2' : ''}`}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#6B5744] dark:text-[#b1a7a6] hover:bg-[#F5EDE4] dark:hover:bg-[#0b090a] hover:text-[#5D4037] dark:hover:text-white transition-all ${isCollapsed ? 'justify-center px-2' : ''}`}
           title={isCollapsed ? 'Settings' : ''}
         >
           <Settings className="w-5 h-5" />
@@ -288,7 +288,7 @@ export default function Sidebar({ activeItem, onMenuChange, isCollapsed, onToggl
           whileHover={{ x: isCollapsed ? 0 : 4 }}
           whileTap={{ scale: 0.98 }}
           onClick={handleLogout}
-          className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-red-500 dark:text-red-400/80 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-300 transition-all ${isCollapsed ? 'justify-center px-2' : ''}`}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-red-500 dark:text-[#e5383b] hover:bg-red-50 dark:hover:bg-[#e5383b]/10 hover:text-red-600 dark:hover:text-[#ea5f62] transition-all ${isCollapsed ? 'justify-center px-2' : ''}`}
           title={isCollapsed ? 'Logout' : ''}
         >
           <LogOut className="w-5 h-5" />

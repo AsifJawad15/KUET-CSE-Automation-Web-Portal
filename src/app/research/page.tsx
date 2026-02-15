@@ -46,7 +46,7 @@ export default function ResearchPage() {
                 <div className="relative overflow-hidden">
                   <img src={getImageUrl(r.image_path)} alt={r.title} className="w-full h-52 object-cover transition-transform duration-700 group-hover:scale-110" />
                   <div className="absolute inset-0 bg-[#5D4037]/20 group-hover:bg-[#5D4037]/10 transition-all" />
-                  <div className="absolute bottom-0 inset-x-0 h-1/2 bg-gradient-to-t from-[#2C1810]/70 to-transparent" />
+                  <div className="absolute bottom-0 inset-x-0 h-1/2 bg-gradient-to-t from-[#161a1d]/70 to-transparent" />
                   <span className="absolute bottom-3 left-3 text-white text-xs font-medium bg-white/20 backdrop-blur-md px-3 py-1 rounded-full">{r.category.replace('_', ' ')}</span>
                 </div>
               )}

@@ -37,7 +37,7 @@ export default function FacultyPage() {
                 <img src={getImageUrl(data.hodMessage.photo_path)} alt={data.hodMessage.name}
                   className="w-full h-64 md:h-full object-cover" />
                 <div className="absolute inset-0 bg-[#5D4037]/15" />
-                <div className="absolute bottom-0 inset-x-0 h-1/3 bg-gradient-to-t from-[#2C1810]/50 to-transparent" />
+                <div className="absolute bottom-0 inset-x-0 h-1/3 bg-gradient-to-t from-[#161a1d]/50 to-transparent" />
               </div>
               <div className="md:col-span-2 p-8">
                 <span className="text-xs font-bold uppercase tracking-wider text-[#D4A574] mb-2 block">Head of Department</span>

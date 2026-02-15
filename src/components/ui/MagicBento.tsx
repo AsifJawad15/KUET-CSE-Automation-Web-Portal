@@ -134,9 +134,9 @@ export const BentoStatCard: React.FC<BentoStatCardProps> = ({
         </div>
         <div className="mt-auto">
           <h3 className="text-2xl font-bold text-[#5D4E37] dark:text-white mb-1">{value}</h3>
-          <p className="text-sm text-[#8B7355] dark:text-white/60">{title}</p>
+          <p className="text-sm text-[#8B7355] dark:text-[#b1a7a6]">{title}</p>
           {subtitle && (
-            <p className="text-xs text-[#A89888] dark:text-white/40 mt-1">{subtitle}</p>
+            <p className="text-xs text-[#A89888] dark:text-[#b1a7a6]/70 mt-1">{subtitle}</p>
           )}
         </div>
       </div>
@@ -170,22 +170,22 @@ export const BentoListCard: React.FC<BentoListCardProps> = ({
   return (
     <BentoItem spotlightColor={spotlightColor} delay={delay} colSpan={colSpan} rowSpan={rowSpan}>
       <div className="p-5 h-full flex flex-col">
-        <h3 className="text-sm font-semibold text-[#5D4E37] dark:text-white/80 mb-4">{title}</h3>
-        <div className="space-y-3 flex-1 overflow-y-auto max-h-[300px] pr-1 [&::-webkit-scrollbar]:w-[4px] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#DCC5B2] dark:[&::-webkit-scrollbar-thumb]:bg-[#392e4e] [&::-webkit-scrollbar-thumb]:rounded-full">
+        <h3 className="text-sm font-semibold text-[#5D4E37] dark:text-[#f5f3f4] mb-4">{title}</h3>
+        <div className="space-y-3 flex-1 overflow-y-auto max-h-[300px] pr-1 [&::-webkit-scrollbar]:w-[4px] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#DCC5B2] dark:[&::-webkit-scrollbar-thumb]:bg-[#3d4951] [&::-webkit-scrollbar-thumb]:rounded-full">
           {items.map((item, index) => (
             <motion.div
               key={item.id}
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: delay + index * 0.05 }}
-              className="flex items-center justify-between p-2.5 rounded-lg bg-[#F0E4D3] dark:bg-white/5 hover:bg-[#DCC5B2] dark:hover:bg-[#8400ff]/10 transition-colors group cursor-pointer"
+              className="flex items-center justify-between p-2.5 rounded-lg bg-[#F0E4D3] dark:bg-[#0b090a] hover:bg-[#DCC5B2] dark:hover:bg-[#ba181b]/10 transition-colors group cursor-pointer"
             >
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-[#5D4E37] dark:text-white font-medium truncate group-hover:text-[#D9A299] dark:group-hover:text-[#00e5ff] transition-colors">
+                <p className="text-sm text-[#5D4E37] dark:text-white font-medium truncate group-hover:text-[#D9A299] dark:group-hover:text-[#d3d3d3] transition-colors">
                   {item.primary}
                 </p>
                 {item.secondary && (
-                  <p className="text-xs text-[#8B7355] dark:text-white/50 truncate">{item.secondary}</p>
+                  <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6] truncate">{item.secondary}</p>
                 )}
               </div>
               {item.badge && (
@@ -227,7 +227,7 @@ export const BentoChartCard: React.FC<BentoChartCardProps> = ({
   return (
     <BentoItem spotlightColor={spotlightColor} delay={delay} colSpan={colSpan} rowSpan={rowSpan}>
       <div className="p-5 h-full flex flex-col">
-        <h3 className="text-sm font-semibold text-[#5D4E37] dark:text-white/80 mb-4">{title}</h3>
+        <h3 className="text-sm font-semibold text-[#5D4E37] dark:text-[#f5f3f4] mb-4">{title}</h3>
         <div className="flex-1 min-h-0">
           {children}
         </div>
