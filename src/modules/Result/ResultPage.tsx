@@ -105,7 +105,7 @@ export default function ResultPage() {
   }, [results, selectedCourse]);
 
   const getGrade = (total: number): { grade: string; color: string } => {
-    if (total >= 70) return { grade: 'A+', color: '#00e5ff' };
+    if (total >= 70) return { grade: 'A+', color: '#d3d3d3' };
     if (total >= 65) return { grade: 'A', color: '#22c55e' };
     if (total >= 60) return { grade: 'A-', color: '#84cc16' };
     if (total >= 55) return { grade: 'B+', color: '#eab308' };
@@ -139,24 +139,24 @@ export default function ResultPage() {
       >
         <div>
           <h1 className="text-2xl font-bold text-[#5D4E37] dark:text-white">Result Management</h1>
-          <p className="text-[#8B7355] dark:text-white/60 mt-1">Enter and manage student results</p>
+          <p className="text-[#8B7355] dark:text-[#b1a7a6] mt-1">Enter and manage student results</p>
         </div>
         <div className="flex items-center gap-3">
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="px-4 py-2 rounded-full bg-[#F0E4D3] dark:bg-[#0d0d1a] border border-[#DCC5B2] dark:border-[#392e4e] text-[#5D4E37] dark:text-white/70 hover:border-[#D9A299] dark:hover:border-[#8400ff]/50 flex items-center gap-2 transition-colors"
+            className="px-4 py-2 rounded-full bg-[#F0E4D3] dark:bg-[#161a1d] border border-[#DCC5B2] dark:border-[#3d4951] text-[#5D4E37] dark:text-[#d3d3d3] hover:border-[#D9A299] dark:hover:border-[#ba181b]/50 flex items-center gap-2 transition-colors"
           >
             <Download className="w-4 h-4" />
             Export
           </motion.button>
-          <div className="flex bg-[#F0E4D3] dark:bg-[#0d0d1a] border border-[#DCC5B2] dark:border-[#392e4e] rounded-full p-1">
+          <div className="flex bg-[#F0E4D3] dark:bg-[#161a1d] border border-[#DCC5B2] dark:border-[#3d4951] rounded-full p-1">
             <button
               onClick={() => setViewMode('input')}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
                 viewMode === 'input' 
                   ? 'bg-[#D9A299] text-white shadow-lg shadow-[#D9A299]/25' 
-                  : 'text-[#8B7355] dark:text-white/60 hover:text-[#5D4E37] dark:hover:text-white'
+                  : 'text-[#8B7355] dark:text-[#b1a7a6] hover:text-[#5D4E37] dark:hover:text-white'
               }`}
             >
               Input Results
@@ -166,7 +166,7 @@ export default function ResultPage() {
               className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
                 viewMode === 'view' 
                   ? 'bg-[#D9A299] text-white shadow-lg shadow-[#D9A299]/25' 
-                  : 'text-[#8B7355] dark:text-white/60 hover:text-[#5D4E37] dark:hover:text-white'
+                  : 'text-[#8B7355] dark:text-[#b1a7a6] hover:text-[#5D4E37] dark:hover:text-white'
               }`}
             >
               View Results
@@ -178,7 +178,7 @@ export default function ResultPage() {
       {/* Stats Cards - Bento Grid */}
       <BentoGrid cols={4} gap="md">
         <BentoStatCard
-          icon={<Users className="w-5 h-5 text-[#8400ff]" />}
+          icon={<Users className="w-5 h-5 text-[#ba181b]" />}
           title="Total Students"
           value={stats.totalStudents}
           subtitle={`Section ${selectedSection}`}
@@ -186,7 +186,7 @@ export default function ResultPage() {
           delay={0}
         />
         <BentoStatCard
-          icon={<TrendingUp className="w-5 h-5 text-[#00e5ff]" />}
+          icon={<TrendingUp className="w-5 h-5 text-[#d3d3d3]" />}
           title="Class Average"
           value={stats.average}
           subtitle="Out of 75"
@@ -221,19 +221,19 @@ export default function ResultPage() {
         className="flex flex-col sm:flex-row gap-4"
       >
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B7355] dark:text-white/40" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B7355] dark:text-[#b1a7a6]/70" />
           <input
             type="text"
             placeholder="Search by name or roll..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-[#FAF7F3] dark:bg-[#0d0d1a] text-[#5D4E37] dark:text-white placeholder:text-[#8B7355] dark:placeholder:text-white/40 focus:border-[#D9A299] dark:focus:border-[#8400ff] focus:outline-none focus:ring-1 focus:ring-[#D9A299] dark:focus:ring-[#8400ff]"
+            className="w-full pl-10 pr-4 py-2 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#161a1d] text-[#5D4E37] dark:text-white placeholder:text-[#8B7355] dark:placeholder:text-white/40 focus:border-[#D9A299] dark:focus:border-[#ba181b] focus:outline-none focus:ring-1 focus:ring-[#D9A299] dark:focus:ring-[#ba181b]"
           />
         </div>
         <select
           value={selectedCourse}
           onChange={(e) => setSelectedCourse(e.target.value)}
-          className="px-4 py-2 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-[#FAF7F3] dark:bg-[#0d0d1a] text-[#5D4E37] dark:text-white focus:border-[#D9A299] dark:focus:border-[#8400ff] focus:outline-none"
+          className="px-4 py-2 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#161a1d] text-[#5D4E37] dark:text-white focus:border-[#D9A299] dark:focus:border-[#ba181b] focus:outline-none"
         >
           {dummyCourses.map(course => (
             <option key={course.id} value={course.code}>{course.code} - {course.title}</option>
@@ -242,7 +242,7 @@ export default function ResultPage() {
         <select
           value={selectedSection}
           onChange={(e) => setSelectedSection(e.target.value)}
-          className="px-4 py-2 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-[#FAF7F3] dark:bg-[#0d0d1a] text-[#5D4E37] dark:text-white focus:border-[#D9A299] dark:focus:border-[#8400ff] focus:outline-none"
+          className="px-4 py-2 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#161a1d] text-[#5D4E37] dark:text-white focus:border-[#D9A299] dark:focus:border-[#ba181b] focus:outline-none"
         >
           <option value="A">Section A</option>
           <option value="B">Section B</option>
@@ -256,33 +256,33 @@ export default function ResultPage() {
         transition={{ delay: 0.3 }}
       >
         <SpotlightCard spotlightColor="rgba(217, 162, 153, 0.2)">
-          <div className="p-4 border-b border-[#DCC5B2] dark:border-[#392e4e] flex items-center justify-between">
+          <div className="p-4 border-b border-[#DCC5B2] dark:border-[#3d4951] flex items-center justify-between">
             <div>
               <h3 className="font-semibold text-[#5D4E37] dark:text-white">
                 {dummyCourses.find(c => c.code === selectedCourse)?.title}
               </h3>
-              <p className="text-sm text-[#8B7355] dark:text-white/50">{selectedCourse} - Section {selectedSection}</p>
+              <p className="text-sm text-[#8B7355] dark:text-[#b1a7a6]">{selectedCourse} - Section {selectedSection}</p>
             </div>
-            <span className="text-xs text-[#8B7355] dark:text-white/40 px-3 py-1 rounded-full bg-[#F0E4D3] dark:bg-white/5 border border-[#DCC5B2] dark:border-[#392e4e]">
+            <span className="text-xs text-[#8B7355] dark:text-[#b1a7a6]/70 px-3 py-1 rounded-full bg-[#F0E4D3] dark:bg-[#0b090a] border border-[#DCC5B2] dark:border-[#3d4951]">
               {filteredStudents.length} students
             </span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-[#F0E4D3] dark:bg-[#060010]/50 border-b border-[#DCC5B2] dark:border-[#392e4e]">
+              <thead className="bg-[#F0E4D3] dark:bg-[#0b090a]/50 border-b border-[#DCC5B2] dark:border-[#3d4951]">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase">Roll</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase">Name</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase">CT-1 (20)</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase">CT-2 (20)</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase">CT-3 (20)</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase">Attend. (10)</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase">Assign. (5)</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase">Total</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase">Grade</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-[#5D4E37] dark:text-[#b1a7a6] uppercase">Roll</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-[#5D4E37] dark:text-[#b1a7a6] uppercase">Name</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-[#5D4E37] dark:text-[#b1a7a6] uppercase">CT-1 (20)</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-[#5D4E37] dark:text-[#b1a7a6] uppercase">CT-2 (20)</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-[#5D4E37] dark:text-[#b1a7a6] uppercase">CT-3 (20)</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-[#5D4E37] dark:text-[#b1a7a6] uppercase">Attend. (10)</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-[#5D4E37] dark:text-[#b1a7a6] uppercase">Assign. (5)</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-[#5D4E37] dark:text-[#b1a7a6] uppercase">Total</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-[#5D4E37] dark:text-[#b1a7a6] uppercase">Grade</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#DCC5B2]/50 dark:divide-[#392e4e]/50">
+              <tbody className="divide-y divide-[#DCC5B2]/50 dark:divide-[#3d4951]/50">
                 {filteredStudents.map((student, index) => {
                   const total = calculateTotal(student.id);
                   const { grade, color } = getGrade(total);
@@ -293,10 +293,10 @@ export default function ResultPage() {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: 0.3 + index * 0.03 }}
-                      className="hover:bg-[#F0E4D3] dark:hover:bg-[#8400ff]/5 transition-colors"
+                      className="hover:bg-[#F0E4D3] dark:hover:bg-[#ba181b]/5 transition-colors"
                     >
                       <td className="px-4 py-3 font-medium text-[#5D4E37] dark:text-white">{student.roll}</td>
-                      <td className="px-4 py-3 text-[#8B7355] dark:text-white/70">{student.name}</td>
+                      <td className="px-4 py-3 text-[#8B7355] dark:text-[#d3d3d3]">{student.name}</td>
                       <td className="px-4 py-3 text-center">
                         {viewMode === 'input' ? (
                           <input
@@ -305,10 +305,10 @@ export default function ResultPage() {
                             max="20"
                             value={getResultValue(student.id, 'ct1') || ''}
                             onChange={(e) => handleResultChange(student.id, 'ct1', parseFloat(e.target.value) || 0)}
-                            className="w-16 px-2 py-1 text-center border border-[#DCC5B2] dark:border-[#392e4e] rounded bg-[#FAF7F3] dark:bg-[#060010] text-[#5D4E37] dark:text-white focus:border-[#D9A299] dark:focus:border-[#8400ff] focus:outline-none"
+                            className="w-16 px-2 py-1 text-center border border-[#DCC5B2] dark:border-[#3d4951] rounded bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white focus:border-[#D9A299] dark:focus:border-[#ba181b] focus:outline-none"
                           />
                         ) : (
-                          <span className="text-[#5D4E37] dark:text-white/80">{getResultValue(student.id, 'ct1')}</span>
+                          <span className="text-[#5D4E37] dark:text-[#f5f3f4]">{getResultValue(student.id, 'ct1')}</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-center">
@@ -319,10 +319,10 @@ export default function ResultPage() {
                             max="20"
                             value={getResultValue(student.id, 'ct2') || ''}
                             onChange={(e) => handleResultChange(student.id, 'ct2', parseFloat(e.target.value) || 0)}
-                            className="w-16 px-2 py-1 text-center border border-[#DCC5B2] dark:border-[#392e4e] rounded bg-[#FAF7F3] dark:bg-[#060010] text-[#5D4E37] dark:text-white focus:border-[#D9A299] dark:focus:border-[#8400ff] focus:outline-none"
+                            className="w-16 px-2 py-1 text-center border border-[#DCC5B2] dark:border-[#3d4951] rounded bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white focus:border-[#D9A299] dark:focus:border-[#ba181b] focus:outline-none"
                           />
                         ) : (
-                          <span className="text-[#5D4E37] dark:text-white/80">{getResultValue(student.id, 'ct2')}</span>
+                          <span className="text-[#5D4E37] dark:text-[#f5f3f4]">{getResultValue(student.id, 'ct2')}</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-center">
@@ -333,10 +333,10 @@ export default function ResultPage() {
                             max="20"
                             value={getResultValue(student.id, 'ct3') || ''}
                             onChange={(e) => handleResultChange(student.id, 'ct3', parseFloat(e.target.value) || 0)}
-                            className="w-16 px-2 py-1 text-center border border-[#DCC5B2] dark:border-[#392e4e] rounded bg-[#FAF7F3] dark:bg-[#060010] text-[#5D4E37] dark:text-white focus:border-[#D9A299] dark:focus:border-[#8400ff] focus:outline-none"
+                            className="w-16 px-2 py-1 text-center border border-[#DCC5B2] dark:border-[#3d4951] rounded bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white focus:border-[#D9A299] dark:focus:border-[#ba181b] focus:outline-none"
                           />
                         ) : (
-                          <span className="text-[#5D4E37] dark:text-white/80">{getResultValue(student.id, 'ct3')}</span>
+                          <span className="text-[#5D4E37] dark:text-[#f5f3f4]">{getResultValue(student.id, 'ct3')}</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-center">
@@ -347,10 +347,10 @@ export default function ResultPage() {
                             max="10"
                             value={getResultValue(student.id, 'attendance') || ''}
                             onChange={(e) => handleResultChange(student.id, 'attendance', parseFloat(e.target.value) || 0)}
-                            className="w-16 px-2 py-1 text-center border border-[#DCC5B2] dark:border-[#392e4e] rounded bg-[#FAF7F3] dark:bg-[#060010] text-[#5D4E37] dark:text-white focus:border-[#D9A299] dark:focus:border-[#8400ff] focus:outline-none"
+                            className="w-16 px-2 py-1 text-center border border-[#DCC5B2] dark:border-[#3d4951] rounded bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white focus:border-[#D9A299] dark:focus:border-[#ba181b] focus:outline-none"
                           />
                         ) : (
-                          <span className="text-[#5D4E37] dark:text-white/80">{getResultValue(student.id, 'attendance')}</span>
+                          <span className="text-[#5D4E37] dark:text-[#f5f3f4]">{getResultValue(student.id, 'attendance')}</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-center">
@@ -361,10 +361,10 @@ export default function ResultPage() {
                             max="5"
                             value={getResultValue(student.id, 'assignment') || ''}
                             onChange={(e) => handleResultChange(student.id, 'assignment', parseFloat(e.target.value) || 0)}
-                            className="w-16 px-2 py-1 text-center border border-[#DCC5B2] dark:border-[#392e4e] rounded bg-[#FAF7F3] dark:bg-[#060010] text-[#5D4E37] dark:text-white focus:border-[#D9A299] dark:focus:border-[#8400ff] focus:outline-none"
+                            className="w-16 px-2 py-1 text-center border border-[#DCC5B2] dark:border-[#3d4951] rounded bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white focus:border-[#D9A299] dark:focus:border-[#ba181b] focus:outline-none"
                           />
                         ) : (
-                          <span className="text-[#5D4E37] dark:text-white/80">{getResultValue(student.id, 'assignment')}</span>
+                          <span className="text-[#5D4E37] dark:text-[#f5f3f4]">{getResultValue(student.id, 'assignment')}</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-center font-bold" style={{ color }}>
@@ -385,11 +385,11 @@ export default function ResultPage() {
             </table>
           </div>
           {viewMode === 'input' && (
-            <div className="p-4 border-t border-[#DCC5B2] dark:border-[#392e4e] flex justify-end gap-3">
+            <div className="p-4 border-t border-[#DCC5B2] dark:border-[#3d4951] flex justify-end gap-3">
               <motion.button 
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="px-5 py-2.5 rounded-full border border-[#DCC5B2] dark:border-[#392e4e] text-[#5D4E37] dark:text-white/70 hover:bg-[#F0E4D3] dark:hover:bg-white/5 transition-colors"
+                className="px-5 py-2.5 rounded-full border border-[#DCC5B2] dark:border-[#3d4951] text-[#5D4E37] dark:text-[#d3d3d3] hover:bg-[#F0E4D3] dark:hover:bg-[#0b090a] transition-colors"
               >
                 Reset
               </motion.button>

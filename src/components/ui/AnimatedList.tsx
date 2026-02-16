@@ -130,7 +130,7 @@ const AnimatedList: React.FC<AnimatedListProps> = ({
   }, [selectedIndex, keyboardNav]);
 
   const defaultRenderItem = (item: string, index: number, isSelected: boolean) => (
-    <div className={`p-4 bg-[#111] rounded-xl border border-[#392e4e] transition-all duration-200 ${isSelected ? 'bg-[#1a1a2e] border-[#8400ff]/50' : 'hover:bg-[#1a1a2e]'} ${itemClassName}`}>
+    <div className={`p-4 bg-[#111] rounded-xl border border-[#3d4951] transition-all duration-200 ${isSelected ? 'bg-[#161a1d] border-[#ba181b]/50' : 'hover:bg-[#161a1d]'} ${itemClassName}`}>
       <p className="text-white m-0">{item}</p>
     </div>
   );
@@ -141,13 +141,13 @@ const AnimatedList: React.FC<AnimatedListProps> = ({
         ref={listRef}
         className={`overflow-y-auto p-2 ${
           displayScrollbar
-            ? '[&::-webkit-scrollbar]:w-[6px] [&::-webkit-scrollbar-track]:bg-[#060010] [&::-webkit-scrollbar-thumb]:bg-[#392e4e] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-[#8400ff]/50'
+            ? '[&::-webkit-scrollbar]:w-[6px] [&::-webkit-scrollbar-track]:bg-[#0b090a] [&::-webkit-scrollbar-thumb]:bg-[#3d4951] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-[#ba181b]/50'
             : 'scrollbar-hide'
         }`}
         style={{
           maxHeight,
           scrollbarWidth: displayScrollbar ? 'thin' : 'none',
-          scrollbarColor: '#392e4e #060010'
+          scrollbarColor: '#3d4951 #0b090a'
         }}
         onScroll={handleScroll}
       >
@@ -166,11 +166,11 @@ const AnimatedList: React.FC<AnimatedListProps> = ({
       {showGradients && (
         <>
           <div
-            className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-[#060010] to-transparent pointer-events-none transition-opacity duration-300"
+            className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-[#0b090a] to-transparent pointer-events-none transition-opacity duration-300"
             style={{ opacity: topGradientOpacity }}
           />
           <div
-            className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-[#060010] to-transparent pointer-events-none transition-opacity duration-300"
+            className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-[#0b090a] to-transparent pointer-events-none transition-opacity duration-300"
             style={{ opacity: bottomGradientOpacity }}
           />
         </>

@@ -63,14 +63,14 @@ function CourseFormModal({
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.9, y: 40 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="w-full max-w-lg bg-[#FAF7F3] dark:bg-[#0d0d1a] border border-[#DCC5B2] dark:border-[#392e4e] rounded-2xl shadow-2xl overflow-hidden"
+        className="w-full max-w-lg bg-[#FAF7F3] dark:bg-[#161a1d] border border-[#DCC5B2] dark:border-[#3d4951] rounded-2xl shadow-2xl overflow-hidden"
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-[#DCC5B2] dark:border-[#392e4e] bg-[#F0E4D3] dark:bg-white/5">
+        <div className="px-6 py-4 border-b border-[#DCC5B2] dark:border-[#3d4951] bg-[#F0E4D3] dark:bg-[#0b090a]">
           <h2 className="text-lg font-bold text-[#5D4E37] dark:text-white">
             {isEdit ? 'Edit Course' : 'Add New Course'}
           </h2>
-          <p className="text-sm text-[#8B7355] dark:text-white/50 mt-0.5">
+          <p className="text-sm text-[#8B7355] dark:text-[#b1a7a6] mt-0.5">
             {isEdit ? 'Update course information' : 'Fill in the details for the new course'}
           </p>
         </div>
@@ -80,7 +80,7 @@ function CourseFormModal({
           {/* Code & Title Row */}
           <div className="grid grid-cols-5 gap-4">
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-[#5D4E37] dark:text-white/70 mb-1">
+              <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-1">
                 Course Code <span className="text-red-400">*</span>
               </label>
               <input
@@ -88,12 +88,12 @@ function CourseFormModal({
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
                 placeholder="CSE 3201"
-                className={`w-full px-3 py-2 rounded-lg border ${errors.code ? 'border-red-400' : 'border-[#DCC5B2] dark:border-[#392e4e]'} bg-white dark:bg-white/5 text-[#5D4E37] dark:text-white placeholder-[#8B7355]/50 dark:placeholder-white/30 focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#8400ff] focus:border-transparent transition-all`}
+                className={`w-full px-3 py-2 rounded-lg border ${errors.code ? 'border-red-400' : 'border-[#DCC5B2] dark:border-[#3d4951]'} bg-white dark:bg-[#0b090a] text-[#5D4E37] dark:text-white placeholder-[#8B7355]/50 dark:placeholder-[#b1a7a6]/50 focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all`}
               />
               {errors.code && <p className="text-xs text-red-400 mt-1">{errors.code}</p>}
             </div>
             <div className="col-span-3">
-              <label className="block text-sm font-medium text-[#5D4E37] dark:text-white/70 mb-1">
+              <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-1">
                 Title <span className="text-red-400">*</span>
               </label>
               <input
@@ -101,7 +101,7 @@ function CourseFormModal({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Software Engineering"
-                className={`w-full px-3 py-2 rounded-lg border ${errors.title ? 'border-red-400' : 'border-[#DCC5B2] dark:border-[#392e4e]'} bg-white dark:bg-white/5 text-[#5D4E37] dark:text-white placeholder-[#8B7355]/50 dark:placeholder-white/30 focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#8400ff] focus:border-transparent transition-all`}
+                className={`w-full px-3 py-2 rounded-lg border ${errors.title ? 'border-red-400' : 'border-[#DCC5B2] dark:border-[#3d4951]'} bg-white dark:bg-[#0b090a] text-[#5D4E37] dark:text-white placeholder-[#8B7355]/50 dark:placeholder-[#b1a7a6]/50 focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all`}
               />
               {errors.title && <p className="text-xs text-red-400 mt-1">{errors.title}</p>}
             </div>
@@ -110,7 +110,7 @@ function CourseFormModal({
           {/* Credit & Type Row */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-[#5D4E37] dark:text-white/70 mb-1">
+              <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-1">
                 Credit <span className="text-red-400">*</span>
               </label>
               <input
@@ -119,43 +119,43 @@ function CourseFormModal({
                 min="0.5"
                 value={credit}
                 onChange={(e) => setCredit(e.target.value)}
-                className={`w-full px-3 py-2 rounded-lg border ${errors.credit ? 'border-red-400' : 'border-[#DCC5B2] dark:border-[#392e4e]'} bg-white dark:bg-white/5 text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#8400ff] focus:border-transparent transition-all`}
+                className={`w-full px-3 py-2 rounded-lg border ${errors.credit ? 'border-red-400' : 'border-[#DCC5B2] dark:border-[#3d4951]'} bg-white dark:bg-[#0b090a] text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all`}
               />
               {errors.credit && <p className="text-xs text-red-400 mt-1">{errors.credit}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#5D4E37] dark:text-white/70 mb-1">Type</label>
+              <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-1">Type</label>
               <select
                 value={courseType}
                 onChange={(e) => setCourseType(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-[#DCC5B2] dark:border-[#392e4e] bg-white dark:bg-white/5 text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#8400ff] focus:border-transparent transition-all"
+                className="w-full px-3 py-2 rounded-lg border border-[#DCC5B2] dark:border-[#3d4951] bg-white dark:bg-[#0b090a] text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all"
               >
-                <option value="Theory" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">Theory</option>
-                <option value="Lab" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">Lab</option>
-                <option value="Thesis" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">Thesis</option>
-                <option value="Project" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">Project</option>
+                <option value="Theory" className="bg-[#FAF7F3] dark:bg-[#161a1d]">Theory</option>
+                <option value="Lab" className="bg-[#FAF7F3] dark:bg-[#161a1d]">Lab</option>
+                <option value="Thesis" className="bg-[#FAF7F3] dark:bg-[#161a1d]">Thesis</option>
+                <option value="Project" className="bg-[#FAF7F3] dark:bg-[#161a1d]">Project</option>
               </select>
             </div>
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-[#5D4E37] dark:text-white/70 mb-1">Description</label>
+            <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-1">Description</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Brief course description..."
               rows={3}
-              className="w-full px-3 py-2 rounded-lg border border-[#DCC5B2] dark:border-[#392e4e] bg-white dark:bg-white/5 text-[#5D4E37] dark:text-white placeholder-[#8B7355]/50 dark:placeholder-white/30 focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#8400ff] focus:border-transparent resize-none transition-all"
+              className="w-full px-3 py-2 rounded-lg border border-[#DCC5B2] dark:border-[#3d4951] bg-white dark:bg-[#0b090a] text-[#5D4E37] dark:text-white placeholder-[#8B7355]/50 dark:placeholder-[#b1a7a6]/50 focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent resize-none transition-all"
             />
           </div>
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-[#DCC5B2] dark:border-[#392e4e] bg-[#F0E4D3]/50 dark:bg-white/[0.02] flex items-center justify-end gap-3">
+        <div className="px-6 py-4 border-t border-[#DCC5B2] dark:border-[#3d4951] bg-[#F0E4D3]/50 dark:bg-white/[0.02] flex items-center justify-end gap-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg border border-[#DCC5B2] dark:border-[#392e4e] text-[#5D4E37] dark:text-white/70 hover:bg-[#DCC5B2]/30 dark:hover:bg-white/5 transition-colors text-sm font-medium"
+            className="px-4 py-2 rounded-lg border border-[#DCC5B2] dark:border-[#3d4951] text-[#5D4E37] dark:text-[#d3d3d3] hover:bg-[#DCC5B2]/30 dark:hover:bg-[#0b090a] transition-colors text-sm font-medium"
           >
             Cancel
           </button>
@@ -164,7 +164,7 @@ function CourseFormModal({
             whileTap={{ scale: 0.98 }}
             onClick={handleSubmit}
             disabled={saving}
-            className="px-5 py-2 rounded-lg bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#8400ff] dark:to-[#a855f7] text-white font-medium text-sm shadow-lg shadow-[#D9A299]/25 dark:shadow-[#8400ff]/25 hover:from-[#C88989] hover:to-[#CCB5A2] dark:hover:from-[#9933ff] dark:hover:to-[#b366ff] transition-all disabled:opacity-50"
+            className="px-5 py-2 rounded-lg bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#ba181b] dark:to-[#e5383b] text-white font-medium text-sm shadow-lg shadow-[#D9A299]/25 dark:shadow-[#ba181b]/25 hover:from-[#C88989] hover:to-[#CCB5A2] dark:hover:from-[#e32a2d] dark:hover:to-[#ea5f62] transition-all disabled:opacity-50"
           >
             {saving ? 'Saving...' : isEdit ? 'Update Course' : 'Add Course'}
           </motion.button>
@@ -200,7 +200,7 @@ function DeleteConfirmModal({
         initial={{ scale: 0.9, y: 20 }}
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.9, y: 20 }}
-        className="w-full max-w-sm bg-[#FAF7F3] dark:bg-[#0d0d1a] border border-[#DCC5B2] dark:border-[#392e4e] rounded-2xl shadow-2xl overflow-hidden"
+        className="w-full max-w-sm bg-[#FAF7F3] dark:bg-[#161a1d] border border-[#DCC5B2] dark:border-[#3d4951] rounded-2xl shadow-2xl overflow-hidden"
       >
         <div className="p-6 text-center">
           <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-red-500/10 flex items-center justify-center">
@@ -209,7 +209,7 @@ function DeleteConfirmModal({
             </svg>
           </div>
           <h3 className="text-lg font-bold text-[#5D4E37] dark:text-white mb-1">Delete Course</h3>
-          <p className="text-sm text-[#8B7355] dark:text-white/60 mb-1">
+          <p className="text-sm text-[#8B7355] dark:text-[#b1a7a6] mb-1">
             Are you sure you want to delete
           </p>
           <p className="text-sm font-semibold text-[#5D4E37] dark:text-white">
@@ -217,10 +217,10 @@ function DeleteConfirmModal({
           </p>
           <p className="text-xs text-red-400/80 mt-2">This action cannot be undone.</p>
         </div>
-        <div className="px-6 py-4 border-t border-[#DCC5B2] dark:border-[#392e4e] flex gap-3">
+        <div className="px-6 py-4 border-t border-[#DCC5B2] dark:border-[#3d4951] flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 rounded-lg border border-[#DCC5B2] dark:border-[#392e4e] text-[#5D4E37] dark:text-white/70 hover:bg-[#DCC5B2]/30 dark:hover:bg-white/5 transition-colors text-sm font-medium"
+            className="flex-1 px-4 py-2 rounded-lg border border-[#DCC5B2] dark:border-[#3d4951] text-[#5D4E37] dark:text-[#d3d3d3] hover:bg-[#DCC5B2]/30 dark:hover:bg-[#0b090a] transition-colors text-sm font-medium"
           >
             Cancel
           </button>
@@ -252,22 +252,22 @@ function CourseDetailPanel({ course }: { course: DBCourse }) {
       <td colSpan={5} className="px-6 py-4 bg-[#F0E4D3]/50 dark:bg-white/[0.02]">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="md:col-span-2">
-            <h4 className="text-sm font-semibold text-[#5D4E37] dark:text-white/80 mb-1">Description</h4>
-            <p className="text-sm text-[#8B7355] dark:text-white/50 leading-relaxed">
+            <h4 className="text-sm font-semibold text-[#5D4E37] dark:text-[#f5f3f4] mb-1">Description</h4>
+            <p className="text-sm text-[#8B7355] dark:text-[#b1a7a6] leading-relaxed">
               {course.description || 'No description available.'}
             </p>
           </div>
           <div className="space-y-3">
             <div>
-              <h4 className="text-sm font-semibold text-[#5D4E37] dark:text-white/80 mb-1">Details</h4>
-              <p className="text-sm text-[#8B7355] dark:text-white/50">
+              <h4 className="text-sm font-semibold text-[#5D4E37] dark:text-[#f5f3f4] mb-1">Details</h4>
+              <p className="text-sm text-[#8B7355] dark:text-[#b1a7a6]">
                 {course.credit} Credit{Number(course.credit) !== 1 ? 's' : ''}  •  {course.course_type || 'Theory'}
               </p>
             </div>
             {course.created_at && (
               <div>
-                <h4 className="text-sm font-semibold text-[#5D4E37] dark:text-white/80 mb-1">Added</h4>
-                <p className="text-sm text-[#8B7355] dark:text-white/50">
+                <h4 className="text-sm font-semibold text-[#5D4E37] dark:text-[#f5f3f4] mb-1">Added</h4>
+                <p className="text-sm text-[#8B7355] dark:text-[#b1a7a6]">
                   {new Date(course.created_at).toLocaleDateString()}
                 </p>
               </div>
@@ -393,13 +393,13 @@ export default function CourseInfoPage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[#5D4E37] dark:text-white">Course Information</h1>
-          <p className="text-[#8B7355] dark:text-white/60 mt-1">Manage all courses in the CSE department curriculum</p>
+          <p className="text-[#8B7355] dark:text-[#b1a7a6] mt-1">Manage all courses in the CSE department curriculum</p>
         </div>
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => { setEditCourse(null); setShowForm(true); }}
-          className="px-4 py-2 bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#8400ff] dark:to-[#a855f7] text-white rounded-lg hover:from-[#C88989] hover:to-[#CCB5A2] dark:hover:from-[#9933ff] dark:hover:to-[#b366ff] transition-all flex items-center gap-2 shadow-lg shadow-[#D9A299]/25 dark:shadow-[#8400ff]/25 font-medium"
+          className="px-4 py-2 bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#ba181b] dark:to-[#e5383b] text-white rounded-lg hover:from-[#C88989] hover:to-[#CCB5A2] dark:hover:from-[#e32a2d] dark:hover:to-[#ea5f62] transition-all flex items-center gap-2 shadow-lg shadow-[#D9A299]/25 dark:shadow-[#ba181b]/25 font-medium"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -411,21 +411,21 @@ export default function CourseInfoPage() {
       {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: 'Total Courses', value: totalCourses, color: 'from-[#D9A299] to-[#DCC5B2] dark:from-[#8400ff] dark:to-[#a855f7]', icon: '📚' },
-          { label: 'Theory', value: theoryCourses, color: 'from-[#00e5ff]/80 to-[#00e5ff]/40 dark:from-[#00e5ff]/80 dark:to-[#00e5ff]/40', icon: '📖' },
-          { label: 'Lab / Sessional', value: labCourses, color: 'from-[#a855f7]/80 to-[#a855f7]/40 dark:from-[#a855f7]/80 dark:to-[#a855f7]/40', icon: '🔬' },
+          { label: 'Total Courses', value: totalCourses, color: 'from-[#D9A299] to-[#DCC5B2] dark:from-[#ba181b] dark:to-[#e5383b]', icon: '📚' },
+          { label: 'Theory', value: theoryCourses, color: 'from-[#d3d3d3]/80 to-[#d3d3d3]/40 dark:from-[#d3d3d3]/80 dark:to-[#d3d3d3]/40', icon: '📖' },
+          { label: 'Lab / Sessional', value: labCourses, color: 'from-[#e5383b]/80 to-[#e5383b]/40 dark:from-[#e5383b]/80 dark:to-[#e5383b]/40', icon: '🔬' },
           { label: 'Total Credits', value: totalCredits, color: 'from-amber-500/80 to-amber-400/40 dark:from-amber-500/80 dark:to-amber-400/40', icon: '🎓' },
         ].map((stat) => (
           <SpotlightCard
             key={stat.label}
-            className="rounded-xl border border-[#DCC5B2] dark:border-[#392e4e] p-4 bg-[#FAF7F3] dark:bg-transparent"
+            className="rounded-xl border border-[#DCC5B2] dark:border-[#3d4951] p-4 bg-[#FAF7F3] dark:bg-transparent"
             spotlightColor="rgba(217, 162, 153, 0.15)"
           >
             <div className="flex items-center gap-3">
               <span className="text-2xl">{stat.icon}</span>
               <div>
                 <p className="text-2xl font-bold text-[#5D4E37] dark:text-white">{stat.value}</p>
-                <p className="text-xs text-[#8B7355] dark:text-white/50">{stat.label}</p>
+                <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6]">{stat.label}</p>
               </div>
             </div>
           </SpotlightCard>
@@ -445,7 +445,7 @@ export default function CourseInfoPage() {
       {/* Filters & Search */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1 max-w-sm">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B7355] dark:text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B7355] dark:text-[#b1a7a6]/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input
@@ -453,51 +453,51 @@ export default function CourseInfoPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by code or title..."
-            className="w-full pl-10 pr-4 py-2 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-[#FAF7F3] dark:bg-white/5 text-[#5D4E37] dark:text-white placeholder-[#8B7355]/50 dark:placeholder-white/30 focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#8400ff] focus:border-transparent transition-all"
+            className="w-full pl-10 pr-4 py-2 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white placeholder-[#8B7355]/50 dark:placeholder-[#b1a7a6]/50 focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all"
           />
         </div>
         <select
           value={filterType}
           onChange={(e) => setFilterType(e.target.value)}
-          className="px-4 py-2 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-[#FAF7F3] dark:bg-white/5 text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#8400ff] focus:border-transparent"
+          className="px-4 py-2 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent"
         >
-          <option value="all" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">All Types</option>
-          <option value="Theory" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">Theory</option>
-          <option value="Lab" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">Lab / Sessional</option>
-          <option value="Thesis" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">Thesis</option>
-          <option value="Project" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">Project</option>
+          <option value="all" className="bg-[#FAF7F3] dark:bg-[#161a1d]">All Types</option>
+          <option value="Theory" className="bg-[#FAF7F3] dark:bg-[#161a1d]">Theory</option>
+          <option value="Lab" className="bg-[#FAF7F3] dark:bg-[#161a1d]">Lab / Sessional</option>
+          <option value="Thesis" className="bg-[#FAF7F3] dark:bg-[#161a1d]">Thesis</option>
+          <option value="Project" className="bg-[#FAF7F3] dark:bg-[#161a1d]">Project</option>
         </select>
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={fetchCourses}
           disabled={loading}
-          className="px-4 py-2 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg text-[#5D4E37] dark:text-white/70 hover:bg-[#DCC5B2]/30 dark:hover:bg-white/5 transition-colors text-sm font-medium disabled:opacity-50"
+          className="px-4 py-2 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg text-[#5D4E37] dark:text-[#d3d3d3] hover:bg-[#DCC5B2]/30 dark:hover:bg-[#0b090a] transition-colors text-sm font-medium disabled:opacity-50"
         >
           {loading ? 'Loading...' : 'Refresh'}
         </motion.button>
       </div>
 
       {/* Courses Table */}
-      <SpotlightCard className="rounded-xl border border-[#DCC5B2] dark:border-[#392e4e] overflow-hidden bg-[#FAF7F3] dark:bg-transparent" spotlightColor="rgba(217, 162, 153, 0.2)">
+      <SpotlightCard className="rounded-xl border border-[#DCC5B2] dark:border-[#3d4951] overflow-hidden bg-[#FAF7F3] dark:bg-transparent" spotlightColor="rgba(217, 162, 153, 0.2)">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-[#F0E4D3] dark:bg-white/5">
+            <thead className="bg-[#F0E4D3] dark:bg-[#0b090a]">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase tracking-wider">Code</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase tracking-wider">Title</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase tracking-wider">Type</th>
-                <th className="px-6 py-4 text-center text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase tracking-wider">Credit</th>
-                <th className="px-6 py-4 text-right text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-[#b1a7a6] uppercase tracking-wider">Code</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-[#b1a7a6] uppercase tracking-wider">Title</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-[#b1a7a6] uppercase tracking-wider">Type</th>
+                <th className="px-6 py-4 text-center text-xs font-semibold text-[#5D4E37] dark:text-[#b1a7a6] uppercase tracking-wider">Credit</th>
+                <th className="px-6 py-4 text-right text-xs font-semibold text-[#5D4E37] dark:text-[#b1a7a6] uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#DCC5B2] dark:divide-[#392e4e]">
+            <tbody className="divide-y divide-[#DCC5B2] dark:divide-[#3d4951]">
               {loading ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-16 text-center">
                     <div className="flex flex-col items-center gap-2">
-                      <div className="w-8 h-8 border-2 border-[#D9A299] dark:border-[#8400ff] border-t-transparent rounded-full animate-spin" />
-                      <p className="text-[#8B7355] dark:text-white/40 text-sm">Loading courses...</p>
+                      <div className="w-8 h-8 border-2 border-[#D9A299] dark:border-[#ba181b] border-t-transparent rounded-full animate-spin" />
+                      <p className="text-[#8B7355] dark:text-[#b1a7a6]/70 text-sm">Loading courses...</p>
                     </div>
                   </td>
                 </tr>
@@ -508,7 +508,7 @@ export default function CourseInfoPage() {
                       <svg className="w-10 h-10 text-[#8B7355]/40 dark:text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                       </svg>
-                      <p className="text-[#8B7355] dark:text-white/40 text-sm">
+                      <p className="text-[#8B7355] dark:text-[#b1a7a6]/70 text-sm">
                         {courses.length === 0 ? 'No courses yet. Add your first course!' : 'No courses match your filters'}
                       </p>
                     </div>
@@ -518,7 +518,7 @@ export default function CourseInfoPage() {
               filteredCourses.map((course) => (
                 <React.Fragment key={course.id}>
                   <tr
-                    className="hover:bg-[#F0E4D3] dark:hover:bg-white/5 transition-colors cursor-pointer"
+                    className="hover:bg-[#F0E4D3] dark:hover:bg-[#0b090a] transition-colors cursor-pointer"
                     onClick={() => setExpandedId(expandedId === course.id ? null : course.id)}
                   >
                     <td className="px-6 py-4">
@@ -528,20 +528,20 @@ export default function CourseInfoPage() {
                       <div>
                         <span className="text-[#5D4E37] dark:text-white font-medium">{course.title}</span>
                         {course.description && (
-                          <p className="text-xs text-[#8B7355] dark:text-white/40 mt-0.5 line-clamp-1 max-w-xs">{course.description}</p>
+                          <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6]/70 mt-0.5 line-clamp-1 max-w-xs">{course.description}</p>
                         )}
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
                         (course.course_type || 'Theory') === 'Theory'
-                          ? 'bg-[#D9A299]/30 text-[#5D4E37] border border-[#D9A299]/50 dark:bg-[#00e5ff]/20 dark:text-[#00e5ff] dark:border-[#00e5ff]/30'
-                          : 'bg-[#DCC5B2]/40 text-[#5D4E37] border border-[#DCC5B2]/60 dark:bg-[#8400ff]/20 dark:text-[#a855f7] dark:border-[#8400ff]/30'
+                          ? 'bg-[#D9A299]/30 text-[#5D4E37] border border-[#D9A299]/50 dark:bg-[#d3d3d3]/20 dark:text-[#d3d3d3] dark:border-[#d3d3d3]/30'
+                          : 'bg-[#DCC5B2]/40 text-[#5D4E37] border border-[#DCC5B2]/60 dark:bg-[#ba181b]/20 dark:text-[#e5383b] dark:border-[#ba181b]/30'
                       }`}>
                         {course.course_type || 'Theory'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-center text-[#8B7355] dark:text-white/60 font-medium">
+                    <td className="px-6 py-4 text-center text-[#8B7355] dark:text-[#b1a7a6] font-medium">
                       {course.credit}
                     </td>
                     <td className="px-6 py-4">
@@ -549,7 +549,7 @@ export default function CourseInfoPage() {
                         {/* Expand */}
                         <button
                           onClick={() => setExpandedId(expandedId === course.id ? null : course.id)}
-                          className="p-2 text-[#8B7355] dark:text-white/40 hover:text-[#5D4E37] dark:hover:text-white hover:bg-[#DCC5B2]/30 dark:hover:bg-white/5 rounded-lg transition-colors"
+                          className="p-2 text-[#8B7355] dark:text-[#b1a7a6]/70 hover:text-[#5D4E37] dark:hover:text-white hover:bg-[#DCC5B2]/30 dark:hover:bg-[#0b090a] rounded-lg transition-colors"
                           title="View details"
                         >
                           <motion.svg
@@ -562,7 +562,7 @@ export default function CourseInfoPage() {
                         {/* Edit */}
                         <button
                           onClick={() => openEdit(course)}
-                          className="p-2 text-[#00e5ff] hover:bg-[#00e5ff]/10 rounded-lg transition-colors"
+                          className="p-2 text-[#d3d3d3] hover:bg-[#d3d3d3]/10 rounded-lg transition-colors"
                           title="Edit course"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -595,8 +595,8 @@ export default function CourseInfoPage() {
         </div>
 
         {/* Table Footer */}
-        <div className="px-6 py-3 border-t border-[#DCC5B2] dark:border-[#392e4e] bg-[#F0E4D3]/50 dark:bg-white/[0.02]">
-          <p className="text-xs text-[#8B7355] dark:text-white/40">
+        <div className="px-6 py-3 border-t border-[#DCC5B2] dark:border-[#3d4951] bg-[#F0E4D3]/50 dark:bg-white/[0.02]">
+          <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6]/70">
             Showing {filteredCourses.length} of {totalCourses} courses
           </p>
         </div>

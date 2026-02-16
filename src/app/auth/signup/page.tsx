@@ -68,7 +68,7 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF7F3] dark:bg-[#060010] flex items-center justify-center relative overflow-hidden px-4 py-10">
+    <div className="min-h-screen bg-[#FAF7F3] dark:bg-[#0b090a] flex items-center justify-center relative overflow-hidden px-4 py-10">
       {/* Light Rays Background */}
       <div className="absolute inset-0 z-0">
         <LightRays
@@ -84,7 +84,7 @@ export default function SignUpPage() {
       </div>
 
       {/* Gradient overlays */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#FAF7F3]/80 dark:from-[#060010]/80 via-transparent to-[#FAF7F3]/80 dark:to-[#060010]/80 z-[1]" />
+      <div className="absolute inset-0 bg-gradient-to-br from-[#FAF7F3]/80 dark:from-[#0b090a]/80 via-transparent to-[#FAF7F3]/80 dark:to-[#0b090a]/80 z-[1]" />
 
       {/* Content */}
       <motion.div 
@@ -102,13 +102,13 @@ export default function SignUpPage() {
             <motion.div 
               whileHover={{ rotate: 360 }}
               transition={{ duration: 0.5 }}
-              className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#D9A299] to-[#DCC5B2] dark:from-[#00e5ff] dark:to-[#00b3cc] flex items-center justify-center shadow-lg shadow-[#D9A299]/30 dark:shadow-[#00e5ff]/30"
+              className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#D9A299] to-[#DCC5B2] dark:from-[#d3d3d3] dark:to-[#b1a7a6] flex items-center justify-center shadow-lg shadow-[#D9A299]/30 dark:shadow-[#d3d3d3]/30"
             >
-              <GraduationCap className="w-7 h-7 text-white dark:text-[#060010]" />
+              <GraduationCap className="w-7 h-7 text-white dark:text-[#0b090a]" />
             </motion.div>
             <div className="text-left">
               <h1 className="text-2xl font-bold text-[#5D4E37] dark:text-white">KUET CSE</h1>
-              <p className="text-xs text-[#8B7355] dark:text-white/60">Automation Portal</p>
+              <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6]">Automation Portal</p>
             </div>
           </Link>
         </motion.div>
@@ -118,21 +118,21 @@ export default function SignUpPage() {
           <SpotlightCard className="p-8 bg-[#FAF7F3] dark:bg-transparent border border-[#DCC5B2] dark:border-transparent" spotlightColor="rgba(217, 162, 153, 0.3)">
             <div className="text-center mb-8">
               <h2 className="text-2xl font-bold text-[#5D4E37] dark:text-white mb-2">Create Account</h2>
-              <p className="text-[#8B7355] dark:text-white/60 text-sm">Join the KUET CSE community</p>
+              <p className="text-[#8B7355] dark:text-[#b1a7a6] text-sm">Join the KUET CSE community</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Name Input */}
               <div className="space-y-2">
-                <label className="text-sm text-[#5D4E37] dark:text-white/80 font-medium">Full Name</label>
+                <label className="text-sm text-[#5D4E37] dark:text-[#f5f3f4] font-medium">Full Name</label>
                 <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#8B7355] dark:text-white/40" />
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#8B7355] dark:text-[#b1a7a6]/70" />
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Enter your full name"
-                    className="w-full pl-12 pr-4 py-3.5 bg-[#F0E4D3] dark:bg-white/5 border border-[#DCC5B2] dark:border-[#392e4e] rounded-xl text-[#5D4E37] dark:text-white placeholder:text-[#8B7355] dark:placeholder:text-white/30 focus:outline-none focus:border-[#D9A299] dark:focus:border-[#00e5ff] focus:ring-1 focus:ring-[#D9A299]/50 dark:focus:ring-[#00e5ff]/50 transition-all"
+                    className="w-full pl-12 pr-4 py-3.5 bg-[#F0E4D3] dark:bg-[#0b090a] border border-[#DCC5B2] dark:border-[#3d4951] rounded-xl text-[#5D4E37] dark:text-white placeholder:text-[#8B7355] dark:placeholder:text-white/30 focus:outline-none focus:border-[#D9A299] dark:focus:border-[#d3d3d3] focus:ring-1 focus:ring-[#D9A299]/50 dark:focus:ring-[#d3d3d3]/50 transition-all"
                     required
                   />
                 </div>
@@ -140,15 +140,15 @@ export default function SignUpPage() {
 
               {/* Email Input */}
               <div className="space-y-2">
-                <label className="text-sm text-[#5D4E37] dark:text-white/80 font-medium">Email</label>
+                <label className="text-sm text-[#5D4E37] dark:text-[#f5f3f4] font-medium">Email</label>
                 <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#8B7355] dark:text-white/40" />
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#8B7355] dark:text-[#b1a7a6]/70" />
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Enter your email"
-                    className="w-full pl-12 pr-4 py-3.5 bg-[#F0E4D3] dark:bg-white/5 border border-[#DCC5B2] dark:border-[#392e4e] rounded-xl text-[#5D4E37] dark:text-white placeholder:text-[#8B7355] dark:placeholder:text-white/30 focus:outline-none focus:border-[#D9A299] dark:focus:border-[#00e5ff] focus:ring-1 focus:ring-[#D9A299]/50 dark:focus:ring-[#00e5ff]/50 transition-all"
+                    className="w-full pl-12 pr-4 py-3.5 bg-[#F0E4D3] dark:bg-[#0b090a] border border-[#DCC5B2] dark:border-[#3d4951] rounded-xl text-[#5D4E37] dark:text-white placeholder:text-[#8B7355] dark:placeholder:text-white/30 focus:outline-none focus:border-[#D9A299] dark:focus:border-[#d3d3d3] focus:ring-1 focus:ring-[#D9A299]/50 dark:focus:ring-[#d3d3d3]/50 transition-all"
                     required
                   />
                 </div>
@@ -156,21 +156,21 @@ export default function SignUpPage() {
 
               {/* Password Input */}
               <div className="space-y-2">
-                <label className="text-sm text-[#5D4E37] dark:text-white/80 font-medium">Password</label>
+                <label className="text-sm text-[#5D4E37] dark:text-[#f5f3f4] font-medium">Password</label>
                 <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#8B7355] dark:text-white/40" />
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#8B7355] dark:text-[#b1a7a6]/70" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Create a password"
-                    className="w-full pl-12 pr-12 py-3.5 bg-[#F0E4D3] dark:bg-white/5 border border-[#DCC5B2] dark:border-[#392e4e] rounded-xl text-[#5D4E37] dark:text-white placeholder:text-[#8B7355] dark:placeholder:text-white/30 focus:outline-none focus:border-[#D9A299] dark:focus:border-[#00e5ff] focus:ring-1 focus:ring-[#D9A299]/50 dark:focus:ring-[#00e5ff]/50 transition-all"
+                    className="w-full pl-12 pr-12 py-3.5 bg-[#F0E4D3] dark:bg-[#0b090a] border border-[#DCC5B2] dark:border-[#3d4951] rounded-xl text-[#5D4E37] dark:text-white placeholder:text-[#8B7355] dark:placeholder:text-white/30 focus:outline-none focus:border-[#D9A299] dark:focus:border-[#d3d3d3] focus:ring-1 focus:ring-[#D9A299]/50 dark:focus:ring-[#d3d3d3]/50 transition-all"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8B7355] dark:text-white/40 hover:text-[#5D4E37] dark:hover:text-white/60 transition-colors"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8B7355] dark:text-[#b1a7a6]/70 hover:text-[#5D4E37] dark:hover:text-white/60 transition-colors"
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
@@ -187,7 +187,7 @@ export default function SignUpPage() {
                       <div
                         key={index}
                         className={`flex items-center gap-2 text-xs ${
-                          req.met ? 'text-emerald-600 dark:text-emerald-400' : 'text-[#8B7355] dark:text-white/40'
+                          req.met ? 'text-emerald-600 dark:text-emerald-400' : 'text-[#8B7355] dark:text-[#b1a7a6]/70'
                         }`}
                       >
                         <Check className={`w-3.5 h-3.5 ${req.met ? '' : 'opacity-30'}`} />
@@ -200,20 +200,20 @@ export default function SignUpPage() {
 
               {/* Confirm Password Input */}
               <div className="space-y-2">
-                <label className="text-sm text-[#5D4E37] dark:text-white/80 font-medium">Confirm Password</label>
+                <label className="text-sm text-[#5D4E37] dark:text-[#f5f3f4] font-medium">Confirm Password</label>
                 <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#8B7355] dark:text-white/40" />
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#8B7355] dark:text-[#b1a7a6]/70" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Confirm your password"
-                    className={`w-full pl-12 pr-4 py-3.5 bg-[#F0E4D3] dark:bg-white/5 border rounded-xl text-[#5D4E37] dark:text-white placeholder:text-[#8B7355] dark:placeholder:text-white/30 focus:outline-none focus:ring-1 transition-all ${
+                    className={`w-full pl-12 pr-4 py-3.5 bg-[#F0E4D3] dark:bg-[#0b090a] border rounded-xl text-[#5D4E37] dark:text-white placeholder:text-[#8B7355] dark:placeholder:text-white/30 focus:outline-none focus:ring-1 transition-all ${
                       confirmPassword && confirmPassword !== password
                         ? 'border-red-500 focus:border-red-500 focus:ring-red-500/50'
                         : confirmPassword && confirmPassword === password
                         ? 'border-emerald-500 focus:border-emerald-500 focus:ring-emerald-500/50'
-                        : 'border-[#DCC5B2] dark:border-[#392e4e] focus:border-[#D9A299] dark:focus:border-[#00e5ff] focus:ring-[#D9A299]/50 dark:focus:ring-[#00e5ff]/50'
+                        : 'border-[#DCC5B2] dark:border-[#3d4951] focus:border-[#D9A299] dark:focus:border-[#d3d3d3] focus:ring-[#D9A299]/50 dark:focus:ring-[#d3d3d3]/50'
                     }`}
                     required
                   />
@@ -235,11 +235,11 @@ export default function SignUpPage() {
               </AnimatePresence>
 
               {/* Terms */}
-              <p className="text-xs text-[#8B7355] dark:text-white/50 text-center">
+              <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6] text-center">
                 By creating an account, you agree to our{' '}
-                <a href="#" className="text-[#D9A299] dark:text-[#00e5ff] hover:underline">Terms of Service</a>
+                <a href="#" className="text-[#D9A299] dark:text-[#d3d3d3] hover:underline">Terms of Service</a>
                 {' '}and{' '}
-                <a href="#" className="text-[#D9A299] dark:text-[#00e5ff] hover:underline">Privacy Policy</a>
+                <a href="#" className="text-[#D9A299] dark:text-[#d3d3d3] hover:underline">Privacy Policy</a>
               </p>
 
               {/* Submit Button */}
@@ -266,11 +266,11 @@ export default function SignUpPage() {
             </form>
 
             {/* Sign In Link */}
-            <p className="text-center text-[#8B7355] dark:text-white/60 text-sm mt-6">
+            <p className="text-center text-[#8B7355] dark:text-[#b1a7a6] text-sm mt-6">
               Already have an account?{' '}
               <Link 
                 href="/auth/signin" 
-                className="text-[#D9A299] dark:text-[#00e5ff] hover:text-[#c48b82] dark:hover:text-[#66efff] font-medium transition-colors"
+                className="text-[#D9A299] dark:text-[#d3d3d3] hover:text-[#c48b82] dark:hover:text-[#66efff] font-medium transition-colors"
               >
                 Sign In
               </Link>
