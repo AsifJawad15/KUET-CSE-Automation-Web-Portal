@@ -1,59 +1,79 @@
 "use client";
 
-import SpotlightCard from '@/components/ui/SpotlightCard';
 import { DBRoutineSlotWithDetails } from '@/lib/supabase';
 import { getRoutineSlots, deleteRoutineSlot } from '@/services/routineService';
+import { groupSlotsForDisplay } from '@/modules/ClassRoutine/helpers';
 import { motion } from 'framer-motion';
-import { Loader2, Trash2, RefreshCw } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { Loader2, RefreshCw } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import ScheduleTableView from './ScheduleTableView';
+import ScheduleGridView from './ScheduleGridView';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
 const DAY_MAP: Record<number, string> = { 0: 'Sunday', 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday' };
-const TIME_SLOTS = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00'];
+// JS getDay(): 0=Sun,1=Mon,...,6=Sat → map to our day names; default to Sunday for Fri/Sat
+const JS_DAY_TO_NAME: Record<number, string> = { 0: 'Sunday', 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday' };
+function getTodayDayName(): string {
+  return JS_DAY_TO_NAME[new Date().getDay()] ?? 'Sunday';
+}
 
 const TERMS = ['1-1', '1-2', '2-1', '2-2', '3-1', '3-2', '4-1', '4-2'];
-const SESSIONS = ['2020-21', '2021-22', '2022-23', '2023-24', '2024-25'];
 
-function formatTime(t: string) {
-  return t.slice(0, 5); // "08:00:00" -> "08:00"
+/** Derive term from course code, e.g. "CSE 3201" → "3-2" */
+function getTermFromCode(code: string): string {
+  const digits = code.replace(/\D/g, '');
+  return digits.length >= 2 ? `${digits[0]}-${digits[1]}` : '';
 }
 
 export default function SchedulePage() {
-  const [slots, setSlots] = useState<DBRoutineSlotWithDetails[]>([]);
+  const [rawSlots, setRawSlots] = useState<DBRoutineSlotWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
-  const [filterDay, setFilterDay] = useState<string>('all');
-  const [term, setTerm] = useState('3-2');
-  const [session, setSession] = useState('2024-25');
+  const [filterDay, setFilterDay] = useState<string>(getTodayDayName);
+  const [term, setTerm] = useState('all');
   const [deleting, setDeleting] = useState<string | null>(null);
+
+  // Group combined slots
+  const displaySlots = useMemo(() => groupSlotsForDisplay(rawSlots), [rawSlots]);
 
   const fetchSlots = useCallback(async () => {
     setLoading(true);
-    const data = await getRoutineSlots(term, session);
-    setSlots(data);
+    const data = await getRoutineSlots();
+    setRawSlots(data);
     setLoading(false);
-  }, [term, session]);
+  }, []);
 
   useEffect(() => { fetchSlots(); }, [fetchSlots]);
 
-  const handleDelete = async (id: string) => {
+  /**
+   * Delete all slot IDs in a combined group.
+   */
+  const handleDelete = async (slotIds: string[]) => {
     if (!confirm('Delete this schedule entry?')) return;
-    setDeleting(id);
-    const res = await deleteRoutineSlot(id);
-    if (res.success) setSlots(prev => prev.filter(s => s.id !== id));
-    else alert(res.error || 'Failed to delete');
+    setDeleting(slotIds[0]);
+    for (const id of slotIds) {
+      const res = await deleteRoutineSlot(id);
+      if (!res.success) {
+        alert(res.error || 'Failed to delete');
+        setDeleting(null);
+        return;
+      }
+    }
+    setRawSlots(prev => prev.filter(s => !slotIds.includes(s.id)));
     setDeleting(null);
   };
 
-  const filteredSlots = filterDay === 'all'
-    ? slots
-    : slots.filter(s => DAY_MAP[s.day_of_week] === filterDay);
-
-  const getScheduleForSlot = (dayName: string, time: string) => {
-    const dayIndex = Object.entries(DAY_MAP).find(([, v]) => v === dayName)?.[0];
-    if (dayIndex === undefined) return [];
-    return slots.filter(s => s.day_of_week === Number(dayIndex) && formatTime(s.start_time) === time);
-  };
+  // Apply term + day filters client-side
+  const filteredSlots = useMemo(() => {
+    let result = displaySlots;
+    if (term !== 'all') {
+      result = result.filter(s => getTermFromCode(s.course_code) === term);
+    }
+    if (filterDay !== 'all') {
+      result = result.filter(s => DAY_MAP[s.day_of_week] === filterDay);
+    }
+    return result;
+  }, [displaySlots, term, filterDay]);
 
   return (
     <div className="space-y-6">
@@ -105,6 +125,7 @@ export default function SchedulePage() {
           onChange={e => setTerm(e.target.value)}
           className="px-4 py-2 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent"
         >
+          <option value="all" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">All Terms</option>
           {TERMS.map(t => (
             <option key={t} value={t} className="bg-[#FAF7F3] dark:bg-[#161a1d]">Term {t}</option>
           ))}
@@ -141,6 +162,9 @@ export default function SchedulePage() {
       {!loading && slots.length === 0 && (
         <div className="text-center py-16 text-[#8B7355] dark:text-[#b1a7a6]/70">
           <p className="text-lg">No schedule entries found for Term {term}, Session {session}</p>
+      {!loading && displaySlots.length === 0 && (
+        <div className="text-center py-16 text-[#8B7355] dark:text-white/40">
+          <p className="text-lg">No schedule entries found{term !== 'all' ? ` for Term ${term}` : ''}</p>
           <p className="text-sm mt-2">Add classes via the Class Routine page first.</p>
         </div>
       )}
@@ -260,6 +284,13 @@ export default function SchedulePage() {
             </table>
           </div>
         </SpotlightCard>
+      {!loading && displaySlots.length > 0 && viewMode === 'table' && (
+        <ScheduleTableView slots={filteredSlots} deleting={deleting} onDelete={handleDelete} />
+      )}
+
+      {/* Grid View */}
+      {!loading && displaySlots.length > 0 && viewMode === 'grid' && (
+        <ScheduleGridView slots={filteredSlots} />
       )}
     </div>
   );

@@ -4,9 +4,14 @@ import SpotlightCard from '@/components/ui/SpotlightCard';
 import { DBRoutineSlotWithDetails, isSupabaseConfigured } from '@/lib/supabase';
 import { getRoutineSlots, addRoutineSlot, deleteRoutineSlot } from '@/services/routineService';
 import { motion } from 'framer-motion';
-import React, { useState, useEffect, useCallback } from 'react';
-import { Loader2, Plus, Trash2, ChevronDown } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Loader2, Plus } from 'lucide-react';
 import AddRoutineSlot from './AddRoutineSlot';
+import RoutineFilters from './RoutineFilters';
+import RoutineGrid from './RoutineGrid';
+import RoutineStats from './RoutineStats';
+import { TERMS } from './constants';
+import { groupSlotsForDisplay } from './helpers';
 
 // ==========================================
 // Constants
@@ -92,29 +97,31 @@ function timeToMinutes(t: string): number {
 
 // ==========================================
 // Main Component
+// Orchestrator Component
 // ==========================================
 export default function ClassRoutinePage() {
   const [selectedTerm, setSelectedTerm] = useState('3-2');
   const [selectedSession, setSelectedSession] = useState('2023-2024');
   const [selectedSection, setSelectedSection] = useState('A');
-  const [slots, setSlots] = useState<DBRoutineSlotWithDetails[]>([]);
+  const [rawSlots, setRawSlots] = useState<DBRoutineSlotWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+
+  // Group combined slots for display
+  const displaySlots = useMemo(() => groupSlotsForDisplay(rawSlots), [rawSlots]);
 
   const loadRoutine = useCallback(async () => {
     setLoading(true);
     setError(null);
     const data = await getRoutineSlots(selectedTerm, selectedSession, selectedSection);
-    setSlots(data);
+    setRawSlots(data);
     setLoading(false);
   }, [selectedTerm, selectedSession, selectedSection]);
 
   useEffect(() => {
     loadRoutine();
   }, [loadRoutine]);
-
-  const openAddModal = () => setShowAddModal(true);
 
   const handleAddSlot = async (data: any) => {
     const result = await addRoutineSlot(data);
@@ -126,29 +133,22 @@ export default function ClassRoutinePage() {
     }
   };
 
-  const handleDeleteSlot = async (id: string) => {
+  /**
+   * Delete all slot IDs in a combined group.
+   * For a normal slot this is just 1 ID; for combined it deletes both.
+   */
+  const handleDeleteSlot = async (slotIds: string[]) => {
     if (!confirm('Remove this slot?')) return;
-    const result = await deleteRoutineSlot(id);
-    if (result.success) await loadRoutine();
-    else setError(result.error || 'Failed to delete');
-  };
-
-  // Build grid: for each day & period, find the matching slot
-  const getSlotForCell = (dayValue: number, period: typeof PERIODS[0]): DBRoutineSlotWithDetails | null => {
-    return slots.find(s => s.day_of_week === dayValue && slotMatchesPeriod(s, period)) || null;
-  };
-
-  // Check if a cell is "covered" by a multi-span slot that started earlier
-  const isCellCovered = (dayValue: number, periodIndex: number): boolean => {
-    for (let i = periodIndex - 1; i >= 0; i--) {
-      const slot = getSlotForCell(dayValue, PERIODS[i]);
-      if (slot) {
-        const span = getSlotSpan(slot);
-        if (i + span > periodIndex) return true;
-        break; // Found a non-spanning slot before this
+    let hasError = false;
+    for (const id of slotIds) {
+      const result = await deleteRoutineSlot(id);
+      if (!result.success) {
+        setError(result.error || 'Failed to delete');
+        hasError = true;
+        break;
       }
     }
-    return false;
+    if (!hasError) await loadRoutine();
   };
 
   if (!isSupabaseConfigured()) {
@@ -172,6 +172,8 @@ export default function ClassRoutinePage() {
           whileTap={{ scale: 0.98 }}
           onClick={openAddModal}
           className="px-4 py-2 bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#ba181b] dark:to-[#e5383b] text-white rounded-lg transition-all flex items-center gap-2 shadow-lg shadow-[#D9A299]/25 dark:shadow-[#ba181b]/25 self-start"
+          onClick={() => setShowAddModal(true)}
+          className="px-4 py-2 bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#8400ff] dark:to-[#a855f7] text-white rounded-lg transition-all flex items-center gap-2 shadow-lg shadow-[#D9A299]/25 dark:shadow-[#8400ff]/25 self-start"
         >
           <Plus className="w-5 h-5" />
           Add Slot
@@ -227,6 +229,15 @@ export default function ClassRoutinePage() {
           ))}
         </div>
       </div>
+      {/* Filters */}
+      <RoutineFilters
+        selectedTerm={selectedTerm}
+        selectedSession={selectedSession}
+        selectedSection={selectedSection}
+        onTermChange={setSelectedTerm}
+        onSessionChange={setSelectedSession}
+        onSectionChange={setSelectedSection}
+      />
 
       {/* Error */}
       {error && (
@@ -354,10 +365,11 @@ export default function ClassRoutinePage() {
             </tbody>
           </table>
         </div>
+        <RoutineGrid displaySlots={displaySlots} onDeleteSlot={handleDeleteSlot} />
       )}
 
       {/* Empty state */}
-      {!loading && slots.length === 0 && (
+      {!loading && displaySlots.length === 0 && (
         <div className="text-center py-12">
           <p className="text-[#8B7355] dark:text-[#b1a7a6]">No routine slots found for this selection.</p>
           <p className="text-sm text-[#8B7355] dark:text-[#b1a7a6]/70 mt-1">Click &quot;Add Slot&quot; to create the first entry.</p>
@@ -391,6 +403,7 @@ export default function ClassRoutinePage() {
           </SpotlightCard>
         </div>
       )}
+      {!loading && displaySlots.length > 0 && <RoutineStats displaySlots={displaySlots} />}
 
       {/* Add Slot Modal */}
       <AddRoutineSlot

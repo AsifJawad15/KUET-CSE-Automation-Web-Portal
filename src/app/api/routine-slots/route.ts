@@ -73,15 +73,27 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for time conflicts in the same room
+    // But allow combined slots: if the conflicting slot is for the same course, it's OK
+    const { data: incomingOffering } = await supabase
+      .from('course_offerings')
+      .select('course_id')
+      .eq('id', offering_id)
+      .single();
+
     const { data: conflicts } = await supabase
       .from('routine_slots')
-      .select('id')
+      .select('id, offering_id, course_offerings!inner(course_id)')
       .eq('room_number', room_number)
       .eq('day_of_week', day_of_week)
       .lt('start_time', end_time)
       .gt('end_time', start_time);
 
-    if (conflicts && conflicts.length > 0) {
+    // Filter out conflicts that belong to the same course (combined slots are allowed)
+    const realConflicts = (conflicts || []).filter((c: any) => {
+      return c.course_offerings?.course_id !== incomingOffering?.course_id;
+    });
+
+    if (realConflicts.length > 0) {
       return NextResponse.json(
         { success: false, error: 'Room is already booked for this time slot' },
         { status: 409 }
