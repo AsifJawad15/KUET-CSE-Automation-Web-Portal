@@ -35,7 +35,7 @@ export default function FacilitiesPage() {
               <div className="relative overflow-hidden h-56">
                 <img src={getImageUrl(l.image_path)} alt={l.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                 <div className="absolute inset-0 bg-[#3E2723]/35 group-hover:bg-[#3E2723]/20 transition-all" />
-                <div className="absolute bottom-0 inset-x-0 h-2/3 bg-gradient-to-t from-[#1A0F08]/80 via-[#1A0F08]/30 to-transparent" />
+                <div className="absolute bottom-0 inset-x-0 h-2/3 bg-gradient-to-t from-[#161a1d]/80 via-[#161a1d]/30 to-transparent" />
                 <div className="absolute bottom-4 left-4 z-10">
                   <h3 className="text-lg font-bold text-white">{l.name}</h3>
                   {l.room_number && <p className="text-[#D4A574] text-sm">Room: {l.room_number}</p>}

@@ -158,7 +158,7 @@ const HeroLanding: React.FC = () => {
   // ---- loading / error ----
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0F0A06] flex items-center justify-center">
+      <div className="min-h-screen bg-[#0b090a] flex items-center justify-center">
         <motion.div
           animate={{ y: [0, -18, 0] }}
           transition={{ repeat: Infinity, duration: 2.2, ease: 'easeInOut' }}
@@ -267,9 +267,9 @@ const HeroLanding: React.FC = () => {
               {/* ◆ Warm brown / beige tint overlay (BRACU‑style) */}
               <div className="absolute inset-0 bg-[#3E2723]/45" />
               {/* ◆ Top edge gradient — darker */}
-              <div className="absolute top-0 inset-x-0 h-[45%] bg-gradient-to-b from-[#1A0F08]/85 via-[#1A0F08]/30 to-transparent" />
+              <div className="absolute top-0 inset-x-0 h-[45%] bg-gradient-to-b from-[#161a1d]/85 via-[#161a1d]/30 to-transparent" />
               {/* ◆ Bottom edge gradient — darker */}
-              <div className="absolute bottom-0 inset-x-0 h-[55%] bg-gradient-to-t from-[#0F0A06] via-[#0F0A06]/60 to-transparent" />
+              <div className="absolute bottom-0 inset-x-0 h-[55%] bg-gradient-to-t from-[#0b090a] via-[#0b090a]/60 to-transparent" />
               {/* ◆ Side vignette */}
               <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at center, transparent 30%, rgba(15,10,6,0.55) 100%)' }} />
             </div>
@@ -351,7 +351,7 @@ const HeroLanding: React.FC = () => {
                     {/* ◆ Vignette border */}
                     <div className="absolute inset-0" style={{ boxShadow: 'inset 0 0 60px rgba(93,64,55,0.25)' }} />
                     {/* ◆ Bottom brown gradient */}
-                    <div className="absolute bottom-0 inset-x-0 h-1/3 bg-gradient-to-t from-[#2C1810]/70 to-transparent" />
+                    <div className="absolute bottom-0 inset-x-0 h-1/3 bg-gradient-to-t from-[#161a1d]/70 to-transparent" />
                     <div className="absolute bottom-4 left-4 right-4 z-10">
                       <p className="text-white font-bold text-lg">{data.hodMessage.name}</p>
                       <p className="text-white/80 text-sm">{data.hodMessage.designation}</p>
@@ -500,7 +500,7 @@ const HeroLanding: React.FC = () => {
                         {/* ◆ Beige tint overlay */}
                         <div className="absolute inset-0 bg-[#5D4037]/15 group-hover:bg-[#5D4037]/5 transition-all duration-500" />
                         {/* ◆ Bottom brown gradient edge */}
-                        <div className="absolute bottom-0 inset-x-0 h-1/2 bg-gradient-to-t from-[#2C1810]/60 via-[#2C1810]/20 to-transparent" />
+                        <div className="absolute bottom-0 inset-x-0 h-1/2 bg-gradient-to-t from-[#161a1d]/60 via-[#161a1d]/20 to-transparent" />
                         <span className="absolute top-3 left-3 px-3 py-1 bg-[#D4A574] text-[#2C1810] text-xs font-bold rounded-full">{n.category}</span>
                       </div>
                     )}
@@ -541,7 +541,7 @@ const HeroLanding: React.FC = () => {
                         {/* ◆ Brown tint overlay */}
                         <div className="absolute inset-0 bg-[#5D4037]/20 group-hover:bg-[#5D4037]/10 transition-all" />
                         {/* ◆ Bottom gradient edge */}
-                        <div className="absolute bottom-0 inset-x-0 h-1/2 bg-gradient-to-t from-[#2C1810]/70 to-transparent" />
+                        <div className="absolute bottom-0 inset-x-0 h-1/2 bg-gradient-to-t from-[#161a1d]/70 to-transparent" />
                         <span className="absolute bottom-3 left-3 text-white text-xs font-medium bg-white/20 backdrop-blur-md px-3 py-1 rounded-full">{r.category}</span>
                       </div>
                     )}
@@ -583,7 +583,7 @@ const HeroLanding: React.FC = () => {
                     {/* ◆ Beige/brown tint overlay */}
                     <div className="absolute inset-0 bg-[#3E2723]/40 group-hover:bg-[#3E2723]/55 transition-all duration-500" />
                     {/* ◆ Bottom gradient edge */}
-                    <div className="absolute bottom-0 inset-x-0 h-2/3 bg-gradient-to-t from-[#1A0F08]/90 via-[#1A0F08]/40 to-transparent" />
+                    <div className="absolute bottom-0 inset-x-0 h-2/3 bg-gradient-to-t from-[#161a1d]/90 via-[#161a1d]/40 to-transparent" />
                     <div className="absolute bottom-0 inset-x-0 p-5 z-10">
                       <h3 className="text-lg font-bold text-white mb-1">{l.name}</h3>
                       {l.description && <p className="text-white/70 text-sm line-clamp-2">{l.description}</p>}
@@ -639,7 +639,7 @@ const HeroLanding: React.FC = () => {
           GALLERY — dark background for drama
           ═══════════════════════════════════════ */}
       {vis('gallery') && data.gallery.length > 0 && (
-        <section className="py-20 md:py-28 bg-[#1A0F08]">
+        <section className="py-20 md:py-28 bg-[#161a1d]">
           <div className="max-w-7xl mx-auto px-6 md:px-8">
             <Reveal>
               <SectionHeading light title={sec('gallery')?.title || 'Gallery'} subtitle={sec('gallery')?.subtitle || 'Life at CSE, KUET in pictures'} />
@@ -653,7 +653,7 @@ const HeroLanding: React.FC = () => {
                     {/* ◆ Warm brown tint — appears on hover */}
                     <div className="absolute inset-0 bg-[#3E2723]/0 group-hover:bg-[#3E2723]/40 transition-all duration-500" />
                     {/* ◆ Bottom gradient edge — always visible */}
-                    <div className="absolute bottom-0 inset-x-0 h-1/2 bg-gradient-to-t from-[#1A0F08]/70 to-transparent opacity-60 group-hover:opacity-100 transition-opacity" />
+                    <div className="absolute bottom-0 inset-x-0 h-1/2 bg-gradient-to-t from-[#161a1d]/70 to-transparent opacity-60 group-hover:opacity-100 transition-opacity" />
                     {/* Caption on hover */}
                     {g.caption && (
                       <div className="absolute bottom-0 inset-x-0 p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-500 z-10">
@@ -711,7 +711,7 @@ const HeroLanding: React.FC = () => {
         <div className="absolute inset-0 bg-cover bg-center bg-fixed"
           style={{ backgroundImage: `url(${getImageUrl(data.heroSlides[3]?.image_path || data.heroSlides[0]?.image_path)})` }} />
         <div className="absolute inset-0 bg-[#3E2723]/70" />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#1A0F08]/40 via-transparent to-[#1A0F08]/40" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#161a1d]/40 via-transparent to-[#161a1d]/40" />
         <div className="relative z-10 max-w-4xl mx-auto px-6 md:px-8 text-center">
           <Reveal>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 mb-6">
@@ -743,7 +743,7 @@ const HeroLanding: React.FC = () => {
       {/* ═══════════════════════════════════════
           FOOTER
           ═══════════════════════════════════════ */}
-      <footer className="bg-[#0F0A06] text-white">
+      <footer className="bg-[#0b090a] text-white">
         {/* Top CTA strip */}
         <div className="border-b border-white/10">
           <div className="max-w-7xl mx-auto px-6 md:px-8 py-6 flex flex-col md:flex-row items-center justify-between gap-4">

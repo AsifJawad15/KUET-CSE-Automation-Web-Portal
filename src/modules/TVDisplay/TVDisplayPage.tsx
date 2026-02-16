@@ -80,11 +80,11 @@ export default function TVDisplayPage() {
 
   const getTypeBadge = (type: string) => {
     const styles: Record<string, string> = {
-      'class-test': 'bg-[#8400ff]/20 text-[#a855f7] border border-[#8400ff]/30',
+      'class-test': 'bg-[#ba181b]/20 text-[#e5383b] border border-[#ba181b]/30',
       'assignment': 'bg-blue-500/20 text-blue-400 border border-blue-500/30',
       'notice': 'bg-white/10 text-white/70 border border-white/20',
       'event': 'bg-pink-500/20 text-pink-400 border border-pink-500/30',
-      'lab-test': 'bg-[#00e5ff]/20 text-[#00e5ff] border border-[#00e5ff]/30',
+      'lab-test': 'bg-[#d3d3d3]/20 text-[#d3d3d3] border border-[#d3d3d3]/30',
       'quiz': 'bg-orange-500/20 text-orange-400 border border-orange-500/30',
     };
     return styles[type] || 'bg-white/10 text-white/70 border border-white/20';
@@ -97,11 +97,11 @@ export default function TVDisplayPage() {
   return (
     <div className="h-full">
       {/* Page Header */}
-      <SpotlightCard className="rounded-2xl border border-[#DCC5B2] dark:border-[#392e4e] bg-[#FAF7F3] dark:bg-transparent p-6 mb-6" spotlightColor="rgba(217, 162, 153, 0.2)">
+      <SpotlightCard className="rounded-2xl border border-[#DCC5B2] dark:border-[#3d4951] bg-[#FAF7F3] dark:bg-transparent p-6 mb-6" spotlightColor="rgba(217, 162, 153, 0.2)">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-[#5D4E37] dark:text-white">TV Display Management</h1>
-            <p className="text-sm text-[#8B7355] dark:text-white/60 mt-1">
+            <p className="text-sm text-[#8B7355] dark:text-[#b1a7a6] mt-1">
               Manage announcements displayed on department TV screens
             </p>
           </div>
@@ -109,7 +109,7 @@ export default function TVDisplayPage() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => setShowForm(true)}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#8400ff] dark:to-[#a855f7] hover:from-[#C88989] hover:to-[#CCB5A2] dark:hover:from-[#9933ff] dark:hover:to-[#b366ff] text-white font-medium rounded-lg transition-all shadow-lg shadow-[#D9A299]/25 dark:shadow-[#8400ff]/25"
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#ba181b] dark:to-[#e5383b] hover:from-[#C88989] hover:to-[#CCB5A2] dark:hover:from-[#e32a2d] dark:hover:to-[#ea5f62] text-white font-medium rounded-lg transition-all shadow-lg shadow-[#D9A299]/25 dark:shadow-[#ba181b]/25"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -119,22 +119,22 @@ export default function TVDisplayPage() {
         </div>
         
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-[#DCC5B2] dark:border-[#392e4e]">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-[#DCC5B2] dark:border-[#3d4951]">
           <div className="text-center">
             <p className="text-2xl font-bold text-[#5D4E37] dark:text-white">{announcements.length}</p>
-            <p className="text-xs text-[#8B7355] dark:text-white/50">Total</p>
+            <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6]">Total</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold text-[#D9A299] dark:text-[#00e5ff]">{announcements.filter(a => a.isActive).length}</p>
-            <p className="text-xs text-[#8B7355] dark:text-white/50">Active</p>
+            <p className="text-2xl font-bold text-[#D9A299] dark:text-[#d3d3d3]">{announcements.filter(a => a.isActive).length}</p>
+            <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6]">Active</p>
           </div>
           <div className="text-center">
             <p className="text-2xl font-bold text-red-500 dark:text-red-400">{announcements.filter(a => a.priority === 'high').length}</p>
-            <p className="text-xs text-[#8B7355] dark:text-white/50">High Priority</p>
+            <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6]">High Priority</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold text-[#D9A299] dark:text-[#8400ff]">{announcements.filter(a => a.scheduledDate).length}</p>
-            <p className="text-xs text-[#8B7355] dark:text-white/50">Scheduled</p>
+            <p className="text-2xl font-bold text-[#D9A299] dark:text-[#ba181b]">{announcements.filter(a => a.scheduledDate).length}</p>
+            <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6]">Scheduled</p>
           </div>
         </div>
       </SpotlightCard>
@@ -145,98 +145,98 @@ export default function TVDisplayPage() {
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-[#FAF7F3] dark:bg-[#0d0d1a] rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-[#DCC5B2] dark:border-[#392e4e]"
+            className="bg-[#FAF7F3] dark:bg-[#161a1d] rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-[#DCC5B2] dark:border-[#3d4951]"
           >
-            <div className="p-6 border-b border-[#DCC5B2] dark:border-[#392e4e]">
+            <div className="p-6 border-b border-[#DCC5B2] dark:border-[#3d4951]">
               <h2 className="text-xl font-bold text-[#5D4E37] dark:text-white">
                 {editingId ? 'Edit Announcement' : 'Create New Announcement'}
               </h2>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-5">
               <div>
-                <label className="block text-sm font-medium text-[#5D4E37] dark:text-white/70 mb-2">Title *</label>
+                <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-2">Title *</label>
                 <input
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   placeholder="Enter announcement title"
-                  className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-[#FAF7F3] dark:bg-white/5 text-[#5D4E37] dark:text-white placeholder-[#8B7355] dark:placeholder-white/40 focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#8400ff] focus:border-transparent transition-all"
+                  className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white placeholder-[#8B7355] dark:placeholder-[#b1a7a6]/60 focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#5D4E37] dark:text-white/70 mb-2">Content *</label>
+                <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-2">Content *</label>
                 <textarea
                   value={formData.content}
                   onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                   placeholder="Enter announcement details"
                   rows={4}
-                  className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-[#FAF7F3] dark:bg-white/5 text-[#5D4E37] dark:text-white placeholder-[#8B7355] dark:placeholder-white/40 focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#8400ff] focus:border-transparent transition-all resize-none"
+                  className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white placeholder-[#8B7355] dark:placeholder-[#b1a7a6]/60 focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all resize-none"
                   required
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-white/70 mb-2">Type</label>
+                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-2">Type</label>
                   <select
                     value={formData.type}
                     onChange={(e) => setFormData({ ...formData, type: e.target.value as Announcement['type'] })}
-                    className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-[#FAF7F3] dark:bg-white/5 text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#8400ff] focus:border-transparent transition-all"
+                    className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all"
                   >
-                    <option value="notice" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">Notice</option>
-                    <option value="class-test" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">Class Test</option>
-                    <option value="assignment" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">Assignment</option>
-                    <option value="lab-test" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">Lab Test</option>
-                    <option value="quiz" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">Quiz</option>
-                    <option value="event" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">Event</option>
-                    <option value="other" className="bg-[#FAF7F3] dark:bg-[#0d0d1a]">Other</option>
+                    <option value="notice" className="bg-[#FAF7F3] dark:bg-[#161a1d]">Notice</option>
+                    <option value="class-test" className="bg-[#FAF7F3] dark:bg-[#161a1d]">Class Test</option>
+                    <option value="assignment" className="bg-[#FAF7F3] dark:bg-[#161a1d]">Assignment</option>
+                    <option value="lab-test" className="bg-[#FAF7F3] dark:bg-[#161a1d]">Lab Test</option>
+                    <option value="quiz" className="bg-[#FAF7F3] dark:bg-[#161a1d]">Quiz</option>
+                    <option value="event" className="bg-[#FAF7F3] dark:bg-[#161a1d]">Event</option>
+                    <option value="other" className="bg-[#FAF7F3] dark:bg-[#161a1d]">Other</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-white/70 mb-2">Priority</label>
+                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-2">Priority</label>
                   <select
                     value={formData.priority}
                     onChange={(e) => setFormData({ ...formData, priority: e.target.value as Announcement['priority'] })}
-                    className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-[#FAF7F3] dark:bg-white/5 text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#8400ff] focus:border-transparent transition-all"
+                    className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all"
                   >
-                    <option value="low" className="bg-[#0d0d1a]">Low</option>
-                    <option value="medium" className="bg-[#0d0d1a]">Medium</option>
-                    <option value="high" className="bg-[#0d0d1a]">High</option>
+                    <option value="low" className="bg-[#161a1d]">Low</option>
+                    <option value="medium" className="bg-[#161a1d]">Medium</option>
+                    <option value="high" className="bg-[#161a1d]">High</option>
                   </select>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-white/70 mb-2">Course Code</label>
+                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-2">Course Code</label>
                   <input
                     type="text"
                     value={formData.courseCode}
                     onChange={(e) => setFormData({ ...formData, courseCode: e.target.value })}
                     placeholder="e.g., CSE 3201"
-                    className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-[#FAF7F3] dark:bg-white/5 text-[#5D4E37] dark:text-white placeholder-[#8B7355] dark:placeholder-white/40 focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#8400ff] focus:border-transparent transition-all"
+                    className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white placeholder-[#8B7355] dark:placeholder-[#b1a7a6]/60 focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-white/70 mb-2">Scheduled Date</label>
+                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-2">Scheduled Date</label>
                   <input
                     type="date"
                     value={formData.scheduledDate}
                     onChange={(e) => setFormData({ ...formData, scheduledDate: e.target.value })}
-                    className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-[#FAF7F3] dark:bg-white/5 text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#8400ff] focus:border-transparent transition-all"
+                    className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all"
                   />
                 </div>
               </div>
-              <div className="flex gap-3 pt-4 border-t border-[#DCC5B2] dark:border-[#392e4e]">
+              <div className="flex gap-3 pt-4 border-t border-[#DCC5B2] dark:border-[#3d4951]">
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="flex-1 px-4 py-3 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg text-[#5D4E37] dark:text-white/70 hover:bg-[#F0E4D3] dark:hover:bg-white/5 font-medium transition-colors"
+                  className="flex-1 px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg text-[#5D4E37] dark:text-[#d3d3d3] hover:bg-[#F0E4D3] dark:hover:bg-[#0b090a] font-medium transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-3 bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#8400ff] dark:to-[#a855f7] text-white rounded-lg hover:from-[#C88989] hover:to-[#CCB5A2] dark:hover:from-[#9933ff] dark:hover:to-[#b366ff] font-medium transition-all"
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#ba181b] dark:to-[#e5383b] text-white rounded-lg hover:from-[#C88989] hover:to-[#CCB5A2] dark:hover:from-[#e32a2d] dark:hover:to-[#ea5f62] font-medium transition-all"
                 >
                   {editingId ? 'Update' : 'Create'}
                 </button>
@@ -249,14 +249,14 @@ export default function TVDisplayPage() {
       {/* Announcements List */}
       <div className="space-y-4">
         {announcements.length === 0 ? (
-          <SpotlightCard className="rounded-2xl border border-[#DCC5B2] dark:border-[#392e4e] bg-[#FAF7F3] dark:bg-transparent p-12 text-center" spotlightColor="rgba(217, 162, 153, 0.2)">
-            <div className="w-16 h-16 bg-[#F0E4D3] dark:bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-[#8B7355] dark:text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <SpotlightCard className="rounded-2xl border border-[#DCC5B2] dark:border-[#3d4951] bg-[#FAF7F3] dark:bg-transparent p-12 text-center" spotlightColor="rgba(217, 162, 153, 0.2)">
+            <div className="w-16 h-16 bg-[#F0E4D3] dark:bg-[#0b090a] rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-[#8B7355] dark:text-[#b1a7a6]/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
               </svg>
             </div>
             <h3 className="text-lg font-medium text-[#5D4E37] dark:text-white mb-2">No Announcements</h3>
-            <p className="text-[#8B7355] dark:text-white/50">Create your first announcement to display on department TVs</p>
+            <p className="text-[#8B7355] dark:text-[#b1a7a6]">Create your first announcement to display on department TVs</p>
           </SpotlightCard>
         ) : (
           announcements.map((announcement) => (
@@ -264,7 +264,7 @@ export default function TVDisplayPage() {
               key={announcement.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`bg-[#FAF7F3] dark:bg-[#0d0d1a] rounded-xl border border-[#DCC5B2] dark:border-[#392e4e] overflow-hidden transition-all hover:border-[#D9A299] dark:hover:border-[#8400ff]/30 ${
+              className={`bg-[#FAF7F3] dark:bg-[#161a1d] rounded-xl border border-[#DCC5B2] dark:border-[#3d4951] overflow-hidden transition-all hover:border-[#D9A299] dark:hover:border-[#ba181b]/30 ${
                 !announcement.isActive && 'opacity-60'
               }`}
             >
@@ -281,14 +281,14 @@ export default function TVDisplayPage() {
                 }`} />
                 
                 {/* Priority Info Section */}
-                <div className={`w-24 flex-shrink-0 flex flex-col items-center justify-center gap-2 border-r border-[#DCC5B2] dark:border-[#392e4e] ${
+                <div className={`w-24 flex-shrink-0 flex flex-col items-center justify-center gap-2 border-r border-[#DCC5B2] dark:border-[#3d4951] ${
                   announcement.isActive 
                     ? announcement.priority === 'high' 
                       ? 'bg-red-500/10' 
                       : announcement.priority === 'medium'
                       ? 'bg-amber-500/10'
                       : 'bg-emerald-500/10'
-                    : 'bg-[#F0E4D3] dark:bg-white/5'
+                    : 'bg-[#F0E4D3] dark:bg-[#0b090a]'
                 }`}>
                   <div className={`p-2.5 rounded-lg ${
                     announcement.isActive 
@@ -297,7 +297,7 @@ export default function TVDisplayPage() {
                         : announcement.priority === 'medium'
                         ? 'bg-amber-500/20'
                         : 'bg-emerald-500/20'
-                      : 'bg-[#F0E4D3] dark:bg-white/10'
+                      : 'bg-[#F0E4D3] dark:bg-[#3d4951]/30'
                   }`}>
                     {announcement.priority === 'high' && (
                       <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -322,7 +322,7 @@ export default function TVDisplayPage() {
                         : announcement.priority === 'medium'
                         ? 'text-amber-400'
                         : 'text-emerald-400'
-                      : 'text-[#8B7355] dark:text-white/40'
+                      : 'text-[#8B7355] dark:text-[#b1a7a6]/70'
                   }`}>
                     {announcement.priority}
                   </span>
@@ -338,7 +338,7 @@ export default function TVDisplayPage() {
                           {announcement.title}
                         </h3>
                         {!announcement.isActive && (
-                          <span className="px-2 py-0.5 rounded text-xs font-medium bg-[#F0E4D3] dark:bg-white/10 text-[#8B7355] dark:text-white/50">
+                          <span className="px-2 py-0.5 rounded text-xs font-medium bg-[#F0E4D3] dark:bg-[#3d4951]/30 text-[#8B7355] dark:text-[#b1a7a6]">
                             INACTIVE
                           </span>
                         )}
@@ -348,7 +348,7 @@ export default function TVDisplayPage() {
                           {formatType(announcement.type)}
                         </span>
                         {announcement.courseCode && (
-                          <span className="px-2.5 py-1 rounded-lg text-xs font-medium bg-[#8400ff]/20 text-[#a855f7] border border-[#8400ff]/30">
+                          <span className="px-2.5 py-1 rounded-lg text-xs font-medium bg-[#ba181b]/20 text-[#e5383b] border border-[#ba181b]/30">
                             {announcement.courseCode}
                           </span>
                         )}
@@ -379,7 +379,7 @@ export default function TVDisplayPage() {
                       </button>
                       <button
                         onClick={() => handleEdit(announcement)}
-                        className="p-2 rounded-lg text-[#00e5ff] hover:bg-[#00e5ff]/10 transition-colors"
+                        className="p-2 rounded-lg text-[#d3d3d3] hover:bg-[#d3d3d3]/10 transition-colors"
                         title="Edit"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -399,12 +399,12 @@ export default function TVDisplayPage() {
                   </div>
                   
                   {/* Content */}
-                  <p className="text-[#8B7355] dark:text-white/60 text-sm mb-4 line-clamp-2">
+                  <p className="text-[#8B7355] dark:text-[#b1a7a6] text-sm mb-4 line-clamp-2">
                     {announcement.content}
                   </p>
                   
                   {/* Footer: Dates */}
-                  <div className="flex items-center gap-6 text-xs text-[#8B7355] dark:text-white/40">
+                  <div className="flex items-center gap-6 text-xs text-[#8B7355] dark:text-[#b1a7a6]/70">
                     <span className="flex items-center gap-1.5">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -412,7 +412,7 @@ export default function TVDisplayPage() {
                       Created: {announcement.createdAt}
                     </span>
                     {announcement.scheduledDate && (
-                      <span className="flex items-center gap-1.5 text-[#D9A299] dark:text-[#00e5ff] font-medium">
+                      <span className="flex items-center gap-1.5 text-[#D9A299] dark:text-[#d3d3d3] font-medium">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>

@@ -52,7 +52,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
       <nav className={`fixed top-0 inset-x-0 z-50 transition-all duration-500 ${
         scrolled
           ? 'bg-[#FDF8F3]/95 backdrop-blur-xl shadow-lg shadow-[#5D4037]/5 border-b border-[#DCC5B2]/50'
-          : 'bg-[#2C1810]/90 backdrop-blur-md'
+          : 'bg-[#161a1d]/90 backdrop-blur-md'
       }`}>
         <div className="max-w-7xl mx-auto px-4 md:px-8 flex items-center justify-between h-16 md:h-20">
           <Link href="/" className="flex items-center gap-3 group">
@@ -100,7 +100,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
       <main className="pt-20">{children}</main>
 
       {/* FOOTER */}
-      <footer className="bg-[#0F0A06] text-white">
+      <footer className="bg-[#0b090a] text-white">
         <div className="border-b border-white/10">
           <div className="max-w-7xl mx-auto px-6 md:px-8 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">

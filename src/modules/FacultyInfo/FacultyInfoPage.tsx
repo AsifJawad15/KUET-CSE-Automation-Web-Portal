@@ -195,17 +195,17 @@ export default function FacultyInfoPage() {
       >
         <div>
           <h1 className="text-2xl font-bold text-[#5D4E37] dark:text-white">Faculty Management</h1>
-          <p className="text-[#8B7355] dark:text-white/60 mt-1">View and manage faculty members</p>
+          <p className="text-[#8B7355] dark:text-[#b1a7a6] mt-1">View and manage faculty members</p>
         </div>
         
         {/* Tab Navigation */}
-        <div className="flex bg-[#F0E4D3] dark:bg-[#0d0d1a] border border-[#DCC5B2] dark:border-[#392e4e] rounded-full p-1">
+        <div className="flex bg-[#F0E4D3] dark:bg-[#161a1d] border border-[#DCC5B2] dark:border-[#3d4951] rounded-full p-1">
           <button
             onClick={() => setActiveTab('view')}
             className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
               activeTab === 'view' 
                 ? 'bg-[#D9A299] text-white shadow-lg shadow-[#D9A299]/25' 
-                : 'text-[#8B7355] dark:text-white/60 hover:text-[#5D4E37] dark:hover:text-white'
+                : 'text-[#8B7355] dark:text-[#b1a7a6] hover:text-[#5D4E37] dark:hover:text-white'
             }`}
           >
             <UserCog className="w-4 h-4" />
@@ -216,7 +216,7 @@ export default function FacultyInfoPage() {
             className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
               activeTab === 'add' 
                 ? 'bg-[#D9A299] text-white shadow-lg shadow-[#D9A299]/25' 
-                : 'text-[#8B7355] dark:text-white/60 hover:text-[#5D4E37] dark:hover:text-white'
+                : 'text-[#8B7355] dark:text-[#b1a7a6] hover:text-[#5D4E37] dark:hover:text-white'
             }`}
           >
             <Plus className="w-4 h-4" />
@@ -241,13 +241,13 @@ export default function FacultyInfoPage() {
                 placeholder="Search by name or email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-[#FAF7F3] dark:bg-[#0d0d1a] text-[#5D4E37] dark:text-white placeholder:text-[#8B7355] dark:placeholder:text-white/40 focus:border-[#D9A299] dark:focus:border-[#8400ff] focus:outline-none focus:ring-1 focus:ring-[#D9A299] dark:focus:ring-[#8400ff]"
+                className="w-full px-4 py-2 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#161a1d] text-[#5D4E37] dark:text-white placeholder:text-[#8B7355] dark:placeholder:text-white/40 focus:border-[#D9A299] dark:focus:border-[#ba181b] focus:outline-none focus:ring-1 focus:ring-[#D9A299] dark:focus:ring-[#ba181b]"
               />
             </div>
             <select
               value={filterDesignation}
               onChange={(e) => setFilterDesignation(e.target.value)}
-              className="px-4 py-2 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-[#FAF7F3] dark:bg-[#0d0d1a] text-[#5D4E37] dark:text-white focus:border-[#D9A299] dark:focus:border-[#8400ff] focus:outline-none"
+              className="px-4 py-2 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#161a1d] text-[#5D4E37] dark:text-white focus:border-[#D9A299] dark:focus:border-[#ba181b] focus:outline-none"
             >
               <option value="all">All Designations</option>
               <option value="PROFESSOR">Professor</option>
@@ -260,10 +260,10 @@ export default function FacultyInfoPage() {
           {/* Faculty Grid */}
           {loading && teachers.length === 0 ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-[#D9A299] dark:text-[#8400ff]" />
+              <Loader2 className="w-8 h-8 animate-spin text-[#D9A299] dark:text-[#ba181b]" />
             </div>
           ) : filteredTeachers.length === 0 ? (
-            <div className="text-center py-12 text-[#8B7355] dark:text-white/60">
+            <div className="text-center py-12 text-[#8B7355] dark:text-[#b1a7a6]">
               No teachers found. {filterDesignation !== 'all' || searchTerm ? 'Try adjusting your filters.' : 'Add your first teacher to get started.'}
             </div>
           ) : (
@@ -329,13 +329,13 @@ export default function FacultyInfoPage() {
         >
           {/* Sub-toggle: Manual / CSV */}
           <div className="flex justify-center">
-            <div className="flex bg-[#F0E4D3] dark:bg-[#0d0d1a] border border-[#DCC5B2] dark:border-[#392e4e] rounded-full p-1">
+            <div className="flex bg-[#F0E4D3] dark:bg-[#161a1d] border border-[#DCC5B2] dark:border-[#3d4951] rounded-full p-1">
               <button
                 onClick={() => setAddMode('manual')}
                 className={`px-5 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
                   addMode === 'manual'
-                    ? 'bg-[#D9A299] dark:bg-gradient-to-r dark:from-[#8400ff] dark:to-[#a855f7] text-white shadow-lg'
-                    : 'text-[#8B7355] dark:text-white/60 hover:text-[#5D4E37] dark:hover:text-white'
+                    ? 'bg-[#D9A299] dark:bg-gradient-to-r dark:from-[#ba181b] dark:to-[#e5383b] text-white shadow-lg'
+                    : 'text-[#8B7355] dark:text-[#b1a7a6] hover:text-[#5D4E37] dark:hover:text-white'
                 }`}
               >
                 <Plus className="w-4 h-4" />
@@ -345,8 +345,8 @@ export default function FacultyInfoPage() {
                 onClick={() => setAddMode('csv')}
                 className={`px-5 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
                   addMode === 'csv'
-                    ? 'bg-[#D9A299] dark:bg-gradient-to-r dark:from-[#8400ff] dark:to-[#a855f7] text-white shadow-lg'
-                    : 'text-[#8B7355] dark:text-white/60 hover:text-[#5D4E37] dark:hover:text-white'
+                    ? 'bg-[#D9A299] dark:bg-gradient-to-r dark:from-[#ba181b] dark:to-[#e5383b] text-white shadow-lg'
+                    : 'text-[#8B7355] dark:text-[#b1a7a6] hover:text-[#5D4E37] dark:hover:text-white'
                 }`}
               >
                 <Upload className="w-4 h-4" />
@@ -367,7 +367,7 @@ export default function FacultyInfoPage() {
                   type="text"
                   value={formData.full_name}
                   onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                  className="w-full px-4 py-2 border border-[#392e4e] rounded-lg bg-[#060010] text-white focus:border-[#8400ff] focus:outline-none focus:ring-1 focus:ring-[#8400ff]"
+                  className="w-full px-4 py-2 border border-[#3d4951] rounded-lg bg-[#0b090a] text-white focus:border-[#ba181b] focus:outline-none focus:ring-1 focus:ring-[#ba181b]"
                   required
                   disabled={loading}
                 />
@@ -379,7 +379,7 @@ export default function FacultyInfoPage() {
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="name@cse.kuet.ac.bd"
-                  className="w-full px-4 py-2 border border-[#392e4e] rounded-lg bg-[#060010] text-white placeholder:text-white/40 focus:border-[#8400ff] focus:outline-none focus:ring-1 focus:ring-[#8400ff]"
+                  className="w-full px-4 py-2 border border-[#3d4951] rounded-lg bg-[#0b090a] text-white placeholder:text-white/40 focus:border-[#ba181b] focus:outline-none focus:ring-1 focus:ring-[#ba181b]"
                   required
                   disabled={loading}
                 />
@@ -392,7 +392,7 @@ export default function FacultyInfoPage() {
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     placeholder="e.g., 01712345678"
-                    className="w-full px-4 py-2 border border-[#392e4e] rounded-lg bg-[#060010] text-white placeholder:text-white/40 focus:border-[#8400ff] focus:outline-none focus:ring-1 focus:ring-[#8400ff]"
+                    className="w-full px-4 py-2 border border-[#3d4951] rounded-lg bg-[#0b090a] text-white placeholder:text-white/40 focus:border-[#ba181b] focus:outline-none focus:ring-1 focus:ring-[#ba181b]"
                     disabled={loading}
                   />
                 </div>
@@ -401,7 +401,7 @@ export default function FacultyInfoPage() {
                   <select
                     value={formData.designation}
                     onChange={(e) => setFormData({ ...formData, designation: e.target.value as TeacherDesignation })}
-                    className="w-full px-4 py-2 border border-[#392e4e] rounded-lg bg-[#060010] text-white focus:border-[#8400ff] focus:outline-none focus:ring-1 focus:ring-[#8400ff]"
+                    className="w-full px-4 py-2 border border-[#3d4951] rounded-lg bg-[#0b090a] text-white focus:border-[#ba181b] focus:outline-none focus:ring-1 focus:ring-[#ba181b]"
                     disabled={loading}
                   >
                     <option value="PROFESSOR">Professor</option>
@@ -417,7 +417,7 @@ export default function FacultyInfoPage() {
                   whileTap={{ scale: 0.98 }}
                   type="button"
                   onClick={() => setFormData({ full_name: '', email: '', phone: '', designation: 'LECTURER' })}
-                  className="flex-1 px-4 py-2 border border-[#392e4e] rounded-full text-white/70 hover:bg-white/5"
+                  className="flex-1 px-4 py-2 border border-[#3d4951] rounded-full text-white/70 hover:bg-white/5"
                   disabled={loading}
                 >
                   Reset
@@ -426,7 +426,7 @@ export default function FacultyInfoPage() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-gradient-to-r from-[#8400ff] to-[#a855f7] text-white rounded-full flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2 bg-gradient-to-r from-[#ba181b] to-[#e5383b] text-white rounded-full flex items-center justify-center gap-2"
                   disabled={loading}
                 >
                   {loading ? (
@@ -465,7 +465,7 @@ export default function FacultyInfoPage() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-[#1a1a2e] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl"
+              className="bg-[#161a1d] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-6">
@@ -482,7 +482,7 @@ export default function FacultyInfoPage() {
                     type="text"
                     value={editFormData.full_name}
                     onChange={(e) => setEditFormData({ ...editFormData, full_name: e.target.value })}
-                    className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#8400ff]/50"
+                    className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#ba181b]/50"
                   />
                 </div>
                 <div>
@@ -491,7 +491,7 @@ export default function FacultyInfoPage() {
                     type="text"
                     value={editFormData.phone}
                     onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
-                    className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#8400ff]/50"
+                    className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#ba181b]/50"
                   />
                 </div>
                 <div>
@@ -499,7 +499,7 @@ export default function FacultyInfoPage() {
                   <select
                     value={editFormData.designation}
                     onChange={(e) => setEditFormData({ ...editFormData, designation: e.target.value as TeacherDesignation })}
-                    className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#8400ff]/50"
+                    className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#ba181b]/50"
                   >
                     <option value="LECTURER">Lecturer</option>
                     <option value="ASSISTANT_PROFESSOR">Assistant Professor</option>
@@ -519,7 +519,7 @@ export default function FacultyInfoPage() {
                 <button
                   onClick={handleUpdateProfile}
                   disabled={loading}
-                  className="flex-1 px-4 py-2 rounded-full bg-gradient-to-r from-[#8400ff] to-[#a855f7] text-white flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="flex-1 px-4 py-2 rounded-full bg-gradient-to-r from-[#ba181b] to-[#e5383b] text-white flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                   Save Changes
@@ -544,7 +544,7 @@ export default function FacultyInfoPage() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-[#1a1a2e] border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl"
+              className="bg-[#161a1d] border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-4">
@@ -562,7 +562,7 @@ export default function FacultyInfoPage() {
               </p>
 
               <div className="bg-white/5 border border-white/10 rounded-lg p-4 mb-3 flex items-center justify-between">
-                <span className="font-mono text-2xl tracking-widest text-[#a855f7]">{passwordPopup.password}</span>
+                <span className="font-mono text-2xl tracking-widest text-[#e5383b]">{passwordPopup.password}</span>
               </div>
 
               <p className="text-amber-400/80 text-xs mb-4">
@@ -576,7 +576,7 @@ export default function FacultyInfoPage() {
                   setTimeout(() => setSuccess(null), 2000);
                   setPasswordPopup({ show: false, password: '', teacherName: '' });
                 }}
-                className="w-full px-4 py-2 rounded-full bg-gradient-to-r from-[#8400ff] to-[#a855f7] text-white flex items-center justify-center gap-2"
+                className="w-full px-4 py-2 rounded-full bg-gradient-to-r from-[#ba181b] to-[#e5383b] text-white flex items-center justify-center gap-2"
               >
                 <Key className="w-4 h-4" />
                 Copy to Clipboard

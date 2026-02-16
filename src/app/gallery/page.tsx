@@ -36,7 +36,7 @@ export default function GalleryPage() {
               className="group relative overflow-hidden rounded-xl cursor-pointer break-inside-avoid">
               <img src={getImageUrl(g.image_path)} alt={g.caption || ''} className="w-full object-cover transition-transform duration-700 group-hover:scale-110" />
               <div className="absolute inset-0 bg-[#3E2723]/0 group-hover:bg-[#3E2723]/40 transition-all duration-500" />
-              <div className="absolute bottom-0 inset-x-0 h-1/2 bg-gradient-to-t from-[#1A0F08]/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute bottom-0 inset-x-0 h-1/2 bg-gradient-to-t from-[#161a1d]/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               {g.caption && (
                 <div className="absolute bottom-0 inset-x-0 p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-500 z-10">
                   <p className="text-white text-sm font-medium">{g.caption}</p>

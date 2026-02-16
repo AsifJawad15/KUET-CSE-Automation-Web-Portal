@@ -62,7 +62,7 @@ export default function ContactPage() {
           <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}
             className="lg:col-span-2 space-y-6">
             {/* Department code snippet card */}
-            <div className="bg-[#1A0F08] rounded-2xl p-6 border border-[#2C1810]/60">
+            <div className="bg-[#161a1d] rounded-2xl p-6 border border-[#161a1d]/60">
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-3 h-3 rounded-full bg-red-500/80" />
                 <div className="w-3 h-3 rounded-full bg-yellow-500/80" />

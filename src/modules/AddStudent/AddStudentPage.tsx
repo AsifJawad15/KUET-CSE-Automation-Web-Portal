@@ -129,7 +129,7 @@ export default function AddStudentPage() {
       >
         <div>
           <h1 className="text-2xl font-bold text-[#5D4E37] dark:text-white">Student Management</h1>
-          <p className="text-[#8B7355] dark:text-white/60 mt-1">Add and manage student records</p>
+          <p className="text-[#8B7355] dark:text-[#b1a7a6] mt-1">Add and manage student records</p>
         </div>
         <div className="flex items-center gap-3">
           <motion.button
@@ -149,8 +149,8 @@ export default function AddStudentPage() {
             onClick={() => setShowCSV(!showCSV)}
             className={`px-5 py-2.5 rounded-full transition-all flex items-center gap-2 ${
               showCSV
-                ? 'bg-gradient-to-r from-[#00e5ff] to-[#8400ff] text-white shadow-lg shadow-[#8400ff]/25'
-                : 'border border-[#DCC5B2] dark:border-[#392e4e] text-[#5D4E37] dark:text-white/70 hover:bg-[#F0E4D3] dark:hover:bg-white/5'
+                ? 'bg-gradient-to-r from-[#d3d3d3] to-[#ba181b] text-white shadow-lg shadow-[#ba181b]/25'
+                : 'border border-[#DCC5B2] dark:border-[#3d4951] text-[#5D4E37] dark:text-[#d3d3d3] hover:bg-[#F0E4D3] dark:hover:bg-[#0b090a]'
             }`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -177,7 +177,7 @@ export default function AddStudentPage() {
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-[#FAF7F3] dark:bg-[#0d0d1a] border border-[#DCC5B2] dark:border-[#392e4e] rounded-2xl p-6 w-full max-w-lg mx-4"
+            className="bg-[#FAF7F3] dark:bg-[#161a1d] border border-[#DCC5B2] dark:border-[#3d4951] rounded-2xl p-6 w-full max-w-lg mx-4"
           >
             <h2 className="text-xl font-bold text-[#5D4E37] dark:text-white mb-4">Add New Student</h2>
             
@@ -190,55 +190,55 @@ export default function AddStudentPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-white/70 mb-1">Roll Number</label>
+                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-1">Roll Number</label>
                   <input
                     type="text"
                     value={formData.roll}
                     onChange={(e) => setFormData({ ...formData, roll: e.target.value })}
                     placeholder="e.g., 2107001"
-                    className="w-full px-4 py-2 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-[#FAF7F3] dark:bg-[#060010] text-[#5D4E37] dark:text-white placeholder:text-[#8B7355] dark:placeholder:text-white/40 focus:border-[#D9A299] dark:focus:border-[#8400ff] focus:outline-none focus:ring-1 focus:ring-[#D9A299] dark:focus:ring-[#8400ff]"
+                    className="w-full px-4 py-2 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white placeholder:text-[#8B7355] dark:placeholder:text-white/40 focus:border-[#D9A299] dark:focus:border-[#ba181b] focus:outline-none focus:ring-1 focus:ring-[#D9A299] dark:focus:ring-[#ba181b]"
                     required
                   />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-white/70 mb-1">Full Name</label>
+                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-1">Full Name</label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder="Student name"
-                    className="w-full px-4 py-2 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-[#FAF7F3] dark:bg-[#060010] text-[#5D4E37] dark:text-white focus:border-[#D9A299] dark:focus:border-[#8400ff] focus:outline-none focus:ring-1 focus:ring-[#D9A299] dark:focus:ring-[#8400ff]"
+                    className="w-full px-4 py-2 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white focus:border-[#D9A299] dark:focus:border-[#ba181b] focus:outline-none focus:ring-1 focus:ring-[#D9A299] dark:focus:ring-[#ba181b]"
                     required
                   />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-white/70 mb-1">Email</label>
+                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-1">Email</label>
                   <input
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder="e.g., student@stud.kuet.ac.bd"
-                    className="w-full px-4 py-2 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-[#FAF7F3] dark:bg-[#060010] text-[#5D4E37] dark:text-white placeholder:text-[#8B7355] dark:placeholder:text-white/40 focus:border-[#D9A299] dark:focus:border-[#8400ff] focus:outline-none focus:ring-1 focus:ring-[#D9A299] dark:focus:ring-[#8400ff]"
+                    className="w-full px-4 py-2 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white placeholder:text-[#8B7355] dark:placeholder:text-white/40 focus:border-[#D9A299] dark:focus:border-[#ba181b] focus:outline-none focus:ring-1 focus:ring-[#D9A299] dark:focus:ring-[#ba181b]"
                     required
                   />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-white/70 mb-1">Phone</label>
+                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-1">Phone</label>
                   <input
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     placeholder="e.g., 01712345678"
-                    className="w-full px-4 py-2 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-[#FAF7F3] dark:bg-[#060010] text-[#5D4E37] dark:text-white placeholder:text-[#8B7355] dark:placeholder:text-white/40 focus:border-[#D9A299] dark:focus:border-[#8400ff] focus:outline-none focus:ring-1 focus:ring-[#D9A299] dark:focus:ring-[#8400ff]"
+                    className="w-full px-4 py-2 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white placeholder:text-[#8B7355] dark:placeholder:text-white/40 focus:border-[#D9A299] dark:focus:border-[#ba181b] focus:outline-none focus:ring-1 focus:ring-[#D9A299] dark:focus:ring-[#ba181b]"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-white/70 mb-1">Batch</label>
+                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-1">Batch</label>
                   <select
                     value={formData.batch}
                     onChange={(e) => setFormData({ ...formData, batch: e.target.value })}
-                    className="w-full px-4 py-2 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-[#FAF7F3] dark:bg-[#060010] text-[#5D4E37] dark:text-white focus:border-[#D9A299] dark:focus:border-[#8400ff] focus:outline-none focus:ring-1 focus:ring-[#D9A299] dark:focus:ring-[#8400ff]"
+                    className="w-full px-4 py-2 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white focus:border-[#D9A299] dark:focus:border-[#ba181b] focus:outline-none focus:ring-1 focus:ring-[#D9A299] dark:focus:ring-[#ba181b]"
                   >
                     <option value="21">2k21</option>
                     <option value="22">2k22</option>
@@ -247,11 +247,11 @@ export default function AddStudentPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-white/70 mb-1">Current Year</label>
+                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-1">Current Year</label>
                   <select
                     value={formData.currentYear}
                     onChange={(e) => setFormData({ ...formData, currentYear: parseInt(e.target.value) as 1 | 2 | 3 | 4 })}
-                    className="w-full px-4 py-2 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-[#FAF7F3] dark:bg-[#060010] text-[#5D4E37] dark:text-white focus:border-[#D9A299] dark:focus:border-[#8400ff] focus:outline-none focus:ring-1 focus:ring-[#D9A299] dark:focus:ring-[#8400ff]"
+                    className="w-full px-4 py-2 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white focus:border-[#D9A299] dark:focus:border-[#ba181b] focus:outline-none focus:ring-1 focus:ring-[#D9A299] dark:focus:ring-[#ba181b]"
                   >
                     <option value={1}>1st Year</option>
                     <option value={2}>2nd Year</option>
@@ -260,11 +260,11 @@ export default function AddStudentPage() {
                   </select>
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-white/70 mb-1">Current Term</label>
+                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-1">Current Term</label>
                   <select
                     value={formData.currentTerm}
                     onChange={(e) => setFormData({ ...formData, currentTerm: parseInt(e.target.value) as 1 | 2 })}
-                    className="w-full px-4 py-2 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-[#FAF7F3] dark:bg-[#060010] text-[#5D4E37] dark:text-white focus:border-[#D9A299] dark:focus:border-[#8400ff] focus:outline-none focus:ring-1 focus:ring-[#D9A299] dark:focus:ring-[#8400ff]"
+                    className="w-full px-4 py-2 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white focus:border-[#D9A299] dark:focus:border-[#ba181b] focus:outline-none focus:ring-1 focus:ring-[#D9A299] dark:focus:ring-[#ba181b]"
                   >
                     <option value={1}>1st Term</option>
                     <option value={2}>2nd Term</option>
@@ -280,7 +280,7 @@ export default function AddStudentPage() {
                     setShowForm(false);
                     setError(null);
                   }}
-                  className="flex-1 px-4 py-2 border border-[#DCC5B2] dark:border-[#392e4e] rounded-full text-[#5D4E37] dark:text-white/70 hover:bg-[#F0E4D3] dark:hover:bg-white/5"
+                  className="flex-1 px-4 py-2 border border-[#DCC5B2] dark:border-[#3d4951] rounded-full text-[#5D4E37] dark:text-[#d3d3d3] hover:bg-[#F0E4D3] dark:hover:bg-[#0b090a]"
                   disabled={isSubmitting}
                 >
                   Cancel
@@ -312,13 +312,13 @@ export default function AddStudentPage() {
             placeholder="Search by name or roll..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-[#F0E4D3] dark:bg-[#0d0d1a] text-[#5D4E37] dark:text-white placeholder:text-[#8B7355] dark:placeholder:text-white/40 focus:border-[#D9A299] dark:focus:border-[#8400ff] focus:outline-none focus:ring-1 focus:ring-[#D9A299] dark:focus:ring-[#8400ff]"
+            className="w-full px-4 py-2 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#F0E4D3] dark:bg-[#161a1d] text-[#5D4E37] dark:text-white placeholder:text-[#8B7355] dark:placeholder:text-white/40 focus:border-[#D9A299] dark:focus:border-[#ba181b] focus:outline-none focus:ring-1 focus:ring-[#D9A299] dark:focus:ring-[#ba181b]"
           />
         </div>
         <select
           value={filterBatch}
           onChange={(e) => setFilterBatch(e.target.value)}
-          className="px-4 py-2 border border-[#DCC5B2] dark:border-[#392e4e] rounded-lg bg-[#F0E4D3] dark:bg-[#0d0d1a] text-[#5D4E37] dark:text-white focus:border-[#D9A299] dark:focus:border-[#8400ff] focus:outline-none"
+          className="px-4 py-2 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#F0E4D3] dark:bg-[#161a1d] text-[#5D4E37] dark:text-white focus:border-[#D9A299] dark:focus:border-[#ba181b] focus:outline-none"
         >
           <option value="all">All Batches</option>
           <option value="21">2k21</option>
@@ -336,47 +336,47 @@ export default function AddStudentPage() {
         <SpotlightCard className="bg-[#FAF7F3] dark:bg-transparent border border-[#DCC5B2] dark:border-transparent" spotlightColor="rgba(217, 162, 153, 0.2)">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#D9A299] dark:border-[#8400ff]"></div>
-              <span className="ml-3 text-[#8B7355] dark:text-white/60">Loading students...</span>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#D9A299] dark:border-[#ba181b]"></div>
+              <span className="ml-3 text-[#8B7355] dark:text-[#b1a7a6]">Loading students...</span>
             </div>
           ) : filteredStudents.length === 0 ? (
-            <div className="text-center py-12 text-[#8B7355] dark:text-white/60">
+            <div className="text-center py-12 text-[#8B7355] dark:text-[#b1a7a6]">
               No students found. Add your first student to get started!
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-[#F0E4D3] dark:bg-[#060010]/50 border-b border-[#DCC5B2] dark:border-[#392e4e]">
+                <thead className="bg-[#F0E4D3] dark:bg-[#0b090a]/50 border-b border-[#DCC5B2] dark:border-[#3d4951]">
                   <tr>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase">Roll</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase">Name</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase">Email</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase">Phone</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase">Session</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase">Term</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-white/60 uppercase">Actions</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-[#b1a7a6] uppercase">Roll</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-[#b1a7a6] uppercase">Name</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-[#b1a7a6] uppercase">Email</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-[#b1a7a6] uppercase">Phone</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-[#b1a7a6] uppercase">Session</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-[#b1a7a6] uppercase">Term</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-[#5D4E37] dark:text-[#b1a7a6] uppercase">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#DCC5B2]/50 dark:divide-[#392e4e]/50">
+                <tbody className="divide-y divide-[#DCC5B2]/50 dark:divide-[#3d4951]/50">
                   {filteredStudents.map((student, index) => (
                     <motion.tr 
                       key={student.user_id} 
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: index * 0.03 }}
-                      className="hover:bg-[#D9A299]/10 dark:hover:bg-[#8400ff]/5 transition-colors"
+                      className="hover:bg-[#D9A299]/10 dark:hover:bg-[#ba181b]/5 transition-colors"
                     >
                       <td className="px-6 py-4 font-medium text-[#5D4E37] dark:text-white">{student.roll_no}</td>
                       <td className="px-6 py-4 text-[#5D4E37] dark:text-white">{student.full_name}</td>
-                      <td className="px-6 py-4 text-[#8B7355] dark:text-white/60 text-sm">{student.profile.email}</td>
-                      <td className="px-6 py-4 text-[#8B7355] dark:text-white/60 text-sm">{student.phone}</td>
+                      <td className="px-6 py-4 text-[#8B7355] dark:text-[#b1a7a6] text-sm">{student.profile.email}</td>
+                      <td className="px-6 py-4 text-[#8B7355] dark:text-[#b1a7a6] text-sm">{student.phone}</td>
                       <td className="px-6 py-4">
-                        <span className="px-2.5 py-1 bg-[#D9A299]/20 dark:bg-[#8400ff]/20 text-[#D9A299] dark:text-[#a855f7] rounded-full text-sm border border-[#D9A299]/30 dark:border-[#8400ff]/30">
+                        <span className="px-2.5 py-1 bg-[#D9A299]/20 dark:bg-[#ba181b]/20 text-[#D9A299] dark:text-[#e5383b] rounded-full text-sm border border-[#D9A299]/30 dark:border-[#ba181b]/30">
                           {student.session}
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="px-2.5 py-1 bg-[#5D4E37]/10 dark:bg-white/10 text-[#5D4E37] dark:text-white rounded-full text-sm">
+                        <span className="px-2.5 py-1 bg-[#5D4E37]/10 dark:bg-[#3d4951]/30 text-[#5D4E37] dark:text-white rounded-full text-sm">
                           {student.term}
                         </span>
                       </td>

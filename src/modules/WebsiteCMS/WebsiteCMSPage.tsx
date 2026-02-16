@@ -350,14 +350,14 @@ export default function WebsiteCMSPage() {
       </AnimatePresence>
 
       {/* ── Header ── */}
-      <div className="bg-white dark:bg-[#1A0F08] rounded-2xl shadow-sm border border-[#DCC5B2] dark:border-[#2C1810] p-6">
+      <div className="bg-white dark:bg-[#161a1d] rounded-2xl shadow-sm border border-[#DCC5B2] dark:border-[#161a1d] p-6">
         <div className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 bg-[#D4A574]/20 rounded-xl flex items-center justify-center">
             <Globe className="w-5 h-5 text-[#D4A574]" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-[#2C1810] dark:text-white">Website CMS</h1>
-            <p className="text-sm text-[#6B5744] dark:text-white/60">
+            <p className="text-sm text-[#6B5744] dark:text-[#b1a7a6]">
               Manage all landing page content — images, text, sections, and more.
             </p>
           </div>
@@ -365,7 +365,7 @@ export default function WebsiteCMSPage() {
       </div>
 
       {/* ── Tab navigation ── */}
-      <div className="bg-white dark:bg-[#1A0F08] rounded-2xl shadow-sm border border-[#DCC5B2] dark:border-[#2C1810] p-2">
+      <div className="bg-white dark:bg-[#161a1d] rounded-2xl shadow-sm border border-[#DCC5B2] dark:border-[#161a1d] p-2">
         {/* Desktop tabs */}
         <div className="hidden lg:flex flex-wrap gap-1">
           {CMS_TABLES.map(t => {
@@ -378,7 +378,7 @@ export default function WebsiteCMSPage() {
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
                   isActive
                     ? 'bg-[#D4A574] text-[#2C1810] shadow-sm'
-                    : 'text-[#6B5744] dark:text-white/60 hover:bg-[#D4A574]/10'
+                    : 'text-[#6B5744] dark:text-[#b1a7a6] hover:bg-[#D4A574]/10'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -400,7 +400,7 @@ export default function WebsiteCMSPage() {
             <ChevronDown className={`w-4 h-4 transition-transform ${tabDropdownOpen ? 'rotate-180' : ''}`} />
           </button>
           {tabDropdownOpen && (
-            <div className="absolute top-full left-0 right-0 mt-1 z-20 bg-white dark:bg-[#1A0F08] border border-[#DCC5B2] dark:border-[#2C1810] rounded-lg shadow-lg max-h-64 overflow-y-auto">
+            <div className="absolute top-full left-0 right-0 mt-1 z-20 bg-white dark:bg-[#161a1d] border border-[#DCC5B2] dark:border-[#161a1d] rounded-lg shadow-lg max-h-64 overflow-y-auto">
               {CMS_TABLES.map(t => {
                 const Icon = t.icon;
                 return (
@@ -408,7 +408,7 @@ export default function WebsiteCMSPage() {
                     key={t.key}
                     onClick={() => { setActiveTab(t.key); setTabDropdownOpen(false); }}
                     className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-[#D4A574]/10 ${
-                      activeTab === t.key ? 'text-[#D4A574] font-medium' : 'text-[#6B5744] dark:text-white/60'
+                      activeTab === t.key ? 'text-[#D4A574] font-medium' : 'text-[#6B5744] dark:text-[#b1a7a6]'
                     }`}
                   >
                     <Icon className="w-4 h-4" /> {t.label}
@@ -421,19 +421,19 @@ export default function WebsiteCMSPage() {
       </div>
 
       {/* ── Table content area ── */}
-      <div className="bg-white dark:bg-[#1A0F08] rounded-2xl shadow-sm border border-[#DCC5B2] dark:border-[#2C1810] overflow-hidden">
+      <div className="bg-white dark:bg-[#161a1d] rounded-2xl shadow-sm border border-[#DCC5B2] dark:border-[#161a1d] overflow-hidden">
         {/* Sub-header: description + actions */}
-        <div className="p-4 border-b border-[#DCC5B2]/50 dark:border-[#2C1810]/50">
+        <div className="p-4 border-b border-[#DCC5B2]/50 dark:border-[#161a1d]/50">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold text-[#2C1810] dark:text-white flex items-center gap-2">
                 {React.createElement(activeConfig.icon, { className: 'w-5 h-5 text-[#D4A574]' })}
                 {activeConfig.label}
-                <span className="text-xs font-normal text-[#8B7355] dark:text-white/40 ml-2">
+                <span className="text-xs font-normal text-[#8B7355] dark:text-[#b1a7a6]/70 ml-2">
                   {filteredRows.length} record{filteredRows.length !== 1 ? 's' : ''}
                 </span>
               </h2>
-              <p className="text-xs text-[#8B7355] dark:text-white/50 mt-0.5">{activeConfig.description}</p>
+              <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6] mt-0.5">{activeConfig.description}</p>
             </div>
             <div className="flex items-center gap-2">
               {/* Search */}
@@ -443,7 +443,7 @@ export default function WebsiteCMSPage() {
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   placeholder="Search…"
-                  className="pl-9 pr-3 py-2 text-sm bg-[#FAF7F3] dark:bg-[#0F0A06] border border-[#DCC5B2] dark:border-[#2C1810] rounded-lg text-[#2C1810] dark:text-white/80 focus:outline-none focus:ring-2 focus:ring-[#D4A574]/40 w-48"
+                  className="pl-9 pr-3 py-2 text-sm bg-[#FAF7F3] dark:bg-[#0b090a] border border-[#DCC5B2] dark:border-[#161a1d] rounded-lg text-[#2C1810] dark:text-[#f5f3f4] focus:outline-none focus:ring-2 focus:ring-[#D4A574]/40 w-48"
                 />
               </div>
               {/* Add new */}
@@ -505,28 +505,28 @@ export default function WebsiteCMSPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-[#FAF7F3] dark:bg-[#0F0A06]">
+                <tr className="bg-[#FAF7F3] dark:bg-[#0b090a]">
                   {activeConfig.columns.map(col => (
                     <th
                       key={col.key}
-                      className="px-4 py-3 text-left text-xs font-semibold text-[#6B5744] dark:text-white/50 uppercase tracking-wide"
+                      className="px-4 py-3 text-left text-xs font-semibold text-[#6B5744] dark:text-[#b1a7a6] uppercase tracking-wide"
                     >
                       {col.label}
                     </th>
                   ))}
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-[#6B5744] dark:text-white/50 uppercase tracking-wide w-24">
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-[#6B5744] dark:text-[#b1a7a6] uppercase tracking-wide w-24">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#DCC5B2]/30 dark:divide-[#2C1810]/30">
+              <tbody className="divide-y divide-[#DCC5B2]/30 dark:divide-[#161a1d]/30">
                 {filteredRows.map((row) => (
                   <tr
                     key={row.id as string}
-                    className="hover:bg-[#FAF7F3]/60 dark:hover:bg-[#0F0A06]/40 transition-colors"
+                    className="hover:bg-[#FAF7F3]/60 dark:hover:bg-[#0b090a]/40 transition-colors"
                   >
                     {activeConfig.columns.map(col => (
-                      <td key={col.key} className="px-4 py-3 text-[#2C1810] dark:text-white/80 max-w-[200px]">
+                      <td key={col.key} className="px-4 py-3 text-[#2C1810] dark:text-[#f5f3f4] max-w-[200px]">
                         {renderCellValue(row, col, (id, field, val) => handleToggle(id, field, val), setImagePreview)}
                       </td>
                     ))}
@@ -534,7 +534,7 @@ export default function WebsiteCMSPage() {
                       <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => { setEditingRow({ ...row }); setIsCreating(false); }}
-                          className="p-1.5 text-[#6B5744] dark:text-white/40 hover:text-[#D4A574] hover:bg-[#D4A574]/10 rounded-md transition-colors"
+                          className="p-1.5 text-[#6B5744] dark:text-[#b1a7a6]/70 hover:text-[#D4A574] hover:bg-[#D4A574]/10 rounded-md transition-colors"
                           title="Edit"
                         >
                           <Edit2 className="w-4 h-4" />
@@ -557,7 +557,7 @@ export default function WebsiteCMSPage() {
                         ) : (
                           <button
                             onClick={() => setDeleteConfirm(row.id as string)}
-                            className="p-1.5 text-[#6B5744] dark:text-white/40 hover:text-red-500 hover:bg-red-500/10 rounded-md transition-colors"
+                            className="p-1.5 text-[#6B5744] dark:text-[#b1a7a6]/70 hover:text-red-500 hover:bg-red-500/10 rounded-md transition-colors"
                             title="Delete"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -607,7 +607,7 @@ export default function WebsiteCMSPage() {
             >
               <button
                 onClick={() => setImagePreview(null)}
-                className="absolute -top-3 -right-3 w-8 h-8 bg-white dark:bg-[#2C1810] rounded-full flex items-center justify-center shadow-lg"
+                className="absolute -top-3 -right-3 w-8 h-8 bg-white dark:bg-[#161a1d] rounded-full flex items-center justify-center shadow-lg"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -772,10 +772,10 @@ function EditModal({
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 20, scale: 0.97 }}
         onClick={e => e.stopPropagation()}
-        className="bg-white dark:bg-[#1A0F08] w-full max-w-lg rounded-2xl shadow-2xl border border-[#DCC5B2] dark:border-[#2C1810] overflow-hidden"
+        className="bg-white dark:bg-[#161a1d] w-full max-w-lg rounded-2xl shadow-2xl border border-[#DCC5B2] dark:border-[#161a1d] overflow-hidden"
       >
         {/* Modal header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#DCC5B2]/50 dark:border-[#2C1810]/50">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#DCC5B2]/50 dark:border-[#161a1d]/50">
           <h3 className="text-lg font-semibold text-[#2C1810] dark:text-white">
             {isCreating ? `Add ${tableLabel.replace(/s$/, '')}` : `Edit ${tableLabel.replace(/s$/, '')}`}
           </h3>
@@ -788,7 +788,7 @@ function EditModal({
         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
           {columns.filter(c => c.editable !== false).map(col => (
             <div key={col.key}>
-              <label className="block text-xs font-medium text-[#6B5744] dark:text-white/60 mb-1">
+              <label className="block text-xs font-medium text-[#6B5744] dark:text-[#b1a7a6] mb-1">
                 {col.label}
                 {col.required && <span className="text-red-500 ml-0.5">*</span>}
               </label>
@@ -798,7 +798,7 @@ function EditModal({
         </form>
 
         {/* Modal footer */}
-        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-[#DCC5B2]/50 dark:border-[#2C1810]/50 bg-[#FAF7F3]/50 dark:bg-[#0F0A06]/30">
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-[#DCC5B2]/50 dark:border-[#161a1d]/50 bg-[#FAF7F3]/50 dark:bg-[#0b090a]/30">
           <button
             type="button"
             onClick={onClose}
@@ -837,7 +837,7 @@ function renderFormField(
   onChange: (val: unknown) => void,
 ) {
   const baseInputClass =
-    'w-full px-3 py-2 text-sm bg-[#FAF7F3] dark:bg-[#0F0A06] border border-[#DCC5B2] dark:border-[#2C1810] rounded-lg text-[#2C1810] dark:text-white/80 focus:outline-none focus:ring-2 focus:ring-[#D4A574]/40 placeholder:text-[#8B7355]/50';
+    'w-full px-3 py-2 text-sm bg-[#FAF7F3] dark:bg-[#0b090a] border border-[#DCC5B2] dark:border-[#161a1d] rounded-lg text-[#2C1810] dark:text-[#f5f3f4] focus:outline-none focus:ring-2 focus:ring-[#D4A574]/40 placeholder:text-[#8B7355]/50';
 
   switch (col.type) {
     case 'boolean':
@@ -846,7 +846,7 @@ function renderFormField(
           type="button"
           onClick={() => onChange(!value)}
           className={`relative inline-flex h-6 w-11 rounded-full transition-colors ${
-            value ? 'bg-[#D4A574]' : 'bg-[#DCC5B2]/50 dark:bg-[#2C1810]'
+            value ? 'bg-[#D4A574]' : 'bg-[#DCC5B2]/50 dark:bg-[#161a1d]'
           }`}
         >
           <span

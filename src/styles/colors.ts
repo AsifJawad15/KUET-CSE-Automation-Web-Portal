@@ -120,25 +120,25 @@ export const lightTheme = {
 
 export const darkTheme = {
   background: {
-    primary: colors.neutral[950],
-    secondary: colors.neutral[900],
-    tertiary: colors.neutral[800],
+    primary: '#0b090a',    // onyx
+    secondary: '#161a1d',  // carbon_black
+    tertiary: '#3d4951',   // carbon_black-600
   },
   text: {
-    primary: colors.neutral[50],
-    secondary: colors.neutral[300],
-    tertiary: colors.neutral[400],
-    inverse: colors.neutral[900],
+    primary: '#f5f3f4',    // white_smoke
+    secondary: '#d3d3d3',  // dust_grey
+    tertiary: '#b1a7a6',   // silver
+    inverse: '#0b090a',    // onyx
   },
   border: {
-    light: colors.neutral[800],
-    default: colors.neutral[700],
-    dark: colors.neutral[600],
+    light: '#3d4951',      // carbon_black-600
+    default: '#41353b',    // onyx-600
+    dark: '#657786',       // carbon_black-700
   },
   surface: {
-    card: colors.neutral[900],
-    elevated: colors.neutral[800],
-    overlay: 'rgba(15, 10, 6, 0.7)',
+    card: '#161a1d',       // carbon_black
+    elevated: '#3d4951',   // carbon_black-600
+    overlay: 'rgba(11, 9, 10, 0.7)',
   },
 };
 
@@ -147,8 +147,8 @@ export const gradients = {
   primary: 'from-[#5D4037] via-[#8B6914] to-[#D4A574]',
   secondary: 'from-[#D4A574] via-[#C4956A] to-[#8B6914]',
   accent: 'from-[#D4A574] to-[#E8C09A]',
-  dark: 'from-[#0F0A06] via-[#1A0F08] to-[#0F0A06]',
+  dark: 'from-[#0b090a] via-[#161a1d] to-[#0b090a]',
   light: 'from-[#FDF8F3] via-white to-[#F5EDE4]',
   mesh: 'from-[#5D4037]/10 via-[#8B6914]/10 to-[#D4A574]/10',
-  warmOverlay: 'from-[#1A0F08]/80 via-transparent to-[#0F0A06]/90',
+  warmOverlay: 'from-[#161a1d]/80 via-transparent to-[#0b090a]/90',
 };

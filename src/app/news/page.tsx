@@ -39,7 +39,7 @@ export default function NewsPage() {
                   <img src={getImageUrl(n.image_path)} alt={n.title}
                     className={`w-full object-cover transition-transform duration-700 group-hover:scale-110 ${i === 0 ? 'h-64 md:h-80' : 'h-48'}`} />
                   <div className="absolute inset-0 bg-[#5D4037]/15 group-hover:bg-[#5D4037]/5 transition-all" />
-                  <div className="absolute bottom-0 inset-x-0 h-1/2 bg-gradient-to-t from-[#2C1810]/60 to-transparent" />
+                  <div className="absolute bottom-0 inset-x-0 h-1/2 bg-gradient-to-t from-[#161a1d]/60 to-transparent" />
                   <span className="absolute top-3 left-3 px-3 py-1 bg-[#D4A574] text-[#2C1810] text-xs font-bold rounded-full">{n.category}</span>
                 </div>
               )}
