@@ -1,4 +1,13 @@
-import { DBRoutineSlotWithDetails } from '@/lib/supabase';
+// ==========================================
+// Routine Service
+// Dependency Inversion: Uses httpClient abstraction, not raw fetch
+// Single Responsibility: Only handles routine slot API calls
+// ==========================================
+
+import { apiClient, ServiceResult } from '@/lib/httpClient';
+import type { DBRoutineSlotWithDetails } from '@/types/database';
+
+// ── Input Types ────────────────────────────────────────
 
 export interface AddRoutineSlotInput {
   offering_id: string;
@@ -9,64 +18,36 @@ export interface AddRoutineSlotInput {
   section?: string;
 }
 
-export interface RoutineSlotResponse {
-  success: boolean;
-  data?: any;
-  error?: string;
-}
+export type RoutineSlotResponse = ServiceResult<DBRoutineSlotWithDetails>;
+
+// ── API Methods ────────────────────────────────────────
+
+const ENDPOINT = '/routine-slots';
 
 export async function getRoutineSlots(
   term?: string,
   session?: string,
   section?: string
 ): Promise<DBRoutineSlotWithDetails[]> {
-  try {
-    const params = new URLSearchParams();
-    if (term) params.set('term', term);
-    if (session) params.set('session', session);
-    if (section) params.set('section', section);
+  const params: Record<string, string> = {};
+  if (term) params.term = term;
+  if (session) params.session = session;
+  if (section) params.section = section;
 
-    const response = await fetch(`/api/routine-slots?${params}`);
-    return response.ok ? await response.json() : [];
-  } catch {
-    return [];
-  }
+  return apiClient.getList<DBRoutineSlotWithDetails>(ENDPOINT, params);
 }
 
 export async function addRoutineSlot(input: AddRoutineSlotInput): Promise<RoutineSlotResponse> {
-  try {
-    const response = await fetch('/api/routine-slots', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input),
-    });
-    return await response.json();
-  } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to add routine slot' };
-  }
+  return apiClient.post<DBRoutineSlotWithDetails>(ENDPOINT, input);
 }
 
-export async function deleteRoutineSlot(id: string): Promise<RoutineSlotResponse> {
-  try {
-    const response = await fetch(`/api/routine-slots?id=${id}`, { method: 'DELETE' });
-    return await response.json();
-  } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to delete routine slot' };
-  }
+export async function deleteRoutineSlot(id: string): Promise<ServiceResult<void>> {
+  return apiClient.delete(ENDPOINT, { id });
 }
 
 export async function updateRoutineSlot(
   id: string,
   updates: Partial<AddRoutineSlotInput>
 ): Promise<RoutineSlotResponse> {
-  try {
-    const response = await fetch('/api/routine-slots', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, ...updates }),
-    });
-    return await response.json();
-  } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to update routine slot' };
-  }
+  return apiClient.patch<DBRoutineSlotWithDetails>(ENDPOINT, { id, ...updates });
 }
