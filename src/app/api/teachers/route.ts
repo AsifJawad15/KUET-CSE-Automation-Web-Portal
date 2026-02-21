@@ -1,42 +1,48 @@
+// ==========================================
+// API: /api/teachers
+// Single Responsibility: HTTP layer — delegates to Supabase
+// Uses shared response helpers, validators & query constants
+// ==========================================
+
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { hashPassword, generateTeacherPassword } from '@/lib/passwordUtils';
+import { badRequest, guardSupabase, internalError, conflict, noContent, ok } from '@/lib/apiResponse';
+import { requireField, requireFields, runValidations, validateEmail } from '@/lib/validators';
+import { WITH_PROFILE } from '@/lib/queryConstants';
+
+// ── Helpers ────────────────────────────────────────────
+
+function extractErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
+function isDuplicateError(error: { message: string }): boolean {
+  return error.message.includes('unique') || error.message.includes('duplicate');
+}
+
+// ── POST /api/teachers ─────────────────────────────────
 
 export async function POST(request: NextRequest) {
-  try {
-    if (!isSupabaseConfigured()) {
-      return NextResponse.json(
-        { success: false, error: 'Supabase is not configured' },
-        { status: 500 }
-      );
-    }
+  const guard = guardSupabase(isSupabaseConfigured());
+  if (guard) return guard;
 
+  try {
     const body = await request.json();
     const { full_name, email, phone, designation, password } = body;
 
-    // Validate required fields
-    if (!full_name || !email || !designation) {
-      return NextResponse.json(
-        { success: false, error: 'Required fields: full_name, email, designation' },
-        { status: 400 }
-      );
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid email format' },
-        { status: 400 }
-      );
-    }
+    const validationError = runValidations(
+      requireFields({ full_name, email, designation }),
+      validateEmail(email ?? ''),
+    );
+    if (validationError) return badRequest(validationError);
 
     // Generate UUID and password
     const tempUserId = crypto.randomUUID();
     const plainPassword = password || generateTeacherPassword();
     const passwordHash = await hashPassword(plainPassword);
 
-    // 1. Create profile (auth only: email + password + role)
+    // 1. Create profile (auth only)
     const { error: profileError } = await supabase
       .from('profiles')
       .insert({
@@ -48,87 +54,62 @@ export async function POST(request: NextRequest) {
       });
 
     if (profileError) {
-      if (profileError.message.includes('unique') || profileError.message.includes('duplicate')) {
-        return NextResponse.json(
-          { success: false, error: 'A teacher with this email already exists' },
-          { status: 409 }
-        );
-      }
+      if (isDuplicateError(profileError)) return conflict('A teacher with this email already exists');
       throw profileError;
     }
 
-    // 2. Create teacher record (all teacher data: name, phone, designation, etc.)
+    // 2. Create teacher record
     const { error: teacherError } = await supabase
       .from('teachers')
-      .insert({
-        user_id: tempUserId,
-        full_name,
-        phone,
-        designation,
-      });
+      .insert({ user_id: tempUserId, full_name, phone, designation });
 
     if (teacherError) throw teacherError;
 
-    // 3. Fetch complete teacher data with auth info
+    // 3. Fetch complete teacher data
     const { data: teacherData, error: fetchError } = await supabase
       .from('teachers')
-      .select(`
-        *,
-        profile:profiles(user_id, role, email, is_active, created_at, updated_at)
-      `)
+      .select(WITH_PROFILE)
       .eq('user_id', tempUserId)
       .single();
 
     if (fetchError) throw fetchError;
 
-    return NextResponse.json({
-      success: true,
-      data: teacherData,
-      generatedPassword: plainPassword,
-    });
-  } catch (error: any) {
-    console.error('Error adding teacher:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to add teacher' },
-      { status: 500 }
-    );
+    return ok({ ...teacherData, generatedPassword: plainPassword });
+  } catch (error: unknown) {
+    return internalError(extractErrorMessage(error, 'Failed to add teacher'));
   }
 }
 
-export async function GET() {
-  try {
-    if (!isSupabaseConfigured()) {
-      return NextResponse.json([], { status: 200 });
-    }
+// ── GET /api/teachers ──────────────────────────────────
 
+export async function GET() {
+  const guard = guardSupabase(isSupabaseConfigured());
+  if (guard) return guard;
+
+  try {
     const { data, error } = await supabase
       .from('teachers')
-      .select(`
-        *,
-        profile:profiles(user_id, role, email, is_active, created_at, updated_at)
-      `)
+      .select(WITH_PROFILE)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-
     return NextResponse.json(data || []);
-  } catch (error: any) {
-    console.error('Error fetching teachers:', error);
-    return NextResponse.json([], { status: 500 });
+  } catch (error: unknown) {
+    return internalError(extractErrorMessage(error, 'Failed to fetch teachers'));
   }
 }
 
+// ── DELETE /api/teachers ───────────────────────────────
+
 export async function DELETE(request: NextRequest) {
+  const guard = guardSupabase(isSupabaseConfigured());
+  if (guard) return guard;
+
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'User ID required' },
-        { status: 400 }
-      );
-    }
+    if (!userId) return badRequest('User ID required');
 
     const { error } = await supabase
       .from('profiles')
@@ -136,37 +117,26 @@ export async function DELETE(request: NextRequest) {
       .eq('user_id', userId);
 
     if (error) throw error;
-
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error('Error deactivating teacher:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
+    return noContent();
+  } catch (error: unknown) {
+    return internalError(extractErrorMessage(error, 'Failed to deactivate teacher'));
   }
 }
 
-export async function PATCH(request: NextRequest) {
-  try {
-    if (!isSupabaseConfigured()) {
-      return NextResponse.json(
-        { success: false, error: 'Supabase is not configured' },
-        { status: 500 }
-      );
-    }
+// ── PATCH /api/teachers ────────────────────────────────
 
+export async function PATCH(request: NextRequest) {
+  const guard = guardSupabase(isSupabaseConfigured());
+  if (guard) return guard;
+
+  try {
     const body = await request.json();
     const { userId, action, full_name, phone, designation } = body;
 
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'User ID is required' },
-        { status: 400 }
-      );
-    }
+    const idCheck = requireField(userId, 'User ID');
+    if (!idCheck.valid) return badRequest(idCheck.error!);
 
-    // Reset password: generate new 6-digit password and return it
+    // ── Reset password ──
     if (action === 'reset_password') {
       const newPassword = generateTeacherPassword();
       const passwordHash = await hashPassword(newPassword);
@@ -177,33 +147,26 @@ export async function PATCH(request: NextRequest) {
         .eq('user_id', userId);
 
       if (error) throw error;
-
-      return NextResponse.json({
-        success: true,
-        newPassword,
-      });
+      return ok({ newPassword });
     }
 
-    // Toggle leave status
+    // ── Toggle leave status ──
     if (action === 'toggle_leave') {
       const { is_on_leave, leave_reason } = body;
 
-      const updates: Record<string, any> = {
-        is_on_leave: !!is_on_leave,
-        leave_reason: is_on_leave ? (leave_reason || null) : null,
-      };
-
       const { error } = await supabase
         .from('teachers')
-        .update(updates)
+        .update({
+          is_on_leave: !!is_on_leave,
+          leave_reason: is_on_leave ? (leave_reason || null) : null,
+        })
         .eq('user_id', userId);
 
       if (error) throw error;
-
-      return NextResponse.json({ success: true });
+      return noContent();
     }
 
-    // Update profile: update teacher data
+    // ── Update profile ──
     if (action === 'update_profile') {
       const teacherUpdates: Record<string, string> = {};
       if (full_name) teacherUpdates.full_name = full_name;
@@ -219,18 +182,11 @@ export async function PATCH(request: NextRequest) {
         if (error) throw error;
       }
 
-      return NextResponse.json({ success: true });
+      return noContent();
     }
 
-    return NextResponse.json(
-      { success: false, error: 'Invalid action' },
-      { status: 400 }
-    );
-  } catch (error: any) {
-    console.error('Error updating teacher:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to update teacher' },
-      { status: 500 }
-    );
+    return badRequest('Invalid action');
+  } catch (error: unknown) {
+    return internalError(extractErrorMessage(error, 'Failed to update teacher'));
   }
 }

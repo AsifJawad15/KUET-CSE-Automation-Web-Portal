@@ -1,11 +1,28 @@
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { NextRequest, NextResponse } from 'next/server';
+// ==========================================
+// API: /api/term-upgrades
+// Single Responsibility: HTTP layer — delegates to Supabase
+// Uses shared response helpers, validators & query constants
+// ==========================================
 
-// GET - Fetch term upgrade requests (optionally filter by studentUserId or status)
+import { NextRequest, NextResponse } from 'next/server';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { badRequest, conflict, created, guardSupabase, internalError, noContent, notFound, ok, serviceUnavailable } from '@/lib/apiResponse';
+import { requireFields, validateUUID } from '@/lib/validators';
+import { TERM_UPGRADE_WITH_STUDENT } from '@/lib/queryConstants';
+
+// ── Helpers ────────────────────────────────────────────
+
+function extractErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
+const VALID_REVIEW_STATUSES = ['approved', 'rejected'] as const;
+
+// ── GET /api/term-upgrades ─────────────────────────────
+
 export async function GET(request: NextRequest) {
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json({ error: 'Supabase not configured' }, { status: 503 });
-  }
+  const guard = guardSupabase(isSupabaseConfigured());
+  if (guard) return guard;
 
   try {
     const { searchParams } = new URL(request.url);
@@ -14,58 +31,35 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('term_upgrade_requests')
-      .select(`
-        *,
-        students!inner (
-          full_name,
-          roll_no,
-          term,
-          session,
-          batch,
-          section,
-          cgpa
-        )
-      `)
+      .select(TERM_UPGRADE_WITH_STUDENT)
       .order('requested_at', { ascending: false });
 
-    if (studentUserId) {
-      query = query.eq('student_user_id', studentUserId);
-    }
-    if (status) {
-      query = query.eq('status', status);
-    }
+    if (studentUserId) query = query.eq('student_user_id', studentUserId);
+    if (status) query = query.eq('status', status);
 
     const { data, error } = await query;
-
-    if (error) {
-      console.error('Error fetching term upgrade requests:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+    if (error) throw error;
 
     return NextResponse.json(data || []);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return internalError(extractErrorMessage(error, 'Failed to fetch term upgrade requests'));
   }
 }
 
-// POST - Submit a new term upgrade request (student)
+// ── POST /api/term-upgrades ────────────────────────────
+
 export async function POST(request: NextRequest) {
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json({ error: 'Supabase not configured' }, { status: 503 });
-  }
+  const guard = guardSupabase(isSupabaseConfigured());
+  if (guard) return guard;
 
   try {
     const body = await request.json();
     const { student_user_id, current_term, requested_term, reason } = body;
 
-    if (!student_user_id || !current_term || !requested_term) {
-      return NextResponse.json(
-        { error: 'student_user_id, current_term, and requested_term are required' },
-        { status: 400 }
-      );
-    }
+    const fieldCheck = requireFields({ student_user_id, current_term, requested_term });
+    if (!fieldCheck.valid) return badRequest(fieldCheck.error!);
 
-    // Check if student already has a pending request
+    // Check for existing pending request
     const { data: existing } = await supabase
       .from('term_upgrade_requests')
       .select('id')
@@ -74,10 +68,7 @@ export async function POST(request: NextRequest) {
       .limit(1);
 
     if (existing && existing.length > 0) {
-      return NextResponse.json(
-        { error: 'You already have a pending term upgrade request' },
-        { status: 409 }
-      );
+      return conflict('You already have a pending term upgrade request');
     }
 
     const { data, error } = await supabase
@@ -92,79 +83,59 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
-    if (error) {
-      console.error('Error creating term upgrade request:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json(data, { status: 201 });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) throw error;
+    return created(data);
+  } catch (error: unknown) {
+    return internalError(extractErrorMessage(error, 'Failed to create term upgrade request'));
   }
 }
 
-// PATCH - Approve or reject a term upgrade request (admin)
+// ── PATCH /api/term-upgrades (approve/reject) ──────────
+
 export async function PATCH(request: NextRequest) {
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json({ error: 'Supabase not configured' }, { status: 503 });
-  }
+  const guard = guardSupabase(isSupabaseConfigured());
+  if (guard) return guard;
 
   try {
     const body = await request.json();
     const { id, status, admin_user_id, admin_remarks } = body;
 
-    if (!id || !status) {
-      return NextResponse.json(
-        { error: 'id and status are required' },
-        { status: 400 }
-      );
-    }
+    const fieldCheck = requireFields({ id, status });
+    if (!fieldCheck.valid) return badRequest(fieldCheck.error!);
 
-    if (!['approved', 'rejected'].includes(status)) {
-      return NextResponse.json(
-        { error: 'status must be "approved" or "rejected"' },
-        { status: 400 }
-      );
+    if (!VALID_REVIEW_STATUSES.includes(status)) {
+      return badRequest(`status must be "approved" or "rejected"`);
     }
 
     // Validate admin_user_id is a valid UUID, otherwise set to null
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    const validAdminId = admin_user_id && uuidRegex.test(admin_user_id) ? admin_user_id : null;
+    const validAdminId = admin_user_id
+      ? (validateUUID(admin_user_id).valid ? admin_user_id : null)
+      : null;
 
-    // Fetch the request first
+    // Fetch the request
     const { data: upgradeRequest, error: fetchError } = await supabase
       .from('term_upgrade_requests')
       .select('*')
       .eq('id', id)
       .single();
 
-    if (fetchError || !upgradeRequest) {
-      return NextResponse.json({ error: 'Request not found' }, { status: 404 });
-    }
+    if (fetchError || !upgradeRequest) return notFound('Request not found');
+    if (upgradeRequest.status !== 'pending') return badRequest('This request has already been reviewed');
 
-    if (upgradeRequest.status !== 'pending') {
-      return NextResponse.json(
-        { error: 'This request has already been reviewed' },
-        { status: 400 }
-      );
-    }
-
-    // Update the request status
+    // Update request status
+    const now = new Date().toISOString();
     const { error: updateError } = await supabase
       .from('term_upgrade_requests')
       .update({
         status,
         admin_user_id: validAdminId,
         admin_remarks: admin_remarks || null,
-        reviewed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        reviewed_at: now,
+        updated_at: now,
       })
       .eq('id', id);
 
-    if (updateError) {
-      console.error('Error updating term upgrade request:', updateError);
-      return NextResponse.json({ error: updateError.message }, { status: 500 });
-    }
+    if (updateError) throw updateError;
 
     // If approved, update the student's term
     if (status === 'approved') {
@@ -172,44 +143,38 @@ export async function PATCH(request: NextRequest) {
         .from('students')
         .update({
           term: upgradeRequest.requested_term,
-          updated_at: new Date().toISOString(),
+          updated_at: now,
         })
         .eq('user_id', upgradeRequest.student_user_id);
 
       if (studentUpdateError) {
-        console.error('Error updating student term:', studentUpdateError);
-        // Rollback the request status
+        // Rollback request status on failure
         await supabase
           .from('term_upgrade_requests')
           .update({ status: 'pending', admin_user_id: null, admin_remarks: null, reviewed_at: null })
           .eq('id', id);
 
-        return NextResponse.json(
-          { error: 'Failed to update student term: ' + studentUpdateError.message },
-          { status: 500 }
-        );
+        return internalError('Failed to update student term: ' + studentUpdateError.message);
       }
     }
 
-    return NextResponse.json({ success: true, status });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return ok({ status });
+  } catch (error: unknown) {
+    return internalError(extractErrorMessage(error, 'Failed to review term upgrade request'));
   }
 }
 
-// DELETE - Delete a term upgrade request (only pending ones)
+// ── DELETE /api/term-upgrades ──────────────────────────
+
 export async function DELETE(request: NextRequest) {
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json({ error: 'Supabase not configured' }, { status: 503 });
-  }
+  const guard = guardSupabase(isSupabaseConfigured());
+  if (guard) return guard;
 
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
-    if (!id) {
-      return NextResponse.json({ error: 'id is required' }, { status: 400 });
-    }
+    if (!id) return badRequest('id is required');
 
     const { error } = await supabase
       .from('term_upgrade_requests')
@@ -217,12 +182,9 @@ export async function DELETE(request: NextRequest) {
       .eq('id', id)
       .eq('status', 'pending'); // Only allow deleting pending requests
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) throw error;
+    return noContent();
+  } catch (error: unknown) {
+    return internalError(extractErrorMessage(error, 'Failed to delete term upgrade request'));
   }
 }

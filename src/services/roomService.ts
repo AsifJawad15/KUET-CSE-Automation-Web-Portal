@@ -1,4 +1,13 @@
-import { DBRoom, DBRoomType } from '@/lib/supabase';
+// ==========================================
+// Room Service
+// Dependency Inversion: Uses httpClient abstraction, not raw fetch
+// Single Responsibility: Only handles room-related API calls
+// ==========================================
+
+import { apiClient, ServiceResult } from '@/lib/httpClient';
+import type { DBRoom, DBRoomType } from '@/types/database';
+
+// ── Input / Response Types ─────────────────────────────
 
 export interface AddRoomInput {
   room_number: string;
@@ -8,54 +17,24 @@ export interface AddRoomInput {
   facilities?: string[];
 }
 
-export interface RoomResponse {
-  success: boolean;
-  data?: DBRoom;
-  error?: string;
-}
+export type RoomResponse = ServiceResult<DBRoom>;
+
+// ── API Methods ────────────────────────────────────────
+
+const ENDPOINT = '/rooms';
 
 export async function getAllRooms(): Promise<DBRoom[]> {
-  try {
-    const response = await fetch('/api/rooms');
-    return response.ok ? await response.json() : [];
-  } catch {
-    return [];
-  }
+  return apiClient.getList<DBRoom>(ENDPOINT);
 }
 
 export async function addRoom(input: AddRoomInput): Promise<RoomResponse> {
-  try {
-    const response = await fetch('/api/rooms', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input),
-    });
-    return await response.json();
-  } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to add room' };
-  }
+  return apiClient.post<DBRoom>(ENDPOINT, input);
 }
 
 export async function updateRoom(room_number: string, updates: Partial<AddRoomInput>): Promise<RoomResponse> {
-  try {
-    const response = await fetch('/api/rooms', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ room_number, ...updates }),
-    });
-    return await response.json();
-  } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to update room' };
-  }
+  return apiClient.patch<DBRoom>(ENDPOINT, { room_number, ...updates });
 }
 
-export async function deleteRoom(room_number: string): Promise<{ success: boolean; error?: string }> {
-  try {
-    const response = await fetch(`/api/rooms?room_number=${encodeURIComponent(room_number)}`, {
-      method: 'DELETE',
-    });
-    return await response.json();
-  } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to delete room' };
-  }
+export async function deleteRoom(room_number: string): Promise<ServiceResult<void>> {
+  return apiClient.delete(ENDPOINT, { room_number });
 }

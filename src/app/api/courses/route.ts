@@ -1,67 +1,59 @@
+// ==========================================
+// API: /api/courses
+// Single Responsibility: HTTP layer only — delegates to Supabase
+// Uses shared response helpers & validators for consistency
+// ==========================================
+
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { badRequest, conflict, guardSupabase, internalError, noContent, ok } from '@/lib/apiResponse';
+import { requireField, requireFields, runValidations, validateUppercase, validatePositiveNumber } from '@/lib/validators';
 
-// ==========================================
-// GET /api/courses — List all courses
-// ==========================================
+// ── Helpers ────────────────────────────────────────────
+
+function isDuplicateError(error: { message: string }): boolean {
+  return error.message.includes('unique') || error.message.includes('duplicate');
+}
+
+function extractErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
+// ── GET /api/courses ───────────────────────────────────
+
 export async function GET() {
-  try {
-    if (!isSupabaseConfigured()) {
-      return NextResponse.json([], { status: 200 });
-    }
+  const guard = guardSupabase(isSupabaseConfigured());
+  if (guard) return guard;
 
+  try {
     const { data, error } = await supabase
       .from('courses')
       .select('*')
       .order('code', { ascending: true });
 
     if (error) throw error;
-
     return NextResponse.json(data || []);
-  } catch (error: any) {
-    console.error('Error fetching courses:', error);
-    return NextResponse.json([], { status: 500 });
+  } catch (error: unknown) {
+    return internalError(extractErrorMessage(error, 'Failed to fetch courses'));
   }
 }
 
-// ==========================================
-// POST /api/courses — Add a new course
-// ==========================================
-export async function POST(request: NextRequest) {
-  try {
-    if (!isSupabaseConfigured()) {
-      return NextResponse.json(
-        { success: false, error: 'Supabase is not configured' },
-        { status: 500 }
-      );
-    }
+// ── POST /api/courses ──────────────────────────────────
 
+export async function POST(request: NextRequest) {
+  const guard = guardSupabase(isSupabaseConfigured());
+  if (guard) return guard;
+
+  try {
     const body = await request.json();
     const { code, title, credit, course_type, description } = body;
 
-    // Validate required fields
-    if (!code || !title || credit == null) {
-      return NextResponse.json(
-        { success: false, error: 'Required fields: code, title, credit' },
-        { status: 400 }
-      );
-    }
-
-    // Validate code is uppercase
-    if (code !== code.toUpperCase()) {
-      return NextResponse.json(
-        { success: false, error: 'Course code must be uppercase (e.g., CSE 3201)' },
-        { status: 400 }
-      );
-    }
-
-    // Validate credit > 0
-    if (Number(credit) <= 0) {
-      return NextResponse.json(
-        { success: false, error: 'Credit must be greater than 0' },
-        { status: 400 }
-      );
-    }
+    const validationError = runValidations(
+      requireFields({ code, title, credit }),
+      validateUppercase(code ?? '', 'Course code'),
+      validatePositiveNumber(Number(credit), 'Credit'),
+    );
+    if (validationError) return badRequest(validationError);
 
     const { data, error } = await supabase
       .from('courses')
@@ -76,76 +68,47 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      if (error.message.includes('unique') || error.message.includes('duplicate')) {
-        return NextResponse.json(
-          { success: false, error: `Course with code "${code}" already exists` },
-          { status: 409 }
-        );
-      }
+      if (isDuplicateError(error)) return conflict(`Course with code "${code}" already exists`);
       throw error;
     }
 
-    return NextResponse.json({ success: true, data });
-  } catch (error: any) {
-    console.error('Error adding course:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to add course' },
-      { status: 500 }
-    );
+    return ok(data);
+  } catch (error: unknown) {
+    return internalError(extractErrorMessage(error, 'Failed to add course'));
   }
 }
 
-// ==========================================
-// PATCH /api/courses — Update an existing course
-// ==========================================
-export async function PATCH(request: NextRequest) {
-  try {
-    if (!isSupabaseConfigured()) {
-      return NextResponse.json(
-        { success: false, error: 'Supabase is not configured' },
-        { status: 500 }
-      );
-    }
+// ── PATCH /api/courses ─────────────────────────────────
 
+export async function PATCH(request: NextRequest) {
+  const guard = guardSupabase(isSupabaseConfigured());
+  if (guard) return guard;
+
+  try {
     const body = await request.json();
     const { id, code, title, credit, course_type, description } = body;
 
-    if (!id) {
-      return NextResponse.json(
-        { success: false, error: 'Course ID is required' },
-        { status: 400 }
-      );
-    }
+    const idCheck = requireField(id, 'Course ID');
+    if (!idCheck.valid) return badRequest(idCheck.error!);
 
-    const updates: Record<string, any> = {};
+    // Build update payload with inline validation
+    const updates: Record<string, unknown> = {};
+
     if (code !== undefined) {
-      if (code !== code.toUpperCase()) {
-        return NextResponse.json(
-          { success: false, error: 'Course code must be uppercase' },
-          { status: 400 }
-        );
-      }
+      const codeCheck = validateUppercase(code, 'Course code');
+      if (!codeCheck.valid) return badRequest(codeCheck.error!);
       updates.code = code.trim();
     }
     if (title !== undefined) updates.title = title.trim();
     if (credit !== undefined) {
-      if (Number(credit) <= 0) {
-        return NextResponse.json(
-          { success: false, error: 'Credit must be greater than 0' },
-          { status: 400 }
-        );
-      }
+      const creditCheck = validatePositiveNumber(Number(credit), 'Credit');
+      if (!creditCheck.valid) return badRequest(creditCheck.error!);
       updates.credit = Number(credit);
     }
     if (course_type !== undefined) updates.course_type = course_type;
     if (description !== undefined) updates.description = description?.trim() || null;
 
-    if (Object.keys(updates).length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'No fields to update' },
-        { status: 400 }
-      );
-    }
+    if (Object.keys(updates).length === 0) return badRequest('No fields to update');
 
     const { data, error } = await supabase
       .from('courses')
@@ -155,46 +118,27 @@ export async function PATCH(request: NextRequest) {
       .single();
 
     if (error) {
-      if (error.message.includes('unique') || error.message.includes('duplicate')) {
-        return NextResponse.json(
-          { success: false, error: `Course code "${code}" already exists` },
-          { status: 409 }
-        );
-      }
+      if (isDuplicateError(error)) return conflict(`Course code "${code}" already exists`);
       throw error;
     }
 
-    return NextResponse.json({ success: true, data });
-  } catch (error: any) {
-    console.error('Error updating course:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to update course' },
-      { status: 500 }
-    );
+    return ok(data);
+  } catch (error: unknown) {
+    return internalError(extractErrorMessage(error, 'Failed to update course'));
   }
 }
 
-// ==========================================
-// DELETE /api/courses?id=<uuid> — Delete a course
-// ==========================================
-export async function DELETE(request: NextRequest) {
-  try {
-    if (!isSupabaseConfigured()) {
-      return NextResponse.json(
-        { success: false, error: 'Supabase is not configured' },
-        { status: 500 }
-      );
-    }
+// ── DELETE /api/courses ────────────────────────────────
 
+export async function DELETE(request: NextRequest) {
+  const guard = guardSupabase(isSupabaseConfigured());
+  if (guard) return guard;
+
+  try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
-    if (!id) {
-      return NextResponse.json(
-        { success: false, error: 'Course ID is required' },
-        { status: 400 }
-      );
-    }
+    if (!id) return badRequest('Course ID is required');
 
     const { error } = await supabase
       .from('courses')
@@ -202,13 +146,8 @@ export async function DELETE(request: NextRequest) {
       .eq('id', id);
 
     if (error) throw error;
-
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error('Error deleting course:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to delete course' },
-      { status: 500 }
-    );
+    return noContent();
+  } catch (error: unknown) {
+    return internalError(extractErrorMessage(error, 'Failed to delete course'));
   }
 }

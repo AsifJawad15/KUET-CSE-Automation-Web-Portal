@@ -1,128 +1,70 @@
-import { StudentWithAuth } from '@/lib/supabase';
+// ==========================================
+// Student Service
+// Dependency Inversion: Uses httpClient abstraction, not raw fetch
+// Single Responsibility: Only handles student-related API calls
+// ==========================================
 
-// Re-export for components that import from here
+import { apiClient, ServiceResult } from '@/lib/httpClient';
+import type { StudentWithAuth } from '@/types/database';
+
+// Re-export for backward compatibility
 export type { StudentWithAuth };
+
+// ── Input / Response Types ─────────────────────────────
 
 export interface AddStudentInput {
   full_name: string;
   email: string;
   phone: string;
   roll_no: string;
-  term: string; // Format: '1-1', '1-2', '2-1', '2-2', '3-1', '3-2', '4-1', '4-2'
-  session: string; // e.g., '2024', '2023'
+  term: string;   // Format: '1-1' .. '4-2'
+  session: string; // e.g., '2024'
 }
 
-export interface AddStudentResponse {
-  success: boolean;
-  data?: StudentWithAuth;
-  initialPassword?: string; // The initial password (roll number) - only returned once!
-  error?: string;
+export interface AddStudentResponse extends ServiceResult<StudentWithAuth> {
+  initialPassword?: string;
 }
 
-/**
- * Helper function to generate term string from year and term number
- */
+// ── Pure Helpers (no side effects) ─────────────────────
+
 export function formatTerm(year: number, termNumber: number): string {
   return `${year}-${termNumber}`;
 }
 
-/**
- * Helper function to generate session from batch year
- */
 export function formatSession(batch: string): string {
   return `20${batch}`;
 }
 
-/**
- * Add a new student to the system using server-side API
- */
+// ── API Methods ────────────────────────────────────────
+
+const ENDPOINT = '/students';
+
+/** Create a new student (profile + student record). */
 export async function addStudent(input: AddStudentInput): Promise<AddStudentResponse> {
-  try {
-    const response = await fetch('/api/students', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input),
-    });
-
-    const result = await response.json();
-    return result;
-  } catch (error: any) {
-    console.error('Error adding student:', error);
-    return {
-      success: false,
-      error: error.message || 'Failed to add student',
-    };
-  }
+  return apiClient.post<StudentWithAuth>(ENDPOINT, input) as Promise<AddStudentResponse>;
 }
 
-/**
- * Fetch all students with their auth info using server-side API
- */
+/** Fetch all students with their auth info. */
 export async function getAllStudents(): Promise<StudentWithAuth[]> {
-  try {
-    const response = await fetch('/api/students');
-    const data = await response.json();
-    return data || [];
-  } catch (error) {
-    console.error('Error fetching students:', error);
-    return [];
-  }
+  return apiClient.getList<StudentWithAuth>(ENDPOINT);
 }
 
-/**
- * Update student information (TODO: Implement with API route)
- */
-export async function updateStudent(
-  userId: string,
-  updates: Partial<AddStudentInput>
-): Promise<AddStudentResponse> {
-  console.warn('updateStudent not yet implemented with API');
-  return {
-    success: false,
-    error: 'Update functionality not yet implemented',
-  };
+/** Soft-delete (deactivate) a student. */
+export async function deleteStudent(userId: string): Promise<ServiceResult<void>> {
+  return apiClient.delete(ENDPOINT, { userId });
 }
 
-/**
- * Delete (deactivate) a student using server-side API
- */
-export async function deleteStudent(userId: string): Promise<{ success: boolean; error?: string }> {
-  try {
-    const response = await fetch(`/api/students?userId=${userId}`, {
-      method: 'DELETE',
-    });
-
-    const result = await response.json();
-    return result;
-  } catch (error: any) {
-    console.error('Error deleting student:', error);
-    return {
-      success: false,
-      error: error.message || 'Failed to delete student',
-    };
-  }
-}
-
-/**
- * Search students by name, roll, or session (TODO: Implement with API route)
- */
+/** Search students by name, roll, or session. */
 export async function searchStudents(query: string): Promise<StudentWithAuth[]> {
-  console.warn('searchStudents not yet implemented with API');
-  return [];
+  return apiClient.getList<StudentWithAuth>(ENDPOINT, { q: query });
 }
 
-/**
- * Get students by session (batch) (TODO: Implement with API route)
- */
+/** Get students filtered by session (batch year). */
 export async function getStudentsBySession(session: string): Promise<StudentWithAuth[]> {
-  console.warn('getStudentsBySession not yet implemented with API');
-  return [];
+  return apiClient.getList<StudentWithAuth>(ENDPOINT, { session });
 }
 
-/**
- * Get students by term (TODO: Implement with API route)
- */
+/** Get students filtered by term. */
 export async function getStudentsByTerm(term: string): Promise<StudentWithAuth[]> {
-  console.warn('getStudentsByTerm not yet implemented with API');
-  return [];
+  return apiClient.getList<StudentWithAuth>(ENDPOINT, { term });
 }
