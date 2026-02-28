@@ -45,6 +45,38 @@ export interface DisplaySlot {
   teachers: TeacherInfo[];
   /** Whether this is a combined slot (has multiple teachers) */
   isCombined: boolean;
+  /** Whether this slot was imported from file (not persisted in DB) */
+  isImported?: boolean;
   /** Original raw slots for reference */
   rawSlots: DBRoutineSlotWithDetails[];
+}
+
+// ── Parsed Routine Types (for file upload/import) ──────
+
+/**
+ * A single parsed routine slot from an uploaded file (CSV/PDF/DOCX).
+ * Contains all display info inline — no DB references required.
+ */
+export interface ParsedRoutineSlot {
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  course_code: string;
+  course_title: string;
+  course_type: string;
+  teacher_name: string;
+  room_number: string;
+  section: string;
+  term: string;
+  session: string;
+}
+
+/**
+ * Result of bulk import attempt.
+ */
+export interface BulkImportResult {
+  inserted: number;
+  skipped: number;
+  unmatched: ParsedRoutineSlot[];
+  errors: string[];
 }

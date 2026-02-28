@@ -151,16 +151,18 @@ function SlotCell({ slot, onDelete }: SlotCellProps) {
         slot.course_type
       )} dark:${getSlotColor(slot.course_type)} ${getSlotColorLight(
         slot.course_type
-      )} dark:bg-transparent`}
+      )} dark:bg-transparent ${slot.isImported ? 'ring-1 ring-amber-400/50 dark:ring-amber-500/40' : ''}`}
     >
       {/* Course code */}
       <div className="font-bold text-[11px] text-[#5D4E37] dark:text-white">
         {slot.course_code}
       </div>
 
-      {/* Teacher initials — shows "WIS & DMH" for combined */}
+      {/* Teacher initials — shows "WIS & DMH" for combined, or full name for imported */}
       <div className="text-[10px] text-[#8B7355] dark:text-white/50 mt-0.5">
-        ({teacherInitials})
+        ({slot.isImported && slot.teachers[0]?.full_name
+          ? slot.teachers[0].full_name
+          : teacherInitials})
       </div>
 
       {/* Room number */}
@@ -175,17 +177,26 @@ function SlotCell({ slot, onDelete }: SlotCellProps) {
         </div>
       )}
 
-      {/* Delete button on hover */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete();
-        }}
-        className="absolute -top-1 -right-1 p-0.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-        title="Delete slot"
-      >
-        <Trash2 className="w-3 h-3" />
-      </button>
+      {/* Imported badge */}
+      {slot.isImported && (
+        <div className="text-[8px] text-amber-600 dark:text-amber-400 mt-0.5 font-medium">
+          Imported
+        </div>
+      )}
+
+      {/* Delete button on hover (only for DB-backed slots) */}
+      {!slot.isImported && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          className="absolute -top-1 -right-1 p-0.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+          title="Delete slot"
+        >
+          <Trash2 className="w-3 h-3" />
+        </button>
+      )}
     </motion.div>
   );
 }
