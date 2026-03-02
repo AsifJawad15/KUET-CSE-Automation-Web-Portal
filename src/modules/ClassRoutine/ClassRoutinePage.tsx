@@ -14,8 +14,7 @@ import RoutineStats from './RoutineStats';
 import RoutineUpload from './RoutineUpload';
 import { TERMS } from './constants';
 import { groupSlotsForDisplay } from './helpers';
-import { parsedToDisplaySlots } from './routineParser';
-import type { ParsedRoutineSlot } from './types';
+
 
 // ==========================================
 // Main Component
@@ -30,14 +29,11 @@ export default function ClassRoutinePage() {
   const [error, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [importedSlots, setImportedSlots] = useState<ParsedRoutineSlot[]>([]);
 
-  // Group combined slots for display + merge imported (unmatched) slots
+  // Group combined slots for display
   const displaySlots = useMemo(() => {
-    const dbSlots = groupSlotsForDisplay(rawSlots);
-    const imported = parsedToDisplaySlots(importedSlots);
-    return [...dbSlots, ...imported];
-  }, [rawSlots, importedSlots]);
+    return groupSlotsForDisplay(rawSlots);
+  }, [rawSlots]);
 
   const loadRoutine = useCallback(async () => {
     setLoading(true);
@@ -179,8 +175,7 @@ export default function ClassRoutinePage() {
       <RoutineUpload
         show={showUploadModal}
         onClose={() => setShowUploadModal(false)}
-        onImportComplete={(unmatched) => {
-          setImportedSlots(unmatched);
+        onImportComplete={() => {
           setShowUploadModal(false);
           loadRoutine(); // Refresh DB slots
         }}

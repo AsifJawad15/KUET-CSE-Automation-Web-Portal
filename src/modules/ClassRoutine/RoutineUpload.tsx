@@ -4,7 +4,7 @@ import React, { useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Upload, FileSpreadsheet, Loader2, AlertCircle,
-  CheckCircle2, Download, Eye, Trash2,
+  CheckCircle2, Download, Trash2,
 } from 'lucide-react';
 import { DAYS, PERIODS } from './constants';
 import type { ParsedRoutineSlot, BulkImportResult } from './types';
@@ -15,7 +15,7 @@ import { parseCSVText, generateCSVTemplate } from './routineParser';
 interface RoutineUploadProps {
   show: boolean;
   onClose: () => void;
-  onImportComplete: (unmatched: ParsedRoutineSlot[]) => void;
+  onImportComplete: () => void;
   term: string;
   session: string;
   section: string;
@@ -118,8 +118,8 @@ export default function RoutineUpload({ show, onClose, onImportComplete, term, s
       setImportResult(result);
       setStep('result');
 
-      // Pass unmatched slots to parent for grid display
-      onImportComplete(result.unmatched);
+      // Notify parent to refresh grid
+      onImportComplete();
     } catch (err: unknown) {
       setParseErrors([err instanceof Error ? err.message : 'Import failed']);
     } finally {
@@ -145,9 +145,11 @@ export default function RoutineUpload({ show, onClose, onImportComplete, term, s
 
   // ── Day/Period Label Helpers ───────────────────────
 
-  const dayLabel = (d: number) => DAYS.find((x) => x.value === d)?.label || '?';
-  const periodLabel = (time: string) => {
-    const p = PERIODS.find((x) => x.start === time);
+  const dayLabel = (d: number) => DAYS.find((x) => x.value === d)?.label || `Day ${d}`;
+  const periodLabel = (time: string, isEnd = false) => {
+    const p = isEnd
+      ? PERIODS.find((x) => x.end === time)
+      : PERIODS.find((x) => x.start === time);
     return p ? `P${p.id}` : time;
   };
 
@@ -275,7 +277,7 @@ export default function RoutineUpload({ show, onClose, onImportComplete, term, s
                       {parsedSlots.map((slot, i) => (
                         <tr key={i} className="border-t border-[#DCC5B2] dark:border-[#3d4951] hover:bg-[#F0E4D3]/50 dark:hover:bg-white/5">
                           <td className="p-2 text-[#5D4E37] dark:text-white">{dayLabel(slot.day_of_week)}</td>
-                          <td className="p-2 text-[#8B7355] dark:text-[#b1a7a6]">{periodLabel(slot.start_time)}–{periodLabel(slot.end_time)}</td>
+                          <td className="p-2 text-[#8B7355] dark:text-[#b1a7a6]">{periodLabel(slot.start_time)}–{periodLabel(slot.end_time, true)}</td>
                           <td className="p-2 font-medium text-[#5D4E37] dark:text-white">{slot.course_code}</td>
                           <td className="p-2 text-[#8B7355] dark:text-[#b1a7a6]">{slot.teacher_name || '—'}</td>
                           <td className="p-2 text-[#8B7355] dark:text-[#b1a7a6]">{slot.room_number || '—'}</td>
@@ -324,34 +326,42 @@ export default function RoutineUpload({ show, onClose, onImportComplete, term, s
             {step === 'result' && importResult && (
               <div className="space-y-4">
                 {/* Summary Cards */}
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="p-3 rounded-lg bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30 text-center">
                     <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400 mx-auto mb-1" />
                     <p className="text-lg font-bold text-green-700 dark:text-green-400">{importResult.inserted}</p>
-                    <p className="text-xs text-green-600 dark:text-green-500">Imported</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 text-center">
-                    <Eye className="w-6 h-6 text-amber-600 dark:text-amber-400 mx-auto mb-1" />
-                    <p className="text-lg font-bold text-amber-700 dark:text-amber-400">{importResult.unmatched.length}</p>
-                    <p className="text-xs text-amber-600 dark:text-amber-500">Display Only</p>
+                    <p className="text-xs text-green-600 dark:text-green-500">Inserted</p>
                   </div>
                   <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-500/10 border border-gray-200 dark:border-gray-500/30 text-center">
                     <FileSpreadsheet className="w-6 h-6 text-gray-500 dark:text-gray-400 mx-auto mb-1" />
                     <p className="text-lg font-bold text-gray-700 dark:text-gray-400">{importResult.skipped}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-500">Skipped (dup)</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500">Skipped (duplicate)</p>
                   </div>
                 </div>
 
-                {/* Unmatched info */}
-                {importResult.unmatched.length > 0 && (
-                  <div className="p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-lg">
-                    <p className="text-sm text-amber-700 dark:text-amber-400 font-medium mb-1">
-                      Display-Only Slots (teacher/course not in DB):
+                {/* Auto-created resources info */}
+                {(importResult.created_courses?.length > 0 ||
+                  importResult.created_rooms?.length > 0 ||
+                  importResult.created_teachers?.length > 0) && (
+                  <div className="p-3 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 rounded-lg space-y-2">
+                    <p className="text-sm text-blue-700 dark:text-blue-400 font-medium">
+                      Auto-created resources:
                     </p>
-                    <p className="text-xs text-amber-600 dark:text-amber-500">
-                      These slots are shown on the routine grid with teacher names but are not saved to the database.
-                      Add the missing teachers/courses to make them persistent.
-                    </p>
+                    {importResult.created_courses?.length > 0 && (
+                      <p className="text-xs text-blue-600 dark:text-blue-500">
+                        Courses: {importResult.created_courses.join(', ')}
+                      </p>
+                    )}
+                    {importResult.created_teachers?.length > 0 && (
+                      <p className="text-xs text-blue-600 dark:text-blue-500">
+                        Teachers: {importResult.created_teachers.join(', ')}
+                      </p>
+                    )}
+                    {importResult.created_rooms?.length > 0 && (
+                      <p className="text-xs text-blue-600 dark:text-blue-500">
+                        Rooms: {importResult.created_rooms.join(', ')}
+                      </p>
+                    )}
                   </div>
                 )}
 

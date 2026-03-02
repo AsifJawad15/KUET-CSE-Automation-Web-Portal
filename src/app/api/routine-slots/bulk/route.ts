@@ -1,13 +1,13 @@
 // ==========================================
 // API: /api/routine-slots/bulk
-// Single Responsibility: Bulk import parsed routine slots into DB
-// Matches slots to existing course_offerings; returns unmatched for display-only
+// Bulk import routine slots into DB.
+// Auto-creates missing courses, rooms, teachers, and course_offerings.
 // ==========================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { badRequest, guardSupabase, internalError } from '@/lib/apiResponse';
-import { ROUTINE_SLOT_WITH_DETAILS } from '@/lib/queryConstants';
+import { hashPassword } from '@/lib/passwordUtils';
 
 // ── Types ──────────────────────────────────────────────
 
@@ -28,51 +28,246 @@ interface ParsedSlot {
 interface BulkResult {
   inserted: number;
   skipped: number;
-  unmatched: ParsedSlot[];
   errors: string[];
+  created_courses: string[];
+  created_rooms: string[];
+  created_teachers: string[];
 }
 
 // ── Helpers ────────────────────────────────────────────
 
-function getInitials(fullName: string): string {
-  return fullName
-    .replace(/^(Dr\.|Prof\.|Mr\.|Ms\.|Mrs\.|Md\.)\s*/gi, '')
-    .trim()
-    .split(/\s+/)
-    .map((w) => w[0]?.toUpperCase() || '')
-    .join('');
+/** Normalize time to HH:MM:SS format */
+function normalizeTime(t: string): string {
+  const parts = t.split(':');
+  if (parts.length === 2) return `${parts[0]}:${parts[1]}:00`;
+  return t;
 }
 
-/** Try to match teacher by full name, partial name, or initials. */
-function findTeacherMatch(
-  teacherName: string,
-  offerings: { id: string; teacher_name: string }[],
-): string | null {
-  if (!teacherName) return offerings[0]?.id || null;
-
-  const needle = teacherName.trim().toLowerCase();
-  const needleInitials = getInitials(teacherName).toLowerCase();
-
-  // 1) Exact full_name match
-  for (const o of offerings) {
-    if (o.teacher_name.toLowerCase() === needle) return o.id;
+/** Derive term from course code digits e.g. "CSE 3201" → "3-2" */
+function deriveTermFromCode(code: string): string | null {
+  const digits = code.replace(/[^0-9]/g, '');
+  if (digits.length >= 2) {
+    const year = parseInt(digits[0]);
+    const sem = parseInt(digits[1]);
+    // Must match DB constraint: ^[1-4]-[1-2]$
+    if (year >= 1 && year <= 4 && sem >= 1 && sem <= 2) {
+      return `${year}-${sem}`;
+    }
   }
+  return null;
+}
 
-  // 2) Name contains / is contained
-  for (const o of offerings) {
-    const tn = o.teacher_name.toLowerCase();
-    if (tn.includes(needle) || needle.includes(tn)) return o.id;
+/** Derive credit from course code — last digit of the code number */
+function deriveCreditFromCode(code: string): number {
+  const digits = code.replace(/[^0-9]/g, '');
+  if (digits.length >= 4) return parseInt(digits[3]) || 3;
+  return 3;
+}
+
+/** Normalize course code: "CSE3201" → "CSE 3201", trim, uppercase */
+function normalizeCourseCode(raw: string): string {
+  let code = raw.trim().toUpperCase();
+  code = code.replace(/([A-Z])(\d)/, '$1 $2');
+  return code;
+}
+
+// ── Resource Finders/Creators ──────────────────────────
+
+async function findOrCreateRoom(
+  roomNumber: string,
+  createdList: string[],
+): Promise<string> {
+  const cleaned = (roomNumber || '').trim();
+  if (!cleaned) return await findOrCreateRoom('UNASSIGNED', createdList);
+
+  const { data: existing } = await supabase
+    .from('rooms')
+    .select('room_number')
+    .eq('room_number', cleaned)
+    .single();
+
+  if (existing) return existing.room_number;
+
+  const isLab = /lab/i.test(cleaned);
+  const { data: created, error } = await supabase
+    .from('rooms')
+    .insert({
+      room_number: cleaned,
+      building_name: 'Academic Building',
+      capacity: isLab ? 60 : 80,
+      room_type: isLab ? 'LAB' : 'CLASSROOM',
+      is_active: true,
+    })
+    .select('room_number')
+    .single();
+
+  if (error) throw new Error(`Room "${cleaned}": ${error.message}`);
+  createdList.push(cleaned);
+  return created.room_number;
+}
+
+async function findOrCreateCourse(
+  code: string,
+  title: string,
+  courseType: string,
+  createdList: string[],
+): Promise<string> {
+  const normalized = normalizeCourseCode(code);
+
+  const { data: existing } = await supabase
+    .from('courses')
+    .select('id')
+    .eq('code', normalized)
+    .single();
+
+  if (existing) return existing.id;
+
+  const credit = deriveCreditFromCode(normalized);
+  const { data: created, error } = await supabase
+    .from('courses')
+    .insert({
+      code: normalized,
+      title: title || `Course ${normalized}`,
+      credit,
+      course_type: courseType === 'lab' ? 'Lab' : 'Theory',
+    })
+    .select('id')
+    .single();
+
+  if (error) throw new Error(`Course "${normalized}": ${error.message}`);
+  createdList.push(normalized);
+  return created.id;
+}
+
+async function findTeacherByName(name: string): Promise<string | null> {
+  const lower = name.toLowerCase().trim();
+  if (!lower || lower === 'tba' || lower === 'unknown') return null;
+
+  // Exact match
+  const { data: exact } = await supabase
+    .from('teachers')
+    .select('user_id')
+    .ilike('full_name', lower)
+    .limit(1);
+  if (exact && exact.length > 0) return exact[0].user_id;
+
+  // Partial match
+  const { data: all } = await supabase
+    .from('teachers')
+    .select('user_id, full_name')
+    .limit(500);
+
+  if (all) {
+    for (const t of all) {
+      const tLower = t.full_name.toLowerCase();
+      if (tLower.includes(lower) || lower.includes(tLower)) return t.user_id;
+
+      // Initials match (e.g. "KS" matches "Dr. Kazi Shahiduzzaman")
+      const tInitials = t.full_name
+        .replace(/^(Dr\.|Prof\.|Mr\.|Ms\.|Mrs\.|Md\.)\s*/gi, '')
+        .trim()
+        .split(/\s+/)
+        .map((w: string) => w[0]?.toUpperCase() || '')
+        .join('');
+      if (tInitials.length >= 2 && tInitials.toLowerCase() === lower) return t.user_id;
+    }
   }
-
-  // 3) Initials match
-  for (const o of offerings) {
-    if (getInitials(o.teacher_name).toLowerCase() === needleInitials) return o.id;
-  }
-
-  // 4) If only one offering for this course, use it
-  if (offerings.length === 1) return offerings[0].id;
 
   return null;
+}
+
+async function findOrCreateTeacher(
+  teacherName: string,
+  createdList: string[],
+): Promise<string> {
+  const name = (teacherName || 'TBA').trim();
+
+  // Try to find existing teacher
+  const existingId = await findTeacherByName(name);
+  if (existingId) return existingId;
+
+  // Generate a unique email
+  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '');
+  const emailBase = `${slug}@kuet.ac.bd`;
+
+  // Check if email already used
+  const { data: profileCheck } = await supabase
+    .from('profiles')
+    .select('user_id')
+    .eq('email', emailBase)
+    .single();
+
+  if (profileCheck) {
+    // Profile exists — ensure teacher record too
+    const { data: tCheck } = await supabase
+      .from('teachers')
+      .select('user_id')
+      .eq('user_id', profileCheck.user_id)
+      .single();
+
+    if (tCheck) return tCheck.user_id;
+
+    await supabase.from('teachers').insert({
+      user_id: profileCheck.user_id,
+      full_name: name,
+      phone: '0000000000',
+      designation: 'LECTURER',
+      department: 'CSE',
+    });
+    createdList.push(name);
+    return profileCheck.user_id;
+  }
+
+  // Create profile + teacher
+  const passwordHash = await hashPassword('kuet123456');
+  const { data: profile, error: pErr } = await supabase
+    .from('profiles')
+    .insert({ role: 'TEACHER', email: emailBase, password_hash: passwordHash, is_active: true })
+    .select('user_id')
+    .single();
+
+  if (pErr) throw new Error(`Profile for "${name}": ${pErr.message}`);
+
+  const { error: tErr } = await supabase
+    .from('teachers')
+    .insert({
+      user_id: profile.user_id,
+      full_name: name,
+      phone: '0000000000',
+      designation: 'LECTURER',
+      department: 'CSE',
+    });
+
+  if (tErr) throw new Error(`Teacher "${name}": ${tErr.message}`);
+  createdList.push(name);
+  return profile.user_id;
+}
+
+async function findOrCreateOffering(
+  courseId: string,
+  teacherUserId: string,
+  term: string,
+  session: string,
+): Promise<string> {
+  const { data: existing } = await supabase
+    .from('course_offerings')
+    .select('id')
+    .eq('course_id', courseId)
+    .eq('teacher_user_id', teacherUserId)
+    .eq('term', term)
+    .eq('session', session)
+    .limit(1);
+
+  if (existing && existing.length > 0) return existing[0].id;
+
+  const { data: created, error } = await supabase
+    .from('course_offerings')
+    .insert({ course_id: courseId, teacher_user_id: teacherUserId, term, session, is_active: true })
+    .select('id')
+    .single();
+
+  if (error) throw new Error(`Offering: ${error.message}`);
+  return created.id;
 }
 
 // ── POST Handler ───────────────────────────────────────
@@ -89,77 +284,83 @@ export async function POST(request: NextRequest) {
       return badRequest('slots array is required');
     }
 
-    // Prefetch all course offerings with course code + teacher name
-    const { data: allOfferings, error: offerErr } = await supabase
-      .from('course_offerings')
-      .select('id, course_id, teacher_user_id, term, session, courses(code), teachers!course_offerings_teacher_user_id_fkey(full_name)')
-      .eq('is_active', true);
-
-    if (offerErr) throw offerErr;
-
-    // Build lookup: course_code → offerings with teacher names
-    const offeringsByCode = new Map<string, { id: string; teacher_name: string }[]>();
-    for (const o of allOfferings || []) {
-      const code = (o.courses as { code?: string } | null)?.code || '';
-      const name = (o.teachers as { full_name?: string } | null)?.full_name || '';
-      if (!code) continue;
-      const existing = offeringsByCode.get(code) || [];
-      existing.push({ id: o.id, teacher_name: name });
-      offeringsByCode.set(code, existing);
-    }
-
-    const result: BulkResult = { inserted: 0, skipped: 0, unmatched: [], errors: [] };
+    const result: BulkResult = {
+      inserted: 0,
+      skipped: 0,
+      errors: [],
+      created_courses: [],
+      created_rooms: [],
+      created_teachers: [],
+    };
 
     for (const slot of slots) {
-      const courseCode = slot.course_code.replace(/\s+/g, ' ').trim();
-      const offerings = offeringsByCode.get(courseCode);
+      try {
+        const courseCode = normalizeCourseCode(slot.course_code);
+        const term = slot.term || deriveTermFromCode(courseCode) || '1-1';
+        const session = slot.session || '2024-2025';
+        const section = slot.section || 'A';
 
-      if (!offerings || offerings.length === 0) {
-        // Course not found in DB — unmatched (display-only with teacher name)
-        result.unmatched.push(slot);
-        continue;
-      }
+        // 1. Room
+        const roomNumber = await findOrCreateRoom(
+          slot.room_number || '',
+          result.created_rooms,
+        );
 
-      // Try to match teacher
-      const offeringId = findTeacherMatch(slot.teacher_name, offerings);
+        // 2. Course
+        const courseId = await findOrCreateCourse(
+          courseCode,
+          slot.course_title,
+          slot.course_type,
+          result.created_courses,
+        );
 
-      if (!offeringId) {
-        // Teacher not matched — unmatched (keep teacher name for grid display)
-        result.unmatched.push(slot);
-        continue;
-      }
+        // 3. Teacher
+        const teacherUserId = await findOrCreateTeacher(
+          slot.teacher_name || 'TBA',
+          result.created_teachers,
+        );
 
-      // Check for duplicate (same offering + day + time + section)
-      const { data: existing } = await supabase
-        .from('routine_slots')
-        .select('id')
-        .eq('offering_id', offeringId)
-        .eq('day_of_week', slot.day_of_week)
-        .eq('start_time', slot.start_time + ':00')
-        .eq('section', slot.section)
-        .limit(1);
+        // 4. Course offering
+        const offeringId = await findOrCreateOffering(courseId, teacherUserId, term, session);
 
-      if (existing && existing.length > 0) {
-        result.skipped++;
-        continue;
-      }
+        // 5. Duplicate check
+        const startTime = normalizeTime(slot.start_time);
+        const endTime = normalizeTime(slot.end_time);
 
-      // Insert
-      const { error: insertErr } = await supabase
-        .from('routine_slots')
-        .insert({
-          offering_id: offeringId,
-          room_number: slot.room_number,
-          day_of_week: slot.day_of_week,
-          start_time: slot.start_time + ':00',
-          end_time: slot.end_time + ':00',
-          section: slot.section,
-        });
+        const { data: dup } = await supabase
+          .from('routine_slots')
+          .select('id')
+          .eq('offering_id', offeringId)
+          .eq('day_of_week', slot.day_of_week)
+          .eq('start_time', startTime)
+          .eq('section', section)
+          .limit(1);
 
-      if (insertErr) {
-        result.errors.push(`${slot.course_code}: ${insertErr.message}`);
-      } else {
-        result.inserted++;
+        if (dup && dup.length > 0) {
+          result.skipped++;
+          continue;
+        }
+
+        // 6. Insert
+        const { error: insertErr } = await supabase
+          .from('routine_slots')
+          .insert({
+            offering_id: offeringId,
+            room_number: roomNumber,
+            day_of_week: slot.day_of_week,
+            start_time: startTime,
+            end_time: endTime,
+            section,
+          });
+
+        if (insertErr) {
+          result.errors.push(`${courseCode}: ${insertErr.message}`);
+        } else {
+          result.inserted++;
+        }
+      } catch (slotErr: unknown) {
+        const msg = slotErr instanceof Error ? slotErr.message : 'Unknown error';
+        result.errors.push(`${slot.course_code}: ${msg}`);
       }
     }
 
