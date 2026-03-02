@@ -11,7 +11,7 @@ import AddRoutineSlot from './AddRoutineSlot';
 import RoutineFilters from './RoutineFilters';
 import RoutineGrid from './RoutineGrid';
 import RoutineStats from './RoutineStats';
-import RoutineUpload from './RoutineUpload';
+import { FileUploadModal, createRoutineUploadConfig } from '@/components/upload';
 import { TERMS } from './constants';
 import { groupSlotsForDisplay } from './helpers';
 
@@ -172,16 +172,14 @@ export default function ClassRoutinePage() {
       />
 
       {/* Upload Routine Modal */}
-      <RoutineUpload
+      <FileUploadModal
         show={showUploadModal}
         onClose={() => setShowUploadModal(false)}
         onImportComplete={() => {
           setShowUploadModal(false);
           loadRoutine(); // Refresh DB slots
         }}
-        term={selectedTerm}
-        session={selectedSession}
-        section={selectedSection}
+        config={createRoutineUploadConfig(selectedTerm, selectedSession, selectedSection)}
       />
     </div>
   );

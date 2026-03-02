@@ -3,8 +3,9 @@
 import SpotlightCard from '@/components/ui/SpotlightCard';
 import { StudentWithAuth, getAllStudents, deleteStudent } from '@/services/studentService';
 import { motion } from 'framer-motion';
-import { UserCog, Loader2, AlertCircle, Mail, Phone, GraduationCap, Calendar } from 'lucide-react';
+import { UserCog, Loader2, AlertCircle, Mail, Phone, GraduationCap, Calendar, Upload } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { FileUploadModal, studentUploadConfig } from '@/components/upload';
 
 export default function StudentInfoPage() {
   const [students, setStudents] = useState<StudentWithAuth[]>([]);
@@ -14,6 +15,7 @@ export default function StudentInfoPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showUpload, setShowUpload] = useState(false);
 
   // Load students on mount
   useEffect(() => {
@@ -111,9 +113,18 @@ export default function StudentInfoPage() {
           <p className="text-[#8B7355] dark:text-[#b1a7a6] mt-1">View all enrolled students</p>
         </div>
         
-        <div className="flex items-center gap-2 text-sm text-[#8B7355] dark:text-[#b1a7a6]">
-          <UserCog className="w-4 h-4" />
-          <span>{filteredStudents.length} students</span>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowUpload(true)}
+            className="px-4 py-2 border border-[#DCC5B2] dark:border-[#3d4951] text-[#5D4E37] dark:text-[#b1a7a6] rounded-lg transition-all flex items-center gap-2 hover:bg-[#F0E4D3] dark:hover:bg-[#3d4951]/30 text-sm"
+          >
+            <Upload className="w-4 h-4" />
+            Upload CSV
+          </button>
+          <div className="flex items-center gap-2 text-sm text-[#8B7355] dark:text-[#b1a7a6]">
+            <UserCog className="w-4 h-4" />
+            <span>{filteredStudents.length} students</span>
+          </div>
         </div>
       </motion.div>
 
@@ -259,6 +270,14 @@ export default function StudentInfoPage() {
           ))}
         </motion.div>
       )}
+
+      {/* Bulk Upload Modal */}
+      <FileUploadModal
+        show={showUpload}
+        onClose={() => setShowUpload(false)}
+        onImportComplete={loadStudents}
+        config={studentUploadConfig}
+      />
     </div>
   );
 }
