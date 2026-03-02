@@ -389,11 +389,13 @@ export default function CourseAllocationPage() {
     try {
       setRemoving(true);
       const res = await fetch(`/api/course-offerings?id=${removeInfo.offeringId}`, { method: 'DELETE' });
-      const result = await res.json();
-      if (!result.success) {
-        setError(result.error || 'Failed to remove assignment');
+
+      if (!res.ok) {
+        const result = await res.json().catch(() => null);
+        setError(result?.error || 'Failed to remove assignment');
         return;
       }
+
       await fetchData();
       setRemoveInfo(null);
       setError(null);

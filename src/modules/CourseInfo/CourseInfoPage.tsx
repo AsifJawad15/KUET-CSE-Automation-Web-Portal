@@ -366,11 +366,13 @@ export default function CourseInfoPage() {
     try {
       setDeleting(true);
       const res = await fetch(`/api/courses?id=${deleteCourse.id}`, { method: 'DELETE' });
-      const result = await res.json();
-      if (!result.success) {
-        setError(result.error || 'Failed to delete course');
+
+      if (!res.ok) {
+        const result = await res.json().catch(() => null);
+        setError(result?.error || `Failed to delete course (${res.status})`);
         return;
       }
+
       await fetchCourses();
       setDeleteCourse(null);
       if (expandedId === deleteCourse.id) setExpandedId(null);

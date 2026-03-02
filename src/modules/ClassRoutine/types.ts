@@ -77,6 +77,8 @@ export interface ParsedRoutineSlot {
 export interface BulkImportResult {
   inserted: number;
   skipped: number;
-  unmatched: ParsedRoutineSlot[];
   errors: string[];
+  created_courses: string[];
+  created_rooms: string[];
+  created_teachers: string[];
 }

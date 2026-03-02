@@ -140,13 +140,31 @@ export async function DELETE(request: NextRequest) {
 
     if (!id) return badRequest('Course ID is required');
 
+    // Check for dependent course_offerings first
+    const { data: offerings } = await supabase
+      .from('course_offerings')
+      .select('id')
+      .eq('course_id', id)
+      .limit(1);
+
+    if (offerings && offerings.length > 0) {
+      return conflict(
+        'Cannot delete this course because it has active course offerings. Remove the offerings first.'
+      );
+    }
+
     const { error } = await supabase
       .from('courses')
       .delete()
       .eq('id', id);
 
-    if (error) throw error;
-    return noContent();
+    if (error) {
+      if (error.message.includes('foreign key') || error.message.includes('violates')) {
+        return conflict('Cannot delete: this course is referenced by other records.');
+      }
+      throw error;
+    }
+    return ok({ deleted: true });
   } catch (error: unknown) {
     return internalError(extractErrorMessage(error, 'Failed to delete course'));
   }
