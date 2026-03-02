@@ -97,10 +97,10 @@ export function parseCSVText(
   return { slots, errors };
 }
 
-// ── Text Parser (for PDF/DOCX extracted text) ──────────
+// ── Text Parser (for DOCX extracted text) ──────────────
 
 /**
- * Extract routine slots from raw text (PDF/DOCX).
+ * Extract routine slots from raw text (DOCX).
  * Looks for course code patterns and maps them to days/periods.
  */
 export function parseRoutineText(

@@ -11,7 +11,7 @@ import {
   formatSession,
   StudentWithAuth 
 } from '@/services/studentService';
-import AddStudentCSV from './AddStudentCSV';
+import { FileUploadModal, studentUploadConfig } from '@/components/upload';
 
 export default function AddStudentPage() {
   const [students, setStudents] = useState<StudentWithAuth[]>([]);
@@ -146,31 +146,24 @@ export default function AddStudentPage() {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => setShowCSV(!showCSV)}
-            className={`px-5 py-2.5 rounded-full transition-all flex items-center gap-2 ${
-              showCSV
-                ? 'bg-gradient-to-r from-[#d3d3d3] to-[#ba181b] text-white shadow-lg shadow-[#ba181b]/25'
-                : 'border border-[#DCC5B2] dark:border-[#3d4951] text-[#5D4E37] dark:text-[#d3d3d3] hover:bg-[#F0E4D3] dark:hover:bg-[#0b090a]'
-            }`}
+            onClick={() => setShowCSV(true)}
+            className="px-5 py-2.5 rounded-full border border-[#DCC5B2] dark:border-[#3d4951] text-[#5D4E37] dark:text-[#d3d3d3] hover:bg-[#F0E4D3] dark:hover:bg-[#0b090a] transition-all flex items-center gap-2"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
             </svg>
-            CSV Upload
+            Upload CSV
           </motion.button>
         </div>
       </motion.div>
 
-      {/* CSV Upload Section */}
-      {showCSV && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="max-w-3xl"
-        >
-          <AddStudentCSV onComplete={loadStudents} />
-        </motion.div>
-      )}
+      {/* CSV Upload Modal */}
+      <FileUploadModal
+        show={showCSV}
+        onClose={() => setShowCSV(false)}
+        onImportComplete={loadStudents}
+        config={studentUploadConfig}
+      />
 
       {showForm && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">

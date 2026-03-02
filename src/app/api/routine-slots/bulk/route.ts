@@ -278,10 +278,10 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const slots: ParsedSlot[] = body.slots;
+    const slots: ParsedSlot[] = body.slots || body.items || [];
 
     if (!Array.isArray(slots) || slots.length === 0) {
-      return badRequest('slots array is required');
+      return badRequest('slots/items array is required');
     }
 
     const result: BulkResult = {

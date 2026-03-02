@@ -7,20 +7,21 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, UserCog, Loader2, AlertCircle, X, Check, Key, Upload, UserX } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import FacultyCard from './FacultyCard';
-import AddFacultyCSV from '@/modules/AddFaculty/AddFacultyCSV';
+import { FileUploadModal, teacherUploadConfig } from '@/components/upload';
 
 export default function FacultyInfoPage() {
   const [teachers, setTeachers] = useState<TeacherWithAuth[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDesignation, setFilterDesignation] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<'view' | 'add'>('view');
-  const [addMode, setAddMode] = useState<'manual' | 'csv'>('manual');
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [editingTeacher, setEditingTeacher] = useState<TeacherWithAuth | null>(null);
   const [editFormData, setEditFormData] = useState({ full_name: '', phone: '', designation: 'LECTURER' as TeacherDesignation });
   const [passwordPopup, setPasswordPopup] = useState<{ show: boolean; password: string; teacherName: string }>({ show: false, password: '', teacherName: '' });
+  const [showUpload, setShowUpload] = useState(false);
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -198,30 +199,43 @@ export default function FacultyInfoPage() {
           <p className="text-[#8B7355] dark:text-[#b1a7a6] mt-1">View and manage faculty members</p>
         </div>
         
-        {/* Tab Navigation */}
-        <div className="flex bg-[#F0E4D3] dark:bg-[#161a1d] border border-[#DCC5B2] dark:border-[#3d4951] rounded-full p-1">
-          <button
-            onClick={() => setActiveTab('view')}
-            className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
-              activeTab === 'view' 
-                ? 'bg-[#D9A299] text-white shadow-lg shadow-[#D9A299]/25' 
-                : 'text-[#8B7355] dark:text-[#b1a7a6] hover:text-[#5D4E37] dark:hover:text-white'
-            }`}
+        <div className="flex items-center gap-2">
+          {/* Upload CSV Button */}
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setShowUpload(true)}
+            className="px-4 py-2 border border-[#DCC5B2] dark:border-[#3d4951] text-[#5D4E37] dark:text-[#b1a7a6] rounded-lg transition-all flex items-center gap-2 hover:bg-[#F0E4D3] dark:hover:bg-[#3d4951]/30"
           >
-            <UserCog className="w-4 h-4" />
-            View Faculty
-          </button>
-          <button
-            onClick={() => setActiveTab('add')}
-            className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
-              activeTab === 'add' 
-                ? 'bg-[#D9A299] text-white shadow-lg shadow-[#D9A299]/25' 
-                : 'text-[#8B7355] dark:text-[#b1a7a6] hover:text-[#5D4E37] dark:hover:text-white'
-            }`}
-          >
-            <Plus className="w-4 h-4" />
-            Add Faculty
-          </button>
+            <Upload className="w-5 h-5" />
+            Upload CSV
+          </motion.button>
+
+          {/* Tab Navigation */}
+          <div className="flex bg-[#F0E4D3] dark:bg-[#161a1d] border border-[#DCC5B2] dark:border-[#3d4951] rounded-full p-1">
+            <button
+              onClick={() => setActiveTab('view')}
+              className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
+                activeTab === 'view' 
+                  ? 'bg-[#D9A299] text-white shadow-lg shadow-[#D9A299]/25' 
+                  : 'text-[#8B7355] dark:text-[#b1a7a6] hover:text-[#5D4E37] dark:hover:text-white'
+              }`}
+            >
+              <UserCog className="w-4 h-4" />
+              View Faculty
+            </button>
+            <button
+              onClick={() => setActiveTab('add')}
+              className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
+                activeTab === 'add' 
+                  ? 'bg-[#D9A299] text-white shadow-lg shadow-[#D9A299]/25' 
+                  : 'text-[#8B7355] dark:text-[#b1a7a6] hover:text-[#5D4E37] dark:hover:text-white'
+              }`}
+            >
+              <Plus className="w-4 h-4" />
+              Add Faculty
+            </button>
+          </div>
         </div>
       </motion.div>
 
@@ -325,39 +339,8 @@ export default function FacultyInfoPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="max-w-2xl mx-auto space-y-4"
+          className="max-w-2xl mx-auto"
         >
-          {/* Sub-toggle: Manual / CSV */}
-          <div className="flex justify-center">
-            <div className="flex bg-[#F0E4D3] dark:bg-[#161a1d] border border-[#DCC5B2] dark:border-[#3d4951] rounded-full p-1">
-              <button
-                onClick={() => setAddMode('manual')}
-                className={`px-5 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
-                  addMode === 'manual'
-                    ? 'bg-[#D9A299] dark:bg-gradient-to-r dark:from-[#ba181b] dark:to-[#e5383b] text-white shadow-lg'
-                    : 'text-[#8B7355] dark:text-[#b1a7a6] hover:text-[#5D4E37] dark:hover:text-white'
-                }`}
-              >
-                <Plus className="w-4 h-4" />
-                Manual
-              </button>
-              <button
-                onClick={() => setAddMode('csv')}
-                className={`px-5 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
-                  addMode === 'csv'
-                    ? 'bg-[#D9A299] dark:bg-gradient-to-r dark:from-[#ba181b] dark:to-[#e5383b] text-white shadow-lg'
-                    : 'text-[#8B7355] dark:text-[#b1a7a6] hover:text-[#5D4E37] dark:hover:text-white'
-                }`}
-              >
-                <Upload className="w-4 h-4" />
-                CSV Upload
-              </button>
-            </div>
-          </div>
-
-          <AnimatePresence mode="wait">
-            {addMode === 'manual' ? (
-              <motion.div key="manual" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.2 }}>
                 <SpotlightCard className="p-6" spotlightColor="rgba(132, 0, 255, 0.15)">
                   <h2 className="text-xl font-bold text-[#5D4E37] dark:text-white mb-6">Add New Faculty Member</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -441,13 +424,6 @@ export default function FacultyInfoPage() {
               </div>
             </form>
           </SpotlightCard>
-              </motion.div>
-            ) : (
-              <motion.div key="csv" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
-                <AddFacultyCSV onComplete={loadTeachers} />
-              </motion.div>
-            )}
-          </AnimatePresence>
         </motion.div>
       )}
 
@@ -586,6 +562,13 @@ export default function FacultyInfoPage() {
         )}
       </AnimatePresence>
 
+      {/* Bulk Upload Modal */}
+      <FileUploadModal
+        show={showUpload}
+        onClose={() => setShowUpload(false)}
+        onImportComplete={loadTeachers}
+        config={teacherUploadConfig}
+      />
 
     </div>
   );

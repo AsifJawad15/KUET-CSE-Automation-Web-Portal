@@ -54,7 +54,7 @@ export interface DisplaySlot {
 // ── Parsed Routine Types (for file upload/import) ──────
 
 /**
- * A single parsed routine slot from an uploaded file (CSV/PDF/DOCX).
+ * A single parsed routine slot from an uploaded file (CSV/DOCX).
  * Contains all display info inline — no DB references required.
  */
 export interface ParsedRoutineSlot {

@@ -4,6 +4,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import SpotlightCard from '@/components/ui/SpotlightCard';
 import { DBCourse } from '@/lib/supabase';
 import { AnimatePresence, motion } from 'framer-motion';
+import { FileUploadModal, courseUploadConfig } from '@/components/upload';
+import { Upload } from 'lucide-react';
 
 // ==========================================
 // Add / Edit Course Modal
@@ -294,6 +296,7 @@ export default function CourseInfoPage() {
   const [showForm, setShowForm] = useState(false);
   const [editCourse, setEditCourse] = useState<DBCourse | null>(null);
   const [deleteCourse, setDeleteCourse] = useState<DBCourse | null>(null);
+  const [showUpload, setShowUpload] = useState(false);
 
   // Fetch courses from API
   const fetchCourses = useCallback(async () => {
@@ -397,17 +400,28 @@ export default function CourseInfoPage() {
           <h1 className="text-2xl font-bold text-[#5D4E37] dark:text-white">Course Information</h1>
           <p className="text-[#8B7355] dark:text-[#b1a7a6] mt-1">Manage all courses in the CSE department curriculum</p>
         </div>
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => { setEditCourse(null); setShowForm(true); }}
-          className="px-4 py-2 bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#ba181b] dark:to-[#e5383b] text-white rounded-lg hover:from-[#C88989] hover:to-[#CCB5A2] dark:hover:from-[#e32a2d] dark:hover:to-[#ea5f62] transition-all flex items-center gap-2 shadow-lg shadow-[#D9A299]/25 dark:shadow-[#ba181b]/25 font-medium"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Add Course
-        </motion.button>
+        <div className="flex gap-2">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setShowUpload(true)}
+            className="px-4 py-2 border border-[#DCC5B2] dark:border-[#3d4951] text-[#5D4E37] dark:text-[#b1a7a6] rounded-lg transition-all flex items-center gap-2 hover:bg-[#F0E4D3] dark:hover:bg-[#3d4951]/30"
+          >
+            <Upload className="w-5 h-5" />
+            Upload CSV
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => { setEditCourse(null); setShowForm(true); }}
+            className="px-4 py-2 bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#ba181b] dark:to-[#e5383b] text-white rounded-lg hover:from-[#C88989] hover:to-[#CCB5A2] dark:hover:from-[#e32a2d] dark:hover:to-[#ea5f62] transition-all flex items-center gap-2 shadow-lg shadow-[#D9A299]/25 dark:shadow-[#ba181b]/25 font-medium"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Add Course
+          </motion.button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -626,6 +640,14 @@ export default function CourseInfoPage() {
           />
         )}
       </AnimatePresence>
+
+      {/* Bulk Upload Modal */}
+      <FileUploadModal
+        show={showUpload}
+        onClose={() => setShowUpload(false)}
+        onImportComplete={fetchCourses}
+        config={courseUploadConfig}
+      />
     </div>
   );
 }

@@ -4,6 +4,8 @@ import SpotlightCard from '@/components/ui/SpotlightCard';
 import { DBCourse, isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCallback, useEffect, useState } from 'react';
+import { Upload } from 'lucide-react';
+import { FileUploadModal, courseAllocationUploadConfig } from '@/components/upload';
 
 // Types for API responses
 interface TeacherProfile {
@@ -264,6 +266,7 @@ export default function CourseAllocationPage() {
   const [removeInfo, setRemoveInfo] = useState<{ offeringId: string; teacherName: string; courseCode: string; courseTitle: string } | null>(null);
   const [realtimeStatus, setRealtimeStatus] = useState<string>('connecting');
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [showUpload, setShowUpload] = useState(false);
 
   // Fetch all data
   const fetchData = useCallback(async () => {
@@ -420,15 +423,26 @@ export default function CourseAllocationPage() {
           <h1 className="text-2xl font-bold text-[#5D4E37] dark:text-white">Course Allocation</h1>
           <p className="text-[#8B7355] dark:text-[#b1a7a6] mt-1">Assign teachers to courses</p>
         </div>
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={fetchData}
-          disabled={loading}
-          className="px-4 py-2 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg text-[#5D4E37] dark:text-[#d3d3d3] hover:bg-[#DCC5B2]/30 dark:hover:bg-[#0b090a] transition-colors text-sm font-medium disabled:opacity-50"
-        >
-          {loading ? 'Loading...' : 'Refresh'}
-        </motion.button>
+        <div className="flex gap-2">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setShowUpload(true)}
+            className="px-4 py-2 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg text-[#5D4E37] dark:text-[#d3d3d3] hover:bg-[#DCC5B2]/30 dark:hover:bg-[#0b090a] transition-colors text-sm font-medium flex items-center gap-2"
+          >
+            <Upload className="w-4 h-4" />
+            Upload CSV
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={fetchData}
+            disabled={loading}
+            className="px-4 py-2 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg text-[#5D4E37] dark:text-[#d3d3d3] hover:bg-[#DCC5B2]/30 dark:hover:bg-[#0b090a] transition-colors text-sm font-medium disabled:opacity-50"
+          >
+            {loading ? 'Loading...' : 'Refresh'}
+          </motion.button>
+        </div>
       </div>
 
       {/* Real-time Connection Indicator */}
@@ -659,6 +673,14 @@ export default function CourseAllocationPage() {
           />
         )}
       </AnimatePresence>
+
+      {/* Bulk Upload Modal */}
+      <FileUploadModal
+        show={showUpload}
+        onClose={() => setShowUpload(false)}
+        onImportComplete={fetchData}
+        config={courseAllocationUploadConfig}
+      />
     </div>
   );
 }
