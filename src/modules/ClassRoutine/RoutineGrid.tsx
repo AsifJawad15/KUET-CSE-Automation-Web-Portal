@@ -20,16 +20,15 @@ interface RoutineGridProps {
 
 export default function RoutineGrid({ displaySlots, onDeleteSlot }: RoutineGridProps) {
   /**
-   * Find the DisplaySlot starting at this day+period.
+   * Find ALL DisplaySlots starting at this day+period.
+   * Multiple slots can share the same time (e.g., lab sections A1/A2).
    */
-  const getSlotForCell = (
+  const getSlotsForCell = (
     dayValue: number,
     period: (typeof PERIODS)[0]
-  ): DisplaySlot | null => {
-    return (
-      displaySlots.find(
-        (s) => s.day_of_week === dayValue && slotMatchesPeriod(s, period)
-      ) || null
+  ): DisplaySlot[] => {
+    return displaySlots.filter(
+      (s) => s.day_of_week === dayValue && slotMatchesPeriod(s, period)
     );
   };
 
@@ -38,10 +37,10 @@ export default function RoutineGrid({ displaySlots, onDeleteSlot }: RoutineGridP
    */
   const isCellCovered = (dayValue: number, periodIndex: number): boolean => {
     for (let i = periodIndex - 1; i >= 0; i--) {
-      const slot = getSlotForCell(dayValue, PERIODS[i]);
-      if (slot) {
-        const span = getSlotSpan(slot);
-        if (i + span > periodIndex) return true;
+      const slots = getSlotsForCell(dayValue, PERIODS[i]);
+      if (slots.length > 0) {
+        const maxSpan = Math.max(...slots.map((s) => getSlotSpan(s)));
+        if (i + maxSpan > periodIndex) return true;
         break;
       }
     }
@@ -98,24 +97,32 @@ export default function RoutineGrid({ displaySlots, onDeleteSlot }: RoutineGridP
                   );
                 }
 
-                const slot = getSlotForCell(day.value, period);
-                const span = slot ? getSlotSpan(slot) : 1;
+                const slots = getSlotsForCell(day.value, period);
+                const hasSlots = slots.length > 0;
+                const maxSpan = hasSlots
+                  ? Math.max(...slots.map((s) => getSlotSpan(s)))
+                  : 1;
 
                 return (
                   <React.Fragment key={`cell-${day.value}-${period.id}`}>
                     <td
-                      colSpan={span}
+                      colSpan={maxSpan}
                       className={`border border-[#DCC5B2] dark:border-[#392e4e] p-1 text-center align-top ${
-                        slot
+                        hasSlots
                           ? ''
                           : 'bg-[#FAF7F3] dark:bg-transparent hover:bg-[#F0E4D3] dark:hover:bg-white/5'
                       }`}
                     >
-                      {slot && (
-                        <SlotCell
-                          slot={slot}
-                          onDelete={() => onDeleteSlot(slot.slotIds)}
-                        />
+                      {hasSlots && (
+                        <div className={slots.length > 1 ? 'space-y-1' : ''}>
+                          {slots.map((slot) => (
+                            <SlotCell
+                              key={slot.id}
+                              slot={slot}
+                              onDelete={() => onDeleteSlot(slot.slotIds)}
+                            />
+                          ))}
+                        </div>
                       )}
                     </td>
                     {BREAK_AFTER_PERIOD.includes(period.id) && (

@@ -47,7 +47,11 @@ export async function deleteTeacher(userId: string): Promise<ServiceResult<void>
 
 /** Reset a teacher's password — returns new plain-text password. */
 export async function resetTeacherPassword(userId: string): Promise<ResetPasswordResponse> {
-  return apiClient.patch(ENDPOINT, { userId, action: 'reset_password' }) as Promise<ResetPasswordResponse>;
+  const result = await apiClient.patch<{ newPassword: string }>(ENDPOINT, { userId, action: 'reset_password' });
+  if (result.success && result.data?.newPassword) {
+    return { ...result, newPassword: result.data.newPassword };
+  }
+  return result as ResetPasswordResponse;
 }
 
 /** Toggle teacher on-leave status. */
