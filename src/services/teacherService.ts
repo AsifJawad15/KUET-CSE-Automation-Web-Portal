@@ -49,9 +49,9 @@ export async function deleteTeacher(userId: string): Promise<ServiceResult<void>
 export async function resetTeacherPassword(userId: string): Promise<ResetPasswordResponse> {
   const result = await apiClient.patch<{ newPassword: string }>(ENDPOINT, { userId, action: 'reset_password' });
   if (result.success && result.data?.newPassword) {
-    return { ...result, newPassword: result.data.newPassword };
+    return { success: true, newPassword: result.data.newPassword };
   }
-  return result as ResetPasswordResponse;
+  return { success: false, error: result.error || 'Failed to reset password' };
 }
 
 /** Toggle teacher on-leave status. */
