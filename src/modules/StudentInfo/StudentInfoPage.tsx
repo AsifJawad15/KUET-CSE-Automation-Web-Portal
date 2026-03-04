@@ -16,6 +16,7 @@ export default function StudentInfoPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
+  const [expandedTerms, setExpandedTerms] = useState<Set<string>>(new Set());
 
   // Load students on mount
   useEffect(() => {
@@ -74,6 +75,26 @@ export default function StudentInfoPage() {
   // Get unique sessions and terms for filters
   const uniqueSessions = [...new Set(students.map(s => s.session))].sort().reverse();
   const uniqueTerms = ['1-1', '1-2', '2-1', '2-2', '3-1', '3-2', '4-1', '4-2'];
+
+  // Group filtered students by term
+  const studentsByTerm = uniqueTerms
+    .map(term => ({
+      term,
+      label: getTermLabel(term),
+      students: filteredStudents.filter(s => s.term === term),
+    }))
+    .filter(group => group.students.length > 0);
+
+  const VISIBLE_COUNT = 10;
+
+  const toggleTerm = (term: string) => {
+    setExpandedTerms(prev => {
+      const next = new Set(prev);
+      if (next.has(term)) next.delete(term);
+      else next.add(term);
+      return next;
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -186,89 +207,148 @@ export default function StudentInfoPage() {
           </p>
         </motion.div>
       ) : (
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-        >
-          {filteredStudents.map((student, index) => (
-            <motion.div
-              key={student.user_id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-            >
-              <SpotlightCard 
-                className="h-full bg-[#FAF7F3] dark:bg-transparent border border-[#DCC5B2] dark:border-transparent" 
-                spotlightColor="rgba(217, 162, 153, 0.2)"
+        <div className="space-y-8">
+          {studentsByTerm.map((group) => {
+            const isExpanded = expandedTerms.has(group.term);
+            const visibleStudents = isExpanded ? group.students : group.students.slice(0, VISIBLE_COUNT);
+            const hasMore = group.students.length > VISIBLE_COUNT;
+
+            return (
+              <motion.div
+                key={group.term}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-4"
               >
-                <div className="p-6 space-y-4">
-                  {/* Avatar & Roll */}
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#D9A299] to-[#DCC5B2] flex items-center justify-center text-white font-semibold text-lg">
-                        {student.full_name.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-[#5D4E37] dark:text-white">
-                          {student.full_name}
-                        </h3>
-                        <p className="text-sm text-[#8B7355] dark:text-[#b1a7a6]">
-                          Roll: {student.roll_no}
-                        </p>
-                      </div>
+                {/* Term Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-1.5 h-8 rounded-full bg-gradient-to-b from-[#D9A299] to-[#DCC5B2]" />
+                    <div>
+                      <h2 className="text-lg font-bold text-[#5D4E37] dark:text-white">
+                        {group.label}
+                      </h2>
+                      <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6]">
+                        {group.students.length} student{group.students.length !== 1 ? 's' : ''}
+                      </p>
                     </div>
-                    
-                    {student.profile.is_active && (
-                      <span className="px-2.5 py-0.5 bg-emerald-500/20 text-emerald-400 text-xs rounded-full border border-emerald-500/30">
-                        Active
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Contact Info */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-[#8B7355] dark:text-[#b1a7a6]">
-                      <Mail className="w-4 h-4 flex-shrink-0" />
-                      <span className="truncate">{student.profile.email}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-[#8B7355] dark:text-[#b1a7a6]">
-                      <Phone className="w-4 h-4 flex-shrink-0" />
-                      <span>{student.phone}</span>
-                    </div>
-                  </div>
-
-                  {/* Academic Info */}
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`px-2.5 py-1 text-xs rounded-full ${getSessionColor(student.session)}`}>
-                      <Calendar className="w-3 h-3 inline mr-1" />
-                      Session {student.session}
-                    </span>
-                    <span className="px-2.5 py-1 bg-[#5D4E37]/10 dark:bg-[#3d4951]/30 text-[#5D4E37] dark:text-white text-xs rounded-full">
-                      <GraduationCap className="w-3 h-3 inline mr-1" />
-                      {getTermLabel(student.term)}
-                    </span>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="pt-4 border-t border-[#DCC5B2]/50 dark:border-[#3d4951]/50">
-                    <button
-                      onClick={() => handleDelete(student.user_id)}
-                      disabled={loading}
-                      className="w-full px-3 py-2 text-sm text-red-400 hover:bg-red-400/10 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                      Deactivate
-                    </button>
                   </div>
                 </div>
-              </SpotlightCard>
-            </motion.div>
-          ))}
-        </motion.div>
+
+                {/* Student Cards Grid */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.1 }}
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                >
+                  {visibleStudents.map((student, index) => (
+                    <motion.div
+                      key={student.user_id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.03 }}
+                    >
+                      <SpotlightCard 
+                        className="h-full bg-[#FAF7F3] dark:bg-transparent border border-[#DCC5B2] dark:border-transparent" 
+                        spotlightColor="rgba(217, 162, 153, 0.2)"
+                      >
+                        <div className="p-6 space-y-4">
+                          {/* Avatar & Roll */}
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#D9A299] to-[#DCC5B2] flex items-center justify-center text-white font-semibold text-lg">
+                                {student.full_name.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <h3 className="font-semibold text-[#5D4E37] dark:text-white">
+                                  {student.full_name}
+                                </h3>
+                                <p className="text-sm text-[#8B7355] dark:text-[#b1a7a6]">
+                                  Roll: {student.roll_no}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            {student.profile.is_active && (
+                              <span className="px-2.5 py-0.5 bg-emerald-500/20 text-emerald-400 text-xs rounded-full border border-emerald-500/30">
+                                Active
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Contact Info */}
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 text-sm text-[#8B7355] dark:text-[#b1a7a6]">
+                              <Mail className="w-4 h-4 flex-shrink-0" />
+                              <span className="truncate">{student.profile.email}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-[#8B7355] dark:text-[#b1a7a6]">
+                              <Phone className="w-4 h-4 flex-shrink-0" />
+                              <span>{student.phone}</span>
+                            </div>
+                          </div>
+
+                          {/* Academic Info */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`px-2.5 py-1 text-xs rounded-full ${getSessionColor(student.session)}`}>
+                              <Calendar className="w-3 h-3 inline mr-1" />
+                              Session {student.session}
+                            </span>
+                            <span className="px-2.5 py-1 bg-[#5D4E37]/10 dark:bg-[#3d4951]/30 text-[#5D4E37] dark:text-white text-xs rounded-full">
+                              <GraduationCap className="w-3 h-3 inline mr-1" />
+                              {getTermLabel(student.term)}
+                            </span>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="pt-4 border-t border-[#DCC5B2]/50 dark:border-[#3d4951]/50">
+                            <button
+                              onClick={() => handleDelete(student.user_id)}
+                              disabled={loading}
+                              className="w-full px-3 py-2 text-sm text-red-400 hover:bg-red-400/10 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                              Deactivate
+                            </button>
+                          </div>
+                        </div>
+                      </SpotlightCard>
+                    </motion.div>
+                  ))}
+                </motion.div>
+
+                {/* See More / See Less Button */}
+                {hasMore && (
+                  <div className="flex justify-center pt-2">
+                    <button
+                      onClick={() => toggleTerm(group.term)}
+                      className="px-6 py-2.5 text-sm font-medium rounded-full border border-[#DCC5B2] dark:border-[#3d4951] text-[#5D4E37] dark:text-[#b1a7a6] hover:bg-[#F0E4D3] dark:hover:bg-[#3d4951]/30 transition-all flex items-center gap-2"
+                    >
+                      {isExpanded ? (
+                        <>
+                          Show Less
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                          </svg>
+                        </>
+                      ) : (
+                        <>
+                          See More ({group.students.length - VISIBLE_COUNT} more)
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </motion.div>
+            );
+          })}
+        </div>
       )}
 
       {/* Bulk Upload Modal */}
