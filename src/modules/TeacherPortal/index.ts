@@ -1,0 +1,9 @@
+export { default as TeacherPortalPage } from './TeacherPortalPage';
+export { default as UploadCSVTab } from './tabs/UploadCSVTab';
+export { default as TakeAttendanceTab } from './tabs/TakeAttendanceTab';
+export { default as AnnouncementTab } from './tabs/AnnouncementTab';
+export { default as RoomRequestTab } from './tabs/RoomRequestTab';
+export { default as MyScheduleTab } from './tabs/MyScheduleTab';
+export { default as CourseStudentsTab } from './tabs/CourseStudentsTab';
+export { default as EditProfileTab } from './tabs/EditProfileTab';
+export { default as ChangePasswordTab } from './tabs/ChangePasswordTab';

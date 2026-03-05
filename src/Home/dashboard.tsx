@@ -21,6 +21,7 @@ import { SchedulePage } from '@/modules/Schedule';
 import { TermUpgradePage } from '@/modules/TermUpgrade';
 import { TVDisplayPage } from '@/modules/TVDisplay';
 import { WebsiteCMSPage } from '@/modules/WebsiteCMS';
+import { TeacherPortalPage, UploadCSVTab, TakeAttendanceTab, AnnouncementTab, RoomRequestTab, MyScheduleTab, CourseStudentsTab, EditProfileTab, ChangePasswordTab } from '@/modules/TeacherPortal';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -36,24 +37,35 @@ interface PageEntry {
 }
 
 const PAGE_REGISTRY: Record<string, PageEntry> = {
-  'dashboard':        { render: (onMenuChange) => <DashboardOverview onMenuChange={onMenuChange} /> },
-  'tv-display':       { render: () => <TVDisplayPage /> },
-  'faculty-info':     { render: () => <FacultyInfoPage /> },
-  'room-allocation':  { render: () => <RoomAllocationPage /> },
-  'course-info':      { render: () => <CourseInfoPage /> },
-  'course-allocation':{ render: () => <CourseAllocationPage /> },
-  'class-routine':    { render: () => <ClassRoutinePage /> },
-  'schedule':         { render: () => <SchedulePage /> },
-  'add-student':      { render: () => <AddStudentPage />,    requiredRole: 'admin' },
-  'term-upgrade':     { render: () => <TermUpgradePage /> },
-  'result':           { render: () => <ResultPage /> },
-  'website-cms':      { render: () => <WebsiteCMSPage />,    requiredRole: 'admin' },
+  'dashboard':          { render: (onMenuChange) => <DashboardOverview onMenuChange={onMenuChange} /> },
+  'tv-display':         { render: () => <TVDisplayPage /> },
+  'faculty-info':       { render: () => <FacultyInfoPage /> },
+  'room-allocation':    { render: () => <RoomAllocationPage /> },
+  'course-info':        { render: () => <CourseInfoPage /> },
+  'course-allocation':  { render: () => <CourseAllocationPage /> },
+  'class-routine':      { render: () => <ClassRoutinePage /> },
+  'schedule':           { render: () => <SchedulePage /> },
+  'add-student':        { render: () => <AddStudentPage />,       requiredRole: 'admin' },
+  'term-upgrade':       { render: () => <TermUpgradePage /> },
+  'result':             { render: () => <ResultPage /> },
+  'teacher-portal':     { render: () => <TeacherPortalPage />,    requiredRole: 'teacher' },
+  'website-cms':        { render: () => <WebsiteCMSPage />,       requiredRole: 'admin' },
+  // Teacher Portal individual tabs (sidebar-driven)
+  'tp-upload-csv':      { render: () => <UploadCSVTab />,         requiredRole: 'teacher' },
+  'tp-take-attendance': { render: () => <TakeAttendanceTab />,    requiredRole: 'teacher' },
+  'tp-announcements':   { render: () => <AnnouncementTab />,      requiredRole: 'teacher' },
+  'tp-room-request':    { render: () => <RoomRequestTab />,       requiredRole: 'teacher' },
+  'tp-my-schedule':     { render: () => <MyScheduleTab />,        requiredRole: 'teacher' },
+  'tp-course-students': { render: () => <CourseStudentsTab />,    requiredRole: 'teacher' },
+  'tp-edit-profile':    { render: () => <EditProfileTab />,       requiredRole: 'teacher' },
+  'tp-change-password': { render: () => <ChangePasswordTab />,    requiredRole: 'teacher' },
 };
 
 // ── Constants ──────────────────────────────────────────
 
 const STORAGE_KEY = 'dashboard_activeMenu';
 const DEFAULT_PAGE = 'dashboard';
+const TEACHER_DEFAULT_PAGE = 'tp-upload-csv';
 
 const PAGE_VARIANTS = {
   initial: { opacity: 0, x: 20 },
@@ -78,6 +90,13 @@ export default function Dashboard() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, activeMenu);
   }, [activeMenu]);
+
+  // Redirect teachers to teacher pages if on admin page
+  useEffect(() => {
+    if (!isLoading && user?.role === 'teacher' && !activeMenu.startsWith('tp-')) {
+      setActiveMenu(TEACHER_DEFAULT_PAGE);
+    }
+  }, [isLoading, user?.role, activeMenu]);
 
   // Redirect if not authenticated
   useEffect(() => {

@@ -7,20 +7,27 @@ import {
     BookOpen,
     Building2,
     Calendar,
+    CalendarDays,
     ChevronLeft,
     ChevronRight,
+    ClipboardCheck,
     Clock,
+    DoorOpen,
     FileText,
     Globe,
     GraduationCap,
+    KeyRound,
     LayoutDashboard,
     LogOut,
+    Megaphone,
     Monitor,
     Moon,
     Settings,
     Sparkles,
     Sun,
     TrendingUp,
+    Upload,
+    UserCog,
     UserPlus,
     Users
 } from 'lucide-react';
@@ -31,7 +38,6 @@ interface MenuItem {
   id: string;
   label: string;
   icon: React.ElementType;
-  adminOnly?: boolean;
 }
 
 interface SidebarProps {
@@ -76,7 +82,7 @@ export default function Sidebar({ activeItem, onMenuChange, isCollapsed, onToggl
   const { theme, toggleTheme } = useTheme();
   const isAdmin = user?.role === 'admin';
 
-  const menuItems: MenuItem[] = [
+  const adminMenuItems: MenuItem[] = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'tv-display', label: 'TV Display', icon: Monitor },
     { id: 'faculty-info', label: 'Faculty Info', icon: Users },
@@ -85,13 +91,25 @@ export default function Sidebar({ activeItem, onMenuChange, isCollapsed, onToggl
     { id: 'course-allocation', label: 'Course Allocation', icon: BookOpen },
     { id: 'class-routine', label: 'Class Routine', icon: Clock },
     { id: 'schedule', label: 'Schedule', icon: Calendar },
-    { id: 'add-student', label: 'Add Student', icon: UserPlus, adminOnly: true },
+    { id: 'add-student', label: 'Add Student', icon: UserPlus },
     { id: 'term-upgrade', label: 'Term Upgrade', icon: TrendingUp },
     { id: 'result', label: 'Result', icon: FileText },
-    { id: 'website-cms', label: 'Website CMS', icon: Globe, adminOnly: true },
+    { id: 'website-cms', label: 'Website CMS', icon: Globe },
   ];
 
-  const filteredMenuItems = menuItems.filter(item => !item.adminOnly || isAdmin);
+  const teacherMenuItems: MenuItem[] = [
+    { id: 'tp-upload-csv', label: 'Upload CSV', icon: Upload },
+    { id: 'tp-take-attendance', label: 'Take Attendance', icon: ClipboardCheck },
+    { id: 'tp-announcements', label: 'Announcements', icon: Megaphone },
+    { id: 'tp-room-request', label: 'Room Request', icon: DoorOpen },
+    { id: 'tp-my-schedule', label: 'My Schedule', icon: CalendarDays },
+    { id: 'tp-course-students', label: 'Course Students', icon: Users },
+    { id: 'tp-edit-profile', label: 'Edit Profile', icon: UserCog },
+    { id: 'tp-change-password', label: 'Change Password', icon: KeyRound },
+  ];
+
+  const isTeacher = user?.role === 'teacher';
+  const filteredMenuItems = isTeacher ? teacherMenuItems : adminMenuItems;
 
   const handleLogout = () => {
     logout();

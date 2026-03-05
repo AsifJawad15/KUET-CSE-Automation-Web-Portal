@@ -58,48 +58,37 @@ function clearPersistedUser(): void {
   localStorage.removeItem(STORAGE_KEY);
 }
 
-// ── Demo Credentials (isolate so they're easy to replace) ──
+// ── Database Authentication ────────────────────────────
 
-interface DemoCredential extends User {
-  password: string;
-}
+async function authenticateViaAPI(email: string, password: string): Promise<LoginResult & { user?: User }> {
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
 
-const DEMO_USERS: Record<string, DemoCredential> = {
-  'admin@gmail.com': {
-    id: 'admin-001',
-    email: 'admin@gmail.com',
-    name: 'System Administrator',
-    role: 'admin',
-    avatar: '/avatars/admin.png',
-    department: 'Computer Science & Engineering',
-    designation: 'System Admin',
-    password: 'admin123',
-  },
-  'teacher@kuet.ac.bd': {
-    id: 'teacher-001',
-    email: 'teacher@kuet.ac.bd',
-    name: 'Dr. M. M. A. Hashem',
-    role: 'teacher',
-    avatar: '/avatars/teacher.png',
-    department: 'Computer Science & Engineering',
-    designation: 'Professor',
-    password: 'teacher123',
-  },
-};
+    const json = await res.json();
 
-function authenticateDemo(email: string, password: string): LoginResult & { user?: User } {
-  const normalizedEmail = email.toLowerCase().trim();
-  const credential = DEMO_USERS[normalizedEmail];
+    if (!res.ok || !json.success) {
+      return { success: false, error: json.error || 'Invalid email or password' };
+    }
 
-  if (!credential) {
-    return { success: false, error: 'Invalid email address. Use admin@gmail.com or teacher@kuet.ac.bd' };
+    const data = json.data;
+    return {
+      success: true,
+      user: {
+        id: data.id,
+        email: data.email,
+        name: data.name,
+        role: data.role as UserRole,
+        department: data.department,
+        designation: data.designation,
+      },
+    };
+  } catch {
+    return { success: false, error: 'Unable to connect to server. Please try again.' };
   }
-  if (credential.password !== password) {
-    return { success: false, error: 'Invalid password. Try admin123 or teacher123' };
-  }
-
-  const { password: _, ...user } = credential;
-  return { success: true, user };
 }
 
 // ── Provider ───────────────────────────────────────────
@@ -119,10 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string): Promise<LoginResult> => {
     setIsLoading(true);
 
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    const result = authenticateDemo(email, password);
+    const result = await authenticateViaAPI(email, password);
 
     if (result.success && result.user) {
       setUser(result.user);

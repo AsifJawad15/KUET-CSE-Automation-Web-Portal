@@ -11,6 +11,7 @@ export { RoomAllocationPage } from './RoomAllocation';
 export { SchedulePage } from './Schedule';
 export { StudentInfoPage } from './StudentInfo';
 export { TermUpgradePage } from './TermUpgrade';
+export { TeacherPortalPage } from './TeacherPortal';
 export { TVDisplayPage } from './TVDisplay';
 export { WebsiteCMSPage } from './WebsiteCMS';
 

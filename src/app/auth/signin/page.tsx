@@ -43,7 +43,7 @@ export default function SignInPage() {
 
     const result = await login(email, password);
     if (result.success) {
-      router.push('/dashboard');
+      router.replace('/dashboard');
     } else {
       setError(result.error || 'Invalid credentials. Try the demo accounts below.');
     }
