@@ -5,9 +5,9 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
     AlertCircle, Check, ChevronDown, Edit2, ExternalLink,
     Eye, EyeOff, Globe, GraduationCap, Image, Layout,
-    Loader2, MessageSquare, Microscope, Navigation, Newspaper,
+    Loader2, MessageSquare, Microscope, Monitor, Navigation, Newspaper,
     Plus, Save, Search, Settings, Trash2, Trophy,
-    Users, X
+    Users, X, Zap
 } from 'lucide-react';
 import React, { useCallback, useEffect, useState } from 'react';
 
@@ -181,6 +181,41 @@ const CMS_TABLES: CmsTableConfig[] = [
       { key: 'total_credits', label: 'Credits', type: 'number', editable: true },
       { key: 'is_active', label: 'Active', type: 'boolean', editable: true },
       { key: 'display_order', label: 'Order', type: 'number', editable: true },
+    ],
+  },
+  // ── TV Display CMS Tables ──────────────────
+  {
+    key: 'tv_announcements', label: 'TV Announcements', table: 'cms_tv_announcements', icon: Monitor,
+    description: 'Announcements displayed on the department TV display screen.',
+    columns: [
+      { key: 'title', label: 'Title', type: 'text', required: true, editable: true },
+      { key: 'content', label: 'Content', type: 'textarea', required: true, editable: true },
+      { key: 'type', label: 'Type', type: 'select', required: true, editable: true, options: ['notice', 'class-test', 'assignment', 'lab-test', 'quiz', 'event', 'other'] },
+      { key: 'course_code', label: 'Course Code', type: 'text', editable: true, placeholder: 'e.g. CSE 3201' },
+      { key: 'priority', label: 'Priority', type: 'select', required: true, editable: true, options: ['low', 'medium', 'high'] },
+      { key: 'scheduled_date', label: 'Scheduled Date', type: 'datetime', editable: true },
+      { key: 'created_by', label: 'Created By', type: 'text', editable: true },
+      { key: 'is_active', label: 'Active', type: 'boolean', editable: true },
+    ],
+  },
+  {
+    key: 'tv_ticker', label: 'TV Ticker', table: 'cms_tv_ticker', icon: Zap,
+    description: 'Scrolling ticker items shown at the bottom of the TV display.',
+    columns: [
+      { key: 'label', label: 'Label', type: 'text', required: true, editable: true, placeholder: 'e.g. SPECIAL UPDATE' },
+      { key: 'text', label: 'Text', type: 'textarea', required: true, editable: true },
+      { key: 'type', label: 'Type', type: 'select', required: true, editable: true, options: ['notice', 'class-test', 'assignment', 'lab-test', 'quiz', 'event', 'other'] },
+      { key: 'course_code', label: 'Course Code', type: 'text', editable: true, placeholder: 'e.g. CSE 3201' },
+      { key: 'sort_order', label: 'Sort Order', type: 'number', editable: true },
+      { key: 'is_active', label: 'Active', type: 'boolean', editable: true },
+    ],
+  },
+  {
+    key: 'tv_settings', label: 'TV Settings', table: 'cms_tv_settings', icon: Settings,
+    description: 'Key-value settings for the TV display (scroll speed, labels, features).',
+    columns: [
+      { key: 'key', label: 'Key', type: 'text', required: true, editable: true },
+      { key: 'value', label: 'Value', type: 'text', required: true, editable: true },
     ],
   },
 ];

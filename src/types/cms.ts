@@ -145,6 +145,54 @@ export interface CmsProgram {
   created_at: string;
 }
 
+// ==========================================
+// TV Display CMS Types
+// Maps to cms_tv_announcements, cms_tv_ticker, cms_tv_settings
+// ==========================================
+
+export type TvAnnouncementType = 'notice' | 'class-test' | 'assignment' | 'lab-test' | 'quiz' | 'event' | 'other';
+export type TvAnnouncementPriority = 'low' | 'medium' | 'high';
+
+export interface CmsTvAnnouncement {
+  id: string;
+  title: string;
+  content: string;
+  type: TvAnnouncementType;
+  course_code: string | null;
+  priority: TvAnnouncementPriority;
+  scheduled_date: string | null;
+  is_active: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CmsTvTicker {
+  id: string;
+  label: string;
+  text: string;
+  type: TvAnnouncementType;
+  course_code: string | null;
+  announcement_id: string | null;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface CmsTvSetting {
+  id: string;
+  key: string;
+  value: string;
+  updated_at: string;
+}
+
+/** Aggregated TV display data fetched in one batch */
+export interface TvDisplayData {
+  announcements: CmsTvAnnouncement[];
+  ticker: CmsTvTicker[];
+  settings: Record<string, string>;
+}
+
 // Aggregated data for the landing page
 export interface LandingPageData {
   heroSlides: CmsHeroSlide[];
