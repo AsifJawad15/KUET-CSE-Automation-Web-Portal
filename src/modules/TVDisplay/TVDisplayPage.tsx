@@ -15,7 +15,7 @@ import {
     updateSetting,
     updateTicker,
 } from '@/services/tvDisplayService';
-import type { CmsTvAnnouncement, CmsTvSetting, CmsTvTicker, TvAnnouncementPriority, TvAnnouncementType } from '@/types/cms';
+import type { CmsTvAnnouncement, CmsTvTicker, TvAnnouncementPriority, TvAnnouncementType } from '@/types/cms';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BarChart3, Bell, ExternalLink, Monitor, Settings, Zap } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
@@ -26,7 +26,7 @@ export default function TVDisplayPage() {
   const [activeTab, setActiveTab] = useState<AdminTab>('announcements');
   const [announcements, setAnnouncements] = useState<CmsTvAnnouncement[]>([]);
   const [tickerItems, setTickerItems] = useState<CmsTvTicker[]>([]);
-  const [settings, setSettings] = useState<CmsTvSetting[]>([]);
+  const [settings, setSettings] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -159,6 +159,7 @@ export default function TVDisplayPage() {
           text: tickerFormData.text,
           type: tickerFormData.type,
           course_code: tickerFormData.course_code || null,
+          announcement_id: null,
           sort_order: tickerFormData.sort_order,
           is_active: true,
         });
@@ -800,14 +801,12 @@ export default function TVDisplayPage() {
 // Settings Tab Component
 // ══════════════════════════════════════
 
-function SettingsTab({ settings, onSave }: { settings: CmsTvSetting[]; onSave: (key: string, value: string) => Promise<void> }) {
+function SettingsTab({ settings, onSave }: { settings: Record<string, string>; onSave: (key: string, value: string) => Promise<void> }) {
   const [editMap, setEditMap] = useState<Record<string, string>>({});
   const [savingKey, setSavingKey] = useState<string | null>(null);
 
   useEffect(() => {
-    const map: Record<string, string> = {};
-    settings.forEach(s => { map[s.key] = s.value; });
-    setEditMap(map);
+    setEditMap({ ...settings });
   }, [settings]);
 
   const handleSave = async (key: string) => {
