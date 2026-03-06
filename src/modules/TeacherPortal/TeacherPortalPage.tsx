@@ -11,6 +11,7 @@ import {
   Users,
   UserCog,
   KeyRound,
+  MapPin,
 } from 'lucide-react';
 import { useState } from 'react';
 import UploadCSVTab from './tabs/UploadCSVTab';
@@ -21,6 +22,7 @@ import MyScheduleTab from './tabs/MyScheduleTab';
 import CourseStudentsTab from './tabs/CourseStudentsTab';
 import EditProfileTab from './tabs/EditProfileTab';
 import ChangePasswordTab from './tabs/ChangePasswordTab';
+import GeoAttendanceTab from './tabs/GeoAttendanceTab';
 
 // ── Tab Registry ───────────────────────────────────────
 
@@ -38,6 +40,7 @@ export default function TeacherPortalPage() {
   const tabs: TabEntry[] = [
     { id: 'upload-csv',       label: 'Upload CSV',       icon: Upload,         render: () => <UploadCSVTab /> },
     { id: 'take-attendance',  label: 'Take Attendance',  icon: ClipboardCheck, render: () => <TakeAttendanceTab /> },
+    { id: 'geo-attendance',    label: 'Geo-Attendance',   icon: MapPin,         render: () => <GeoAttendanceTab /> },
     { id: 'announcements',    label: 'Announcements',    icon: Megaphone,      render: () => <AnnouncementTab /> },
     { id: 'room-request',     label: 'Room Request',     icon: DoorOpen,       render: () => <RoomRequestTab /> },
     { id: 'my-schedule',      label: 'My Schedule',      icon: CalendarDays,   render: () => <MyScheduleTab /> },

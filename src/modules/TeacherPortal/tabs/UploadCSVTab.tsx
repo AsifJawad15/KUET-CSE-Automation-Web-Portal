@@ -190,6 +190,7 @@ export default function UploadCSVTab() {
           onClose={() => setShowUpload(false)}
           onImportComplete={handleImportComplete}
           config={configMap[uploadType]}
+          extraBody={uploadType === 'attendance' ? { offering_id: selectedCourse?.offering_id, teacher_id: user?.id } : undefined}
         />
       )}
     </div>

@@ -2,8 +2,25 @@
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { getMyCourses, getCourseStudents, saveAttendance, getAttendance, type TeacherCourse, type AttendanceRecord, type CourseStudent } from '@/services/teacherPortalService';
-import { CheckCircle2, Loader2, AlertCircle, ClipboardCheck, ArrowLeft, GraduationCap, Eye } from 'lucide-react';
+import {
+  getMyCourses,
+  getCourseStudents,
+  saveAttendance,
+  getAttendance,
+  openGeoAttendanceRoom,
+  getGeoAttendanceRooms,
+  closeGeoAttendanceRoom,
+  getGeoRoomLogs,
+  type TeacherCourse,
+  type AttendanceRecord,
+  type CourseStudent,
+  type GeoAttendanceRoom,
+  type GeoAttendanceLog,
+} from '@/services/teacherPortalService';
+import { CheckCircle2, Loader2, AlertCircle, ClipboardCheck, ArrowLeft, GraduationCap, Eye, MapPin, Radio, XCircle, Clock, DoorOpen, Users } from 'lucide-react';
+
+const MAX_THEORY_ROOMS = 2;
+const MAX_LAB_ROOMS = 4;
 
 const STATUSES = ['present', 'absent', 'late'] as const;
 type Status = typeof STATUSES[number];
@@ -20,7 +37,7 @@ function rollSuffix(roll: string): number {
   return match ? parseInt(match[1], 10) : 0;
 }
 
-type ViewMode = 'take' | 'preview';
+type ViewMode = 'take' | 'preview' | 'geo';
 
 // Section/group definitions
 interface GroupDef { label: string; min: number; max: number; }
@@ -60,6 +77,20 @@ export default function TakeAttendanceTab() {
   // Preview state
   const [previewData, setPreviewData] = useState<AttendanceRecord[]>([]);
   const [loadingPreview, setLoadingPreview] = useState(false);
+
+  // Geo-attendance state
+  const [activeRooms, setActiveRooms] = useState<GeoAttendanceRoom[]>([]);
+  const [recentRooms, setRecentRooms] = useState<GeoAttendanceRoom[]>([]);
+  const [loadingRooms, setLoadingRooms] = useState(false);
+  const [openingRoom, setOpeningRoom] = useState(false);
+  const [durationMinutes, setDurationMinutes] = useState(50);
+  const [geoRoomNumber, setGeoRoomNumber] = useState('');
+  const [geoSectionGroup, setGeoSectionGroup] = useState('');
+
+  // Geo logs state
+  const [geoViewingRoomId, setGeoViewingRoomId] = useState<string | null>(null);
+  const [geoRoomLogs, setGeoRoomLogs] = useState<GeoAttendanceLog[]>([]);
+  const [geoLoadingLogs, setGeoLoadingLogs] = useState(false);
 
   // Load assigned courses
   const loadCourses = useCallback(async () => {
@@ -134,7 +165,7 @@ export default function TakeAttendanceTab() {
       ...records[i],
       section_or_group: g.label,
     }));
-    const result = await saveAttendance(sectionRecords);
+    const result = await saveAttendance(sectionRecords, selectedCourse?.offering_id, user?.id);
     setSaving(false);
     if (result.success) {
       setMessage({ type: 'success', text: `Saved ${sectionRecords.length} students — ${g.label}` });
@@ -166,7 +197,123 @@ export default function TakeAttendanceTab() {
     setRecords([]);
     setMessage(null);
     setPreviewData([]);
+    setActiveRooms([]);
+    setRecentRooms([]);
     setViewMode('take');
+  };
+
+  // ── Geo-Attendance Helpers ──
+
+  const loadGeoRooms = useCallback(async () => {
+    if (!user?.id) return;
+    setLoadingRooms(true);
+    try {
+      const all = await getGeoAttendanceRooms(user.id);
+      // Filter rooms for the selected course only
+      const courseRooms = selectedCourse
+        ? all.filter(r => r.offering_id === selectedCourse.offering_id)
+        : all;
+      setActiveRooms(courseRooms.filter(r => r.is_active));
+      setRecentRooms(courseRooms.filter(r => !r.is_active).slice(0, 10));
+    } finally {
+      setLoadingRooms(false);
+    }
+  }, [user?.id, selectedCourse]);
+
+  const switchToGeo = () => {
+    setViewMode('geo');
+    loadGeoRooms();
+  };
+
+  // Auto-refresh active rooms every 15s when in geo mode
+  useEffect(() => {
+    if (viewMode !== 'geo' || activeRooms.length === 0) return;
+    const interval = setInterval(loadGeoRooms, 15000);
+    return () => clearInterval(interval);
+  }, [viewMode, activeRooms.length, loadGeoRooms]);
+
+  // Auto-refresh logs when viewing a room
+  useEffect(() => {
+    if (!geoViewingRoomId) return;
+    const interval = setInterval(() => {
+      getGeoRoomLogs(geoViewingRoomId).then(setGeoRoomLogs);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [geoViewingRoomId]);
+
+  const handleViewGeoLogs = async (roomId: string) => {
+    setGeoViewingRoomId(roomId);
+    setGeoLoadingLogs(true);
+    try {
+      const logs = await getGeoRoomLogs(roomId);
+      setGeoRoomLogs(logs);
+    } finally {
+      setGeoLoadingLogs(false);
+    }
+  };
+
+  // Room limits for geo mode
+  const geoMaxRooms = isLab ? MAX_LAB_ROOMS : MAX_THEORY_ROOMS;
+  const geoCanOpenMore = activeRooms.length < geoMaxRooms;
+
+  const handleOpenGeoRoom = async () => {
+    if (!selectedCourse || !user?.id || !geoSectionGroup) return;
+    setOpeningRoom(true);
+    setMessage(null);
+    try {
+      const now = new Date();
+      const endTime = new Date(now.getTime() + durationMinutes * 60000);
+      const result = await openGeoAttendanceRoom({
+        offering_id: selectedCourse.offering_id,
+        teacher_user_id: user.id,
+        room_number: geoRoomNumber || undefined,
+        section: geoSectionGroup,
+        start_time: now.toISOString(),
+        end_time: endTime.toISOString(),
+      });
+      if (result.success) {
+        setMessage({ type: 'success', text: `Geo room opened for ${selectedCourse.course_code} (${geoSectionGroup})! Students within 200m can submit attendance.` });
+        setGeoRoomNumber('');
+        await loadGeoRooms();
+      } else {
+        setMessage({ type: 'error', text: result.error || 'Failed to open room' });
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'Failed to open geo room' });
+    } finally {
+      setOpeningRoom(false);
+    }
+  };
+
+  const handleCloseGeoRoom = async (roomId: string) => {
+    try {
+      const result = await closeGeoAttendanceRoom(roomId, user?.id);
+      if (result.success) {
+        setMessage({ type: 'success', text: 'Geo room closed' });
+        if (geoViewingRoomId === roomId) setGeoViewingRoomId(null);
+        await loadGeoRooms();
+      } else {
+        setMessage({ type: 'error', text: result.error || 'Failed to close room' });
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'Failed to close room' });
+    }
+  };
+
+  const formatGeoTime = (iso: string) => {
+    try {
+      return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return iso;
+    }
+  };
+
+  const geoTimeRemaining = (endTime: string) => {
+    const diff = new Date(endTime).getTime() - Date.now();
+    if (diff <= 0) return 'Expired';
+    const mins = Math.floor(diff / 60000);
+    if (mins >= 60) return `${Math.floor(mins / 60)}h ${mins % 60}m remaining`;
+    return `${mins}m remaining`;
   };
 
   // Preview active group
@@ -271,6 +418,12 @@ export default function TakeAttendanceTab() {
               className={`px-3 py-1.5 font-medium transition-colors flex items-center gap-1 ${viewMode === 'preview' ? 'bg-[#5D4037] dark:bg-[#ba181b] text-white' : 'text-[#5D4E37] dark:text-[#b1a7a6] hover:bg-[#F0E4D3] dark:hover:bg-[#3d4951]/30'}`}
             >
               <Eye className="w-3.5 h-3.5" /> Preview
+            </button>
+            <button
+              onClick={switchToGeo}
+              className={`px-3 py-1.5 font-medium transition-colors flex items-center gap-1 ${viewMode === 'geo' ? 'bg-teal-600 dark:bg-teal-700 text-white' : 'text-[#5D4E37] dark:text-[#b1a7a6] hover:bg-[#F0E4D3] dark:hover:bg-[#3d4951]/30'}`}
+            >
+              <MapPin className="w-3.5 h-3.5" /> Geo Attendance
             </button>
           </div>
           {viewMode === 'take' && (
@@ -402,6 +555,306 @@ export default function TakeAttendanceTab() {
             )}
           </div>
         )
+      )}
+
+      {/* ── Geo Attendance Mode ────────────────────── */}
+      {viewMode === 'geo' && (
+        <div className="space-y-5">
+          {/* Active Rooms for this course */}
+          {activeRooms.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-[#2C1810] dark:text-white">
+                <Radio className="h-4 w-4 text-green-500 animate-pulse" />
+                Active Room{activeRooms.length > 1 ? 's' : ''} ({activeRooms.length}/{geoMaxRooms})
+              </h3>
+              {activeRooms.map(room => (
+                <div
+                  key={room.id}
+                  className="bg-white dark:bg-[#161a1d] rounded-xl border-2 border-green-300 dark:border-green-800 p-5"
+                >
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/40">
+                        <DoorOpen className="h-6 w-6 text-green-600 dark:text-green-400" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-[#2C1810] dark:text-white">
+                          {selectedCourse.course_code} — {selectedCourse.course_title}
+                        </p>
+                        <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6] mt-0.5">
+                          {selectedCourse.term} &middot; {selectedCourse.course_type} &middot; {selectedCourse.credit} cr
+                        </p>
+                        <div className="flex items-center gap-3 mt-1.5 flex-wrap text-sm text-[#6B5744] dark:text-[#b1a7a6]">
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3.5 w-3.5" />
+                            {formatGeoTime(room.start_time)} – {formatGeoTime(room.end_time)}
+                          </span>
+                          {room.room_number && (
+                            <span className="flex items-center gap-1">
+                              <MapPin className="h-3.5 w-3.5" />
+                              Room {room.room_number}
+                            </span>
+                          )}
+                          {room.section && (
+                            <span className="rounded-full bg-blue-100 dark:bg-blue-900/40 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-300">
+                              {room.section}
+                            </span>
+                          )}
+                          <span className="rounded-full bg-green-100 dark:bg-green-900/40 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-300">
+                            {geoTimeRemaining(room.end_time)}
+                          </span>
+                          <span className="flex items-center gap-1 rounded-full bg-purple-100 dark:bg-purple-900/40 px-2.5 py-0.5 text-xs font-medium text-purple-700 dark:text-purple-300">
+                            <Users className="h-3 w-3" />
+                            {room.submission_count ?? 0} submitted
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleViewGeoLogs(room.id)}
+                        className="flex items-center gap-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/30 px-4 py-2 text-sm font-medium text-blue-700 dark:text-blue-400 transition hover:bg-blue-200 dark:hover:bg-blue-900/50"
+                      >
+                        <Eye className="h-4 w-4" />
+                        View Logs
+                      </button>
+                      <button
+                        onClick={() => handleCloseGeoRoom(room.id)}
+                        className="flex items-center gap-1.5 rounded-lg bg-red-100 dark:bg-red-900/30 px-4 py-2 text-sm font-medium text-red-700 dark:text-red-400 transition hover:bg-red-200 dark:hover:bg-red-900/50"
+                      >
+                        <XCircle className="h-4 w-4" />
+                        Close Room
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Geo Attendance Logs Panel */}
+          {geoViewingRoomId && (
+            <div className="rounded-xl border border-[#E8DDD1] dark:border-[#3d4951]/50 bg-white dark:bg-[#161a1d] overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-3 bg-[#FAF7F3] dark:bg-[#0b090a]/50 border-b border-[#E8DDD1] dark:border-[#3d4951]/50">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-[#2C1810] dark:text-white">
+                  <Users className="h-4 w-4 text-purple-500" />
+                  Attendance Submissions ({geoRoomLogs.length})
+                  {activeRooms.some(r => r.id === geoViewingRoomId) && (
+                    <span className="ml-2 text-xs text-green-600 dark:text-green-400 animate-pulse">Live</span>
+                  )}
+                </h3>
+                <button onClick={() => setGeoViewingRoomId(null)} className="text-[#8B7355] hover:text-[#2C1810] dark:text-[#b1a7a6] dark:hover:text-white">
+                  <XCircle className="h-4 w-4" />
+                </button>
+              </div>
+              {geoLoadingLogs ? (
+                <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-[#8B7355]" /></div>
+              ) : geoRoomLogs.length === 0 ? (
+                <div className="p-8 text-center text-[#8B7355] dark:text-[#b1a7a6]">No submissions yet. Waiting for students...</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-[#FAF7F3] dark:bg-[#0b090a]/50">
+                      <tr>
+                        <th className="px-4 py-3 font-medium text-[#8B7355] dark:text-[#b1a7a6]">#</th>
+                        <th className="px-4 py-3 font-medium text-[#8B7355] dark:text-[#b1a7a6]">Roll No</th>
+                        <th className="px-4 py-3 font-medium text-[#8B7355] dark:text-[#b1a7a6]">Name</th>
+                        <th className="px-4 py-3 font-medium text-[#8B7355] dark:text-[#b1a7a6]">Distance</th>
+                        <th className="px-4 py-3 font-medium text-[#8B7355] dark:text-[#b1a7a6]">Time</th>
+                        <th className="px-4 py-3 font-medium text-[#8B7355] dark:text-[#b1a7a6]">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E8DDD1] dark:divide-[#3d4951]/50">
+                      {geoRoomLogs.map((log, i) => (
+                        <tr key={log.id} className="bg-white dark:bg-[#161a1d] hover:bg-[#F5EDE4] dark:hover:bg-[#0b090a]/30">
+                          <td className="px-4 py-3 text-[#8B7355] dark:text-[#b1a7a6]">{i + 1}</td>
+                          <td className="px-4 py-3 font-medium text-[#2C1810] dark:text-white">{log.students?.roll_no ?? '—'}</td>
+                          <td className="px-4 py-3 text-[#6B5744] dark:text-[#b1a7a6]">{log.students?.full_name ?? '—'}</td>
+                          <td className="px-4 py-3 text-[#6B5744] dark:text-[#b1a7a6]">{log.distance_meters}m</td>
+                          <td className="px-4 py-3 text-[#6B5744] dark:text-[#b1a7a6]">{formatGeoTime(log.submitted_at)}</td>
+                          <td className="px-4 py-3">
+                            <span className="rounded-full bg-emerald-100 dark:bg-emerald-900/30 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">{log.status}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Create Room Form */}
+          <div className="bg-white dark:bg-[#161a1d] rounded-xl border border-[#E8DDD1] dark:border-[#3d4951]/50 p-6">
+            <h3 className="flex items-center justify-between mb-4 text-sm font-semibold text-[#2C1810] dark:text-white">
+              <span className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                Create Geo-Attendance Room
+              </span>
+              <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                geoCanOpenMore
+                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                  : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+              }`}>
+                {activeRooms.length}/{geoMaxRooms} rooms active
+              </span>
+            </h3>
+
+            <div className="flex items-center gap-3 mb-4 p-3 rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] border border-[#E8DDD1] dark:border-[#3d4951]/50">
+              <GraduationCap className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+              <div>
+                <p className="font-medium text-[#2C1810] dark:text-white text-sm">{selectedCourse.course_code} — {selectedCourse.course_title}</p>
+                <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6]">{selectedCourse.term} &middot; {selectedCourse.course_type} &middot; {selectedCourse.credit} cr</p>
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {/* Section / Group */}
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-[#6B5744] dark:text-[#b1a7a6]">
+                  Section / Group <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={geoSectionGroup}
+                  onChange={(e) => setGeoSectionGroup(e.target.value)}
+                  className="w-full rounded-lg border border-[#DCC5B2] dark:border-[#3d4951] bg-[#FAF7F3] dark:bg-[#0b090a] px-3 py-2.5 text-sm text-[#2C1810] dark:text-white focus:outline-none focus:ring-1 focus:ring-teal-500"
+                >
+                  <option value="">Select {isLab ? 'group' : 'section'}...</option>
+                  {groups.map((g, gi) => (
+                    <option key={gi} value={g.label}>{g.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Room Number */}
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-[#6B5744] dark:text-[#b1a7a6]">
+                  Room Number (optional)
+                </label>
+                <input
+                  type="text"
+                  value={geoRoomNumber}
+                  onChange={(e) => setGeoRoomNumber(e.target.value)}
+                  placeholder="e.g. 301"
+                  className="w-full rounded-lg border border-[#DCC5B2] dark:border-[#3d4951] bg-[#FAF7F3] dark:bg-[#0b090a] px-3 py-2.5 text-sm text-[#2C1810] dark:text-white focus:outline-none focus:ring-1 focus:ring-teal-500"
+                />
+              </div>
+
+              {/* Duration */}
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-[#6B5744] dark:text-[#b1a7a6]">
+                  Duration
+                </label>
+                <select
+                  value={durationMinutes}
+                  onChange={(e) => setDurationMinutes(Number(e.target.value))}
+                  className="w-full rounded-lg border border-[#DCC5B2] dark:border-[#3d4951] bg-[#FAF7F3] dark:bg-[#0b090a] px-3 py-2.5 text-sm text-[#2C1810] dark:text-white focus:outline-none focus:ring-1 focus:ring-teal-500"
+                >
+                  <option value={30}>30 min</option>
+                  <option value={50}>50 min (1 period)</option>
+                  <option value={80}>80 min</option>
+                  <option value={100}>100 min (2 periods)</option>
+                  <option value={150}>150 min (3 periods)</option>
+                </select>
+              </div>
+
+              {/* Open Button */}
+              <div className="flex items-end">
+                <button
+                  onClick={handleOpenGeoRoom}
+                  disabled={openingRoom || !geoSectionGroup || !geoCanOpenMore}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-teal-600 dark:bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-700 dark:hover:bg-teal-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {openingRoom ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Opening...
+                    </>
+                  ) : (
+                    <>
+                      <Radio className="h-4 w-4" />
+                      Open Room
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <p className="mt-3 text-xs text-[#8B7355] dark:text-[#b1a7a6]">
+              <MapPin className="inline h-3 w-3 mr-1" />
+              Students must be within 200m of CSE Building (KUET) to submit. Room auto-closes after the set duration.
+              {!geoCanOpenMore && (
+                <span className="text-red-500 font-medium ml-1">Room limit reached — close an existing room first.</span>
+              )}
+            </p>
+          </div>
+
+          {/* Recent Sessions for this course */}
+          {loadingRooms ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-5 w-5 animate-spin text-[#8B7355] dark:text-[#b1a7a6]" />
+            </div>
+          ) : recentRooms.length > 0 ? (
+            <div className="space-y-3">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-[#2C1810] dark:text-white">
+                <Clock className="h-4 w-4 text-[#8B7355] dark:text-[#b1a7a6]" />
+                Recent Geo Sessions
+              </h3>
+              <div className="overflow-hidden rounded-xl border border-[#E8DDD1] dark:border-[#3d4951]/50">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-[#FAF7F3] dark:bg-[#0b090a]/50">
+                    <tr>
+                      <th className="px-4 py-3 font-medium text-[#8B7355] dark:text-[#b1a7a6]">Date</th>
+                      <th className="px-4 py-3 font-medium text-[#8B7355] dark:text-[#b1a7a6]">Section</th>
+                      <th className="px-4 py-3 font-medium text-[#8B7355] dark:text-[#b1a7a6]">Time Slot</th>
+                      <th className="px-4 py-3 font-medium text-[#8B7355] dark:text-[#b1a7a6]">Room</th>
+                      <th className="px-4 py-3 font-medium text-[#8B7355] dark:text-[#b1a7a6]">Submissions</th>
+                      <th className="px-4 py-3 font-medium text-[#8B7355] dark:text-[#b1a7a6]">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#E8DDD1] dark:divide-[#3d4951]/50">
+                    {recentRooms.map(room => (
+                      <tr key={room.id} className="bg-white dark:bg-[#161a1d] hover:bg-[#F5EDE4] dark:hover:bg-[#0b090a]/30">
+                        <td className="px-4 py-3 text-[#2C1810] dark:text-white">{room.date}</td>
+                        <td className="px-4 py-3">
+                          {room.section ? (
+                            <span className="rounded-full bg-blue-100 dark:bg-blue-900/30 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-300">
+                              {room.section}
+                            </span>
+                          ) : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-[#6B5744] dark:text-[#b1a7a6]">
+                          {formatGeoTime(room.start_time)} – {formatGeoTime(room.end_time)}
+                        </td>
+                        <td className="px-4 py-3 text-[#6B5744] dark:text-[#b1a7a6]">{room.room_number || '—'}</td>
+                        <td className="px-4 py-3">
+                          <span className="flex items-center gap-1 text-purple-600 dark:text-purple-400 font-medium text-xs">
+                            <Users className="h-3 w-3" />
+                            {room.submission_count ?? 0}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={() => handleViewGeoLogs(room.id)}
+                            className="text-blue-600 dark:text-blue-400 hover:underline text-xs font-medium flex items-center gap-1"
+                          >
+                            <Eye className="h-3 w-3" />
+                            View Logs
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white dark:bg-[#161a1d] rounded-xl border border-[#E8DDD1] dark:border-[#3d4951]/50 p-8 text-center">
+              <MapPin className="w-10 h-10 mx-auto text-[#DCC5B2] dark:text-[#3d4951] mb-3" />
+              <p className="text-[#8B7355] dark:text-[#b1a7a6]">No geo-attendance sessions for this course yet.</p>
+            </div>
+          )}
+        </div>
       )}
 
       {/* ── Take Attendance Mode ────────────────────── */}

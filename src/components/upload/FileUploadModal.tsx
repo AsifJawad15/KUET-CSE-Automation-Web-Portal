@@ -23,6 +23,8 @@ interface FileUploadModalProps {
   onClose: () => void;
   onImportComplete: () => void;
   config: UploadEntityConfig;
+  /** Extra fields to merge into the POST body alongside items */
+  extraBody?: Record<string, unknown>;
 }
 
 // ── Steps ──────────────────────────────────────────────
@@ -40,6 +42,7 @@ export default function FileUploadModal({
   show,
   onClose,
   onImportComplete,
+  extraBody,
   config,
 }: FileUploadModalProps) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -164,7 +167,7 @@ export default function FileUploadModal({
       const res = await fetch(config.bulkEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items }),
+        body: JSON.stringify({ items, ...extraBody }),
       });
 
       if (!res.ok) {
