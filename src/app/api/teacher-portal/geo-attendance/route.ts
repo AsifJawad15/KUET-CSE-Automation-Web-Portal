@@ -49,7 +49,8 @@ export async function POST(request: NextRequest) {
       return badRequest('Course offering not found');
     }
 
-    const courseType = ((offering.courses as { course_type: string })?.course_type || 'theory').toLowerCase();
+    const courses = offering.courses as unknown as { course_type: string } | { course_type: string }[] | null;
+    const courseType = (Array.isArray(courses) ? courses[0]?.course_type : courses?.course_type || 'theory').toLowerCase();
     const maxRooms = courseType === 'lab' ? MAX_LAB_ROOMS : MAX_THEORY_ROOMS;
 
     // Count currently active rooms for this teacher

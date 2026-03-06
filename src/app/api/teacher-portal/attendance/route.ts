@@ -323,7 +323,8 @@ export async function GET(request: NextRequest) {
 
           // Add geo-attendance as flat attendance records (only if not already present)
           for (const log of geoLogs) {
-            const rollNo = log.students?.roll_no;
+            const students = log.students as unknown as { roll_no: string } | { roll_no: string }[] | null;
+            const rollNo = Array.isArray(students) ? students[0]?.roll_no : students?.roll_no;
             const logDate = roomDateMap.get(log.geo_room_id);
             if (!rollNo || !logDate) continue;
 
