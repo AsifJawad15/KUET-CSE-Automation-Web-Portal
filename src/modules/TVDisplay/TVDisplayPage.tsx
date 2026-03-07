@@ -1,6 +1,7 @@
 "use client";
 
 import SpotlightCard from '@/components/ui/SpotlightCard';
+import { cmsSupabase } from '@/services/cmsService';
 import {
     createAnnouncement,
     createEvent,
@@ -34,6 +35,26 @@ export default function TVDisplayPage() {
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState<Record<string, boolean>>({});
+
+  async function uploadImage(file: File, field: 'image_url' | 'speaker_image_url') {
+    setUploading(prev => ({ ...prev, [field]: true }));
+    try {
+      const ext = file.name.split('.').pop() || 'jpg';
+      const path = `tv-events/${Date.now()}-${field}.${ext}`;
+      const { error } = await cmsSupabase.storage
+        .from('cms-images')
+        .upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data } = cmsSupabase.storage.from('cms-images').getPublicUrl(path);
+      setEventFormData(prev => ({ ...prev, [field]: data.publicUrl }));
+    } catch (err) {
+      console.error('Image upload failed:', err);
+      alert('Image upload failed. Please try again.');
+    } finally {
+      setUploading(prev => ({ ...prev, [field]: false }));
+    }
+  }
 
   // Announcement form
   const [showForm, setShowForm] = useState(false);
@@ -693,12 +714,30 @@ export default function TVDisplayPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-2">Image URL</label>
-                  <input type="url" value={eventFormData.image_url} onChange={(e) => setEventFormData({ ...eventFormData, image_url: e.target.value })} placeholder="https://..." className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white placeholder-[#8B7355] dark:placeholder-[#b1a7a6]/60 focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all" />
+                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-2">Event Image</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(f, 'image_url'); }}
+                    className="w-full text-sm text-[#5D4E37] dark:text-white file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-[#D9A299] dark:file:bg-[#ba181b] file:text-white hover:file:opacity-80 cursor-pointer"
+                  />
+                  {uploading['image_url'] && <p className="text-xs mt-1 text-[#8B7355] dark:text-[#b1a7a6]">Uploading...</p>}
+                  {eventFormData.image_url && !uploading['image_url'] && (
+                    <img src={eventFormData.image_url} alt="Preview" className="mt-2 h-20 w-auto rounded-lg object-cover border border-[#DCC5B2] dark:border-[#3d4951]" />
+                  )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-2">Speaker Image URL</label>
-                  <input type="url" value={eventFormData.speaker_image_url} onChange={(e) => setEventFormData({ ...eventFormData, speaker_image_url: e.target.value })} placeholder="https://..." className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white placeholder-[#8B7355] dark:placeholder-[#b1a7a6]/60 focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all" />
+                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-2">Speaker Image</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(f, 'speaker_image_url'); }}
+                    className="w-full text-sm text-[#5D4E37] dark:text-white file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-[#D9A299] dark:file:bg-[#ba181b] file:text-white hover:file:opacity-80 cursor-pointer"
+                  />
+                  {uploading['speaker_image_url'] && <p className="text-xs mt-1 text-[#8B7355] dark:text-[#b1a7a6]">Uploading...</p>}
+                  {eventFormData.speaker_image_url && !uploading['speaker_image_url'] && (
+                    <img src={eventFormData.speaker_image_url} alt="Preview" className="mt-2 h-16 w-16 rounded-full object-cover border-2 border-[#D9A299] dark:border-[#ba181b]" />
+                  )}
                 </div>
               </div>
               <div className="flex gap-3 pt-4 border-t border-[#DCC5B2] dark:border-[#3d4951]">
