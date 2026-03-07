@@ -3,24 +3,29 @@
 import SpotlightCard from '@/components/ui/SpotlightCard';
 import {
     createAnnouncement,
+    createEvent,
     createTicker,
     deleteAnnouncement,
+    deleteEvent,
     deleteTicker,
     fetchAllAnnouncements,
+    fetchAllEvents,
     fetchAllTicker,
     fetchTvSettings,
     toggleAnnouncement,
+    toggleEvent,
     toggleTicker,
     updateAnnouncement,
+    updateEvent,
     updateSetting,
     updateTicker,
 } from '@/services/tvDisplayService';
-import type { CmsTvAnnouncement, CmsTvTicker, TvAnnouncementPriority, TvAnnouncementType } from '@/types/cms';
+import type { CmsTvAnnouncement, CmsTvEvent, CmsTvTicker, TvAnnouncementPriority, TvAnnouncementType } from '@/types/cms';
 import { AnimatePresence, motion } from 'framer-motion';
-import { BarChart3, Bell, ExternalLink, Monitor, Settings, Zap } from 'lucide-react';
+import { BarChart3, Bell, Calendar, ExternalLink, Monitor, Settings, Zap } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
-type AdminTab = 'announcements' | 'ticker' | 'settings';
+type AdminTab = 'announcements' | 'ticker' | 'events' | 'settings';
 
 export default function TVDisplayPage() {
   const [activeTab, setActiveTab] = useState<AdminTab>('announcements');
@@ -53,17 +58,37 @@ export default function TVDisplayPage() {
     sort_order: 0,
   });
 
+  // Events
+  const [eventItems, setEventItems] = useState<CmsTvEvent[]>([]);
+  const [showEventForm, setShowEventForm] = useState(false);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [eventFormData, setEventFormData] = useState({
+    title: '',
+    subtitle: '',
+    description: '',
+    image_url: '',
+    speaker_name: '',
+    speaker_image_url: '',
+    event_date: '',
+    event_time: '',
+    location: '',
+    badge_text: '',
+    display_order: 0,
+  });
+
   // ── Fetch all data ──
   const loadData = useCallback(async () => {
     try {
-      const [annData, tickData, settData] = await Promise.all([
+      const [annData, tickData, settData, evtData] = await Promise.all([
         fetchAllAnnouncements(),
         fetchAllTicker(),
         fetchTvSettings(),
+        fetchAllEvents(),
       ]);
       setAnnouncements(annData);
       setTickerItems(tickData);
       setSettings(settData);
+      setEventItems(evtData);
     } catch (err) {
       console.error('Failed to load TV display data:', err);
     } finally {
@@ -204,6 +229,87 @@ export default function TVDisplayPage() {
     await loadData();
   };
 
+  // ── Event CRUD ──
+  const handleEventSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      if (editingEventId) {
+        await updateEvent(editingEventId, {
+          title: eventFormData.title,
+          subtitle: eventFormData.subtitle || null,
+          description: eventFormData.description || null,
+          image_url: eventFormData.image_url || null,
+          speaker_name: eventFormData.speaker_name || null,
+          speaker_image_url: eventFormData.speaker_image_url || null,
+          event_date: eventFormData.event_date || null,
+          event_time: eventFormData.event_time || null,
+          location: eventFormData.location || null,
+          badge_text: eventFormData.badge_text || null,
+          display_order: eventFormData.display_order,
+        });
+      } else {
+        await createEvent({
+          title: eventFormData.title,
+          subtitle: eventFormData.subtitle || null,
+          description: eventFormData.description || null,
+          image_url: eventFormData.image_url || null,
+          speaker_name: eventFormData.speaker_name || null,
+          speaker_image_url: eventFormData.speaker_image_url || null,
+          event_date: eventFormData.event_date || null,
+          event_time: eventFormData.event_time || null,
+          location: eventFormData.location || null,
+          badge_text: eventFormData.badge_text || null,
+          display_order: eventFormData.display_order,
+          is_active: true,
+        });
+      }
+      resetEventForm();
+      await loadData();
+    } catch (err) {
+      console.error('Failed to save event:', err);
+      alert('Failed to save event.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const resetEventForm = () => {
+    setEventFormData({ title: '', subtitle: '', description: '', image_url: '', speaker_name: '', speaker_image_url: '', event_date: '', event_time: '', location: '', badge_text: '', display_order: 0 });
+    setShowEventForm(false);
+    setEditingEventId(null);
+  };
+
+  const handleEditEvent = (ev: CmsTvEvent) => {
+    setEventFormData({
+      title: ev.title,
+      subtitle: ev.subtitle || '',
+      description: ev.description || '',
+      image_url: ev.image_url || '',
+      speaker_name: ev.speaker_name || '',
+      speaker_image_url: ev.speaker_image_url || '',
+      event_date: ev.event_date || '',
+      event_time: ev.event_time || '',
+      location: ev.location || '',
+      badge_text: ev.badge_text || '',
+      display_order: ev.display_order,
+    });
+    setEditingEventId(ev.id);
+    setShowEventForm(true);
+  };
+
+  const handleDeleteEvent = async (id: string) => {
+    if (confirm('Delete this event?')) {
+      await deleteEvent(id);
+      await loadData();
+    }
+  };
+
+  const handleToggleEvent = async (id: string, currentlyActive: boolean) => {
+    await toggleEvent(id, !currentlyActive);
+    await loadData();
+  };
+
   // ── Settings ──
   const handleSaveSetting = async (key: string, value: string) => {
     await updateSetting(key, value);
@@ -292,6 +398,10 @@ export default function TVDisplayPage() {
             <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6]">Ticker Items</p>
           </div>
           <div className="text-center">
+            <p className="text-2xl font-bold text-teal-500 dark:text-teal-400">{eventItems.length}</p>
+            <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6]">Events</p>
+          </div>
+          <div className="text-center">
             <p className="text-2xl font-bold text-[#D9A299] dark:text-[#ba181b]">{announcements.filter(a => a.scheduled_date).length}</p>
             <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6]">Scheduled</p>
           </div>
@@ -303,6 +413,7 @@ export default function TVDisplayPage() {
         {([
           { id: 'announcements' as AdminTab, label: 'Announcements', icon: Bell },
           { id: 'ticker' as AdminTab, label: 'Ticker Items', icon: Zap },
+          { id: 'events' as AdminTab, label: 'Events', icon: Calendar },
           { id: 'settings' as AdminTab, label: 'Settings', icon: Settings },
         ]).map(tab => {
           const Icon = tab.icon;
@@ -514,6 +625,88 @@ export default function TVDisplayPage() {
                 </button>
                 <button type="submit" disabled={saving} className="flex-1 px-4 py-3 bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#ba181b] dark:to-[#e5383b] text-white rounded-lg font-medium transition-all disabled:opacity-50">
                   {saving ? 'Saving...' : editingTickerId ? 'Update' : 'Create'}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+      </AnimatePresence>
+
+      {/* ══════ Event Form Modal ══════ */}
+      <AnimatePresence>
+      {showEventForm && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-[#FAF7F3] dark:bg-[#161a1d] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-[#DCC5B2] dark:border-[#3d4951]"
+          >
+            <div className="p-6 border-b border-[#DCC5B2] dark:border-[#3d4951]">
+              <h2 className="text-xl font-bold text-[#5D4E37] dark:text-white">
+                {editingEventId ? 'Edit Event' : 'Create New Event'}
+              </h2>
+            </div>
+            <form onSubmit={handleEventSubmit} className="p-6 space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-2">Title *</label>
+                <input type="text" value={eventFormData.title} onChange={(e) => setEventFormData({ ...eventFormData, title: e.target.value })} placeholder="Event title" className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white placeholder-[#8B7355] dark:placeholder-[#b1a7a6]/60 focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all" required />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-2">Subtitle</label>
+                  <input type="text" value={eventFormData.subtitle} onChange={(e) => setEventFormData({ ...eventFormData, subtitle: e.target.value })} placeholder="e.g., Annual Workshop" className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white placeholder-[#8B7355] dark:placeholder-[#b1a7a6]/60 focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-2">Badge Text</label>
+                  <input type="text" value={eventFormData.badge_text} onChange={(e) => setEventFormData({ ...eventFormData, badge_text: e.target.value })} placeholder="e.g., KEYNOTE, NEW" className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white placeholder-[#8B7355] dark:placeholder-[#b1a7a6]/60 focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-2">Description</label>
+                <textarea value={eventFormData.description} onChange={(e) => setEventFormData({ ...eventFormData, description: e.target.value })} placeholder="Event description" rows={3} className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white placeholder-[#8B7355] dark:placeholder-[#b1a7a6]/60 focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all resize-none" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-2">Speaker Name</label>
+                  <input type="text" value={eventFormData.speaker_name} onChange={(e) => setEventFormData({ ...eventFormData, speaker_name: e.target.value })} placeholder="Speaker full name" className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white placeholder-[#8B7355] dark:placeholder-[#b1a7a6]/60 focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-2">Location</label>
+                  <input type="text" value={eventFormData.location} onChange={(e) => setEventFormData({ ...eventFormData, location: e.target.value })} placeholder="e.g., Seminar Room 301" className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white placeholder-[#8B7355] dark:placeholder-[#b1a7a6]/60 focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all" />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-2">Event Date</label>
+                  <input type="date" value={eventFormData.event_date} onChange={(e) => setEventFormData({ ...eventFormData, event_date: e.target.value })} className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-2">Event Time</label>
+                  <input type="text" value={eventFormData.event_time} onChange={(e) => setEventFormData({ ...eventFormData, event_time: e.target.value })} placeholder="e.g., 10:00 AM" className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white placeholder-[#8B7355] dark:placeholder-[#b1a7a6]/60 focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-2">Display Order</label>
+                  <input type="number" value={eventFormData.display_order} onChange={(e) => setEventFormData({ ...eventFormData, display_order: parseInt(e.target.value) || 0 })} className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-2">Image URL</label>
+                  <input type="url" value={eventFormData.image_url} onChange={(e) => setEventFormData({ ...eventFormData, image_url: e.target.value })} placeholder="https://..." className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white placeholder-[#8B7355] dark:placeholder-[#b1a7a6]/60 focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-2">Speaker Image URL</label>
+                  <input type="url" value={eventFormData.speaker_image_url} onChange={(e) => setEventFormData({ ...eventFormData, speaker_image_url: e.target.value })} placeholder="https://..." className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white placeholder-[#8B7355] dark:placeholder-[#b1a7a6]/60 focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all" />
+                </div>
+              </div>
+              <div className="flex gap-3 pt-4 border-t border-[#DCC5B2] dark:border-[#3d4951]">
+                <button type="button" onClick={resetEventForm} className="flex-1 px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg text-[#5D4E37] dark:text-[#d3d3d3] hover:bg-[#F0E4D3] dark:hover:bg-[#0b090a] font-medium transition-colors">
+                  Cancel
+                </button>
+                <button type="submit" disabled={saving} className="flex-1 px-4 py-3 bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#ba181b] dark:to-[#e5383b] text-white rounded-lg font-medium transition-all disabled:opacity-50">
+                  {saving ? 'Saving...' : editingEventId ? 'Update' : 'Create'}
                 </button>
               </div>
             </form>
@@ -789,6 +982,92 @@ export default function TVDisplayPage() {
         </div>
       )}
 
+      {/* ══════ TAB: Events ══════ */}
+      {activeTab === 'events' && (
+        <div className="space-y-4">
+          <div className="flex justify-end mb-2">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowEventForm(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#ba181b] dark:to-[#e5383b] text-white font-medium rounded-lg transition-all text-sm"
+            >
+              <Calendar className="w-4 h-4" />
+              New Event
+            </motion.button>
+          </div>
+
+          {eventItems.length === 0 ? (
+            <SpotlightCard className="rounded-2xl border border-[#DCC5B2] dark:border-[#3d4951] bg-[#FAF7F3] dark:bg-transparent p-12 text-center" spotlightColor="rgba(217, 162, 153, 0.2)">
+              <Calendar className="w-12 h-12 text-[#8B7355] dark:text-[#b1a7a6]/70 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-[#5D4E37] dark:text-white mb-2">No Events</h3>
+              <p className="text-[#8B7355] dark:text-[#b1a7a6]">Create events to show on the TV display info board</p>
+            </SpotlightCard>
+          ) : (
+            eventItems.map((ev) => (
+              <motion.div
+                key={ev.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`bg-[#FAF7F3] dark:bg-[#161a1d] rounded-xl border border-[#DCC5B2] dark:border-[#3d4951] p-5 transition-all hover:border-[#D9A299] dark:hover:border-[#ba181b]/30 ${
+                  !ev.is_active && 'opacity-60'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="text-lg font-semibold text-[#5D4E37] dark:text-white">{ev.title}</h3>
+                      {ev.badge_text && (
+                        <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-teal-500/20 text-teal-400 border border-teal-500/30">
+                          {ev.badge_text}
+                        </span>
+                      )}
+                      {!ev.is_active && (
+                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-[#F0E4D3] dark:bg-[#3d4951]/30 text-[#8B7355] dark:text-[#b1a7a6]">INACTIVE</span>
+                      )}
+                    </div>
+                    {ev.subtitle && <p className="text-sm text-[#8B7355] dark:text-[#b1a7a6] mb-1">{ev.subtitle}</p>}
+                    {ev.description && <p className="text-sm text-[#8B7355] dark:text-[#b1a7a6] line-clamp-2 mb-2">{ev.description}</p>}
+                    <div className="flex items-center flex-wrap gap-3 text-xs text-[#8B7355] dark:text-[#b1a7a6]/70">
+                      {ev.speaker_name && <span>Speaker: <strong className="text-[#5D4E37] dark:text-[#d3d3d3]">{ev.speaker_name}</strong></span>}
+                      {ev.event_date && <span>Date: {new Date(ev.event_date + 'T00:00:00').toLocaleDateString()}</span>}
+                      {ev.event_time && <span>Time: {ev.event_time}</span>}
+                      {ev.location && <span>Location: {ev.location}</span>}
+                      <span>Order: {ev.display_order}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleToggleEvent(ev.id, ev.is_active)}
+                      className={`p-2 rounded-lg transition-colors ${ev.is_active ? 'text-emerald-400 hover:bg-emerald-500/10' : 'text-white/40 hover:bg-white/5'}`}
+                      title={ev.is_active ? 'Deactivate' : 'Activate'}
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        {ev.is_active ? (
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        ) : (
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M3 3l18 18" />
+                        )}
+                      </svg>
+                    </button>
+                    <button onClick={() => handleEditEvent(ev)} className="p-2 rounded-lg text-[#d3d3d3] hover:bg-[#d3d3d3]/10 transition-colors" title="Edit">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                    <button onClick={() => handleDeleteEvent(ev.id)} className="p-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors" title="Delete">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            ))
+          )}
+        </div>
+      )}
+
       {/* ══════ TAB: Settings ══════ */}
       {activeTab === 'settings' && (
         <SettingsTab settings={settings} onSave={handleSaveSetting} />
@@ -827,6 +1106,11 @@ function SettingsTab({ settings, onSave }: { settings: Record<string, string>; o
       keys: ['semester_label', 'department_short', 'headline_prefix'],
     },
     {
+      title: 'TV Room & Events',
+      icon: Calendar,
+      keys: ['tv_room_number', 'tv_class_label', 'event_rotation_sec'],
+    },
+    {
       title: 'Features',
       icon: Settings,
       keys: ['show_routine', 'show_stats', 'show_ticker'],
@@ -843,6 +1127,9 @@ function SettingsTab({ settings, onSave }: { settings: Record<string, string>; o
     show_routine: 'Show Routine Tab',
     show_stats: 'Show Stats Tab',
     show_ticker: 'Show Ticker Bar',
+    tv_room_number: 'TV Room Number (e.g., ROOM 301)',
+    tv_class_label: 'Class Label (e.g., CLASS 4B)',
+    event_rotation_sec: 'Event Carousel Rotation (seconds)',
   };
 
   return (

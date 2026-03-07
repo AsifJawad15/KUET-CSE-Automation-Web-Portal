@@ -186,10 +186,29 @@ export interface CmsTvSetting {
   updated_at: string;
 }
 
+export interface CmsTvEvent {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  description: string | null;
+  image_url: string | null;
+  speaker_name: string | null;
+  speaker_image_url: string | null;
+  event_date: string | null;
+  event_time: string | null;
+  location: string | null;
+  badge_text: string | null;
+  is_active: boolean;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 /** Aggregated TV display data fetched in one batch */
 export interface TvDisplayData {
   announcements: CmsTvAnnouncement[];
   ticker: CmsTvTicker[];
+  events: CmsTvEvent[];
   settings: Record<string, string>;
 }
 

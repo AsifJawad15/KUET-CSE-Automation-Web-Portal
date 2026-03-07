@@ -6,10 +6,11 @@
 
 import { cmsSupabase } from '@/services/cmsService';
 import type {
-    CmsTvAnnouncement,
-    CmsTvSetting,
-    CmsTvTicker,
-    TvDisplayData,
+  CmsTvAnnouncement,
+  CmsTvEvent,
+  CmsTvSetting,
+  CmsTvTicker,
+  TvDisplayData,
 } from '@/types/cms';
 
 // ── Fetch (used by both admin + public TV page) ────────
@@ -19,7 +20,7 @@ import type {
  * Used by the public /tv-display page (polling) and admin page.
  */
 export async function fetchTvDisplayData(): Promise<TvDisplayData> {
-  const [announcementsRes, tickerRes, settingsRes] = await Promise.all([
+  const [announcementsRes, tickerRes, settingsRes, eventsRes] = await Promise.all([
     cmsSupabase
       .from('cms_tv_announcements')
       .select('*')
@@ -34,6 +35,11 @@ export async function fetchTvDisplayData(): Promise<TvDisplayData> {
     cmsSupabase
       .from('cms_tv_settings')
       .select('*'),
+    cmsSupabase
+      .from('cms_tv_events')
+      .select('*')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true }),
   ]);
 
   // Convert settings array → key-value map
@@ -45,6 +51,7 @@ export async function fetchTvDisplayData(): Promise<TvDisplayData> {
   return {
     announcements: (announcementsRes.data as CmsTvAnnouncement[]) || [],
     ticker: (tickerRes.data as CmsTvTicker[]) || [],
+    events: (eventsRes.data as CmsTvEvent[]) || [],
     settings,
   };
 }
@@ -190,6 +197,59 @@ export async function upsertSetting(
   const { error } = await cmsSupabase
     .from('cms_tv_settings')
     .upsert({ key, value }, { onConflict: 'key' });
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+// ── Event CRUD ─────────────────────────────────────────
+
+export async function fetchAllEvents(): Promise<CmsTvEvent[]> {
+  const { data } = await cmsSupabase
+    .from('cms_tv_events')
+    .select('*')
+    .order('display_order', { ascending: true });
+  return (data as CmsTvEvent[]) || [];
+}
+
+export async function createEvent(
+  input: Omit<CmsTvEvent, 'id' | 'created_at' | 'updated_at'>
+): Promise<{ success: boolean; error?: string }> {
+  const { error } = await cmsSupabase.from('cms_tv_events').insert(input);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+export async function updateEvent(
+  id: string,
+  updates: Partial<CmsTvEvent>
+): Promise<{ success: boolean; error?: string }> {
+  const cleaned = { ...updates };
+  delete (cleaned as Record<string, unknown>).id;
+  delete (cleaned as Record<string, unknown>).created_at;
+  delete (cleaned as Record<string, unknown>).updated_at;
+
+  const { error } = await cmsSupabase
+    .from('cms_tv_events')
+    .update(cleaned)
+    .eq('id', id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+export async function deleteEvent(id: string): Promise<{ success: boolean; error?: string }> {
+  const { error } = await cmsSupabase.from('cms_tv_events').delete().eq('id', id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+export async function toggleEvent(
+  id: string,
+  isActive: boolean
+): Promise<{ success: boolean; error?: string }> {
+  const { error } = await cmsSupabase
+    .from('cms_tv_events')
+    .update({ is_active: !isActive })
+    .eq('id', id);
   if (error) return { success: false, error: error.message };
   return { success: true };
 }
