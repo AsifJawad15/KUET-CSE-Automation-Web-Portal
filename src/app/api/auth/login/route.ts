@@ -1,7 +1,7 @@
 // ==========================================
 // API: /api/auth/login
-// Authenticates users against the profiles table
-// Returns user data with teacher/admin profile details
+// Admin: hardcoded credentials (no DB)
+// Teacher: authenticates via Supabase profiles table
 // ==========================================
 
 import { NextRequest } from 'next/server';
@@ -13,6 +13,11 @@ import { comparePassword } from '@/lib/passwordUtils';
 function extractError(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
+
+// ── Hardcoded admin credentials ────────────────────────
+
+const ADMIN_EMAIL = 'admin@gmail.com';
+const ADMIN_PASSWORD = 'admin123';
 
 // ── Designation display mapping ────────────────────────
 
@@ -26,9 +31,6 @@ const DESIGNATION_LABELS: Record<string, string> = {
 // ── POST /api/auth/login ───────────────────────────────
 
 export async function POST(request: NextRequest) {
-  const guard = guardSupabase(isSupabaseConfigured());
-  if (guard) return guard;
-
   try {
     const body = await request.json();
     const { email, password } = body;
@@ -40,6 +42,27 @@ export async function POST(request: NextRequest) {
     if (validation) return badRequest(validation);
 
     const normalizedEmail = email.toLowerCase().trim();
+
+    // ── Admin: hardcoded credentials (no DB lookup) ────
+    if (normalizedEmail === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+      return ok({
+        id: 'admin-001',
+        email: ADMIN_EMAIL,
+        name: 'System Administrator',
+        role: 'admin',
+        department: 'Computer Science & Engineering',
+        designation: 'System Admin',
+      });
+    }
+
+    // If someone tries admin email with wrong password
+    if (normalizedEmail === ADMIN_EMAIL) {
+      return unauthorized('Invalid email or password');
+    }
+
+    // ── Teacher/Other: authenticate via Supabase profiles table ────
+    const guard = guardSupabase(isSupabaseConfigured());
+    if (guard) return guard;
 
     // 1. Fetch profile with password hash
     const { data: profile, error: profileError } = await supabase
