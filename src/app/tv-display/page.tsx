@@ -1,11 +1,12 @@
-'use client';
+﻿'use client';
 
 // ==========================================
-// Public TV Display Page — /tv-display
-// Info Board Layout: Left events carousel + Right room schedule
-// Fullscreen display optimized for 1920×1080 TV via HDMI
-// No authentication required — public page
-// Auto-refreshes via polling every 30 seconds
+// Public TV Display Page â€” /tv-display
+// Left (58%): Liquid glass event cards, wider
+// Right (42%): Time-aware live room schedule
+//   â€¢ Current period â€” all rooms active NOW
+//   â€¢ Next 2 upcoming periods, auto-slides every 20 s
+// No auth required. Polls every 30 s.
 // ==========================================
 
 import { getRoutineSlots } from '@/services/routineService';
@@ -14,44 +15,59 @@ import type { CmsTvAnnouncement, CmsTvEvent, CmsTvTicker } from '@/types/cms';
 import type { DBRoutineSlotWithDetails } from '@/types/database';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-    Calendar, ChevronLeft, ChevronRight, Clock,
-    GraduationCap, MapPin, Monitor, Radio, User, Zap,
+  Calendar, ChevronLeft, ChevronRight, Clock,
+  GraduationCap, MapPin, Monitor, Radio, User, Zap,
 } from 'lucide-react';
 import Image from 'next/image';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-// ── Color Palette ──────────────────────────────────────
-// Deep navy base, teal accents, gold highlights
+// â”€â”€ Color palette â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const C = {
   navyDark: '#091428',
-  navy: '#0c2340',
-  navyLight: '#132e4f',
-  teal: '#00796b',
-  tealLight: '#26a69a',
+  navy:     '#0c2340',
+  navyLight:'#132e4f',
+  teal:     '#00796b',
+  tealLight:'#26a69a',
   tealDark: '#004d40',
-  gold: '#ffc107',
-  goldDark: '#c79100',
-  white: '#ffffff',
-  textMuted: 'rgba(255,255,255,0.55)',
-  textDim: 'rgba(255,255,255,0.3)',
-  border: 'rgba(255,255,255,0.08)',
+  gold:     '#ffc107',
+  white:    '#ffffff',
+  textMuted:'rgba(255,255,255,0.55)',
+  textDim:  'rgba(255,255,255,0.3)',
+  border:   'rgba(255,255,255,0.08)',
 } as const;
 
-const POLL_INTERVAL_MS = 30_000;
+const POLL_MS = 30_000;
 
-const DAY_MAP: Record<number, string> = {
-  0: 'Sunday', 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday',
-};
-const JS_DAY_TO_ROUTINE: Record<number, number> = {
-  0: 0, 1: 1, 2: 2, 3: 3, 4: 4,
-};
+// â”€â”€ Routine helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-function getTodayDayOfWeek(): number {
-  const jsDay = new Date().getDay();
-  return JS_DAY_TO_ROUTINE[jsDay] ?? 0;
+const JS_DAY_TO_ROUTINE: Record<number, number> = { 0:0, 1:1, 2:2, 3:3, 4:4 };
+function getTodayDayOfWeek() { return JS_DAY_TO_ROUTINE[new Date().getDay()] ?? 0; }
+function timeToMins(t: string): number {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + (m || 0);
 }
 
-// ── Main Component ──────────────────────────────────────
+// A "period" = one time slot shared by multiple rooms
+interface TimePeriod {
+  start_time: string;
+  end_time: string;
+  slots: DBRoutineSlotWithDetails[];
+}
+
+function buildPeriods(slots: DBRoutineSlotWithDetails[]): TimePeriod[] {
+  const today = getTodayDayOfWeek();
+  const todaySlots = slots
+    .filter(s => s.day_of_week === today)
+    .sort((a, b) => a.start_time.localeCompare(b.start_time));
+  const map = new Map<string, TimePeriod>();
+  for (const s of todaySlots) {
+    if (!map.has(s.start_time)) map.set(s.start_time, { start_time: s.start_time, end_time: s.end_time, slots: [] });
+    map.get(s.start_time)!.slots.push(s);
+  }
+  return Array.from(map.values()).sort((a, b) => a.start_time.localeCompare(b.start_time));
+}
+
+// â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function TvDisplayPublicPage() {
   // Data state
@@ -66,15 +82,13 @@ export default function TvDisplayPublicPage() {
   const [now, setNow] = useState(new Date());
   const [eventPage, setEventPage] = useState(0);
   const [tickerIndex, setTickerIndex] = useState(0);
+  const [upcomingIdx, setUpcomingIdx] = useState(0); // which upcoming period is shown (0 or 1)
   const autoRotateRef = useRef<NodeJS.Timeout | null>(null);
 
-  // ── Settings helpers ──
   const headlinePrefix = settings.headline_prefix || 'HEADLINES';
-  const roomNumber = settings.tv_room_number || 'ROOM 301';
-  const classLabel = settings.tv_class_label || 'CLASS 4B';
   const eventRotationSec = parseInt(settings.event_rotation_sec || '8', 10);
 
-  // ── Fetch all data ──
+  // â”€â”€ Fetch all data â”€â”€
   const fetchData = useCallback(async () => {
     try {
       const [tvData, slots] = await Promise.all([
@@ -93,10 +107,9 @@ export default function TvDisplayPublicPage() {
     }
   }, []);
 
-  // Initial fetch + polling
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, POLL_INTERVAL_MS);
+    const interval = setInterval(fetchData, POLL_MS);
     return () => clearInterval(interval);
   }, [fetchData]);
 
@@ -106,177 +119,129 @@ export default function TvDisplayPublicPage() {
     return () => clearInterval(timer);
   }, []);
 
-  // Auto-rotate event carousel (1 event at a time)
+  // Auto-rotate event carousel
   useEffect(() => {
     if (events.length <= 1) return;
     if (autoRotateRef.current) clearInterval(autoRotateRef.current);
     const maxPage = events.length - 1;
-    autoRotateRef.current = setInterval(() => {
-      setEventPage(prev => (prev >= maxPage ? 0 : prev + 1));
-    }, eventRotationSec * 1000);
-    return () => {
-      if (autoRotateRef.current) clearInterval(autoRotateRef.current);
-    };
+    autoRotateRef.current = setInterval(() => setEventPage(prev => (prev >= maxPage ? 0 : prev + 1)), eventRotationSec * 1000);
+    return () => { if (autoRotateRef.current) clearInterval(autoRotateRef.current); };
   }, [events.length, eventRotationSec]);
 
-  // Ticker rotation every 5 seconds
+  // Slide between upcoming periods every 20 s
+  useEffect(() => {
+    const t = setInterval(() => setUpcomingIdx(prev => (prev === 0 ? 1 : 0)), 20_000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Ticker rotation every 5 s
   useEffect(() => {
     if (ticker.length <= 1) return;
-    const interval = setInterval(() => {
-      setTickerIndex(prev => (prev + 1) % ticker.length);
-    }, 5000);
+    const interval = setInterval(() => setTickerIndex(prev => (prev + 1) % ticker.length), 5000);
     return () => clearInterval(interval);
   }, [ticker.length]);
 
-  // ── URL param override for room ──
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const roomParam = params.get('room');
-      if (roomParam) {
-        setSettings(prev => ({ ...prev, tv_room_number: `ROOM ${roomParam}` }));
-      }
-    }
-  }, []);
+  // â”€â”€ Schedule derived data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const periods = useMemo(() => buildPeriods(routineSlots), [routineSlots]);
+  const nowMins = now.getHours() * 60 + now.getMinutes();
 
-  // ── Today's routine filtered by room ──
-  const roomSchedule = useMemo(() => {
-    const today = getTodayDayOfWeek();
-    const roomNum = roomNumber.replace(/^ROOM\s*/i, '').trim();
-    return routineSlots
-      .filter(s => s.day_of_week === today && s.room_number === roomNum)
-      .sort((a, b) => a.start_time.localeCompare(b.start_time));
-  }, [routineSlots, roomNumber]);
+  const currentPeriod = useMemo(
+    () => periods.find(p => nowMins >= timeToMins(p.start_time) && nowMins < timeToMins(p.end_time)) ?? null,
+    [periods, nowMins],
+  );
+  const upcomingPeriods = useMemo(
+    () => periods.filter(p => timeToMins(p.start_time) > nowMins).slice(0, 2),
+    [periods, nowMins],
+  );
 
-  // All today's slots (fallback if room filter returns nothing)
-  const allTodaySlots = useMemo(() => {
-    const today = getTodayDayOfWeek();
-    return routineSlots
-      .filter(s => s.day_of_week === today)
-      .sort((a, b) => a.start_time.localeCompare(b.start_time));
-  }, [routineSlots]);
-
-  const displaySchedule = roomSchedule.length > 0 ? roomSchedule : allTodaySlots;
-
-  // ── Clock formatting ──
+  // â”€â”€ Clock formatting â”€â”€
   const timeStr = now.toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit' });
   const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
-  // ── Event pagination (1 event at a time) ──
+  // â”€â”€ Event pagination â”€â”€
   const maxPage = Math.max(0, events.length - 1);
   const currentEvent = events[eventPage] ?? null;
-
   const prevEvents = () => setEventPage(p => (p <= 0 ? maxPage : p - 1));
   const nextEvents = () => setEventPage(p => (p >= maxPage ? 0 : p + 1));
 
-  // ── Loading ──
+  // â”€â”€ Loading â”€â”€
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center" style={{ background: C.navyDark }}>
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="flex flex-col items-center gap-4"
-        >
+        <div className="flex flex-col items-center gap-4">
           <Monitor className="w-16 h-16 animate-pulse" style={{ color: C.teal }} />
           <p className="text-lg" style={{ color: C.textMuted }}>Loading TV Display...</p>
-        </motion.div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div
-      className="h-screen overflow-hidden flex flex-col select-none"
-      style={{ background: C.navyDark, color: C.white }}
-    >
-      {/* ═══════════ HEADER BAR ═══════════ */}
+    <div className="h-screen overflow-hidden flex flex-col select-none" style={{ background: C.navyDark, color: C.white }}>
+
+      {/* â•â•â•â•â•â•â•â•â•â•â• HEADER BAR â•â•â•â•â•â•â•â•â•â•â• */}
       <header
-        className="flex-shrink-0 px-8 py-3"
+        className="flex-shrink-0 px-6 py-2.5 flex items-center justify-between"
         style={{ background: `linear-gradient(135deg, ${C.navy} 0%, ${C.navyLight} 100%)`, borderBottom: `2px solid ${C.teal}` }}
       >
-        <div className="flex items-center justify-between">
-          {/* Left: University name */}
-          <div className="flex items-center gap-4">
-            <div
-              className="w-11 h-11 rounded-xl flex items-center justify-center"
-              style={{ background: C.teal }}
-            >
-              <GraduationCap className="w-7 h-7 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-wide uppercase">
-                <span style={{ color: C.gold }}>KUET</span>
-                <span className="mx-2" style={{ color: C.textDim }}>|</span>
-                <span className="text-white">DEPT. OF COMPUTER SCIENCE & ENGINEERING</span>
-              </h1>
-            </div>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: C.teal }}>
+            <GraduationCap className="w-6 h-6 text-white" />
           </div>
-
-          {/* Right: Clock */}
-          <div
-            className="text-right px-6 py-2 rounded-xl"
-            style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}` }}
-          >
-            <p className="text-3xl font-mono font-bold tracking-wider tabular-nums" style={{ color: C.gold }}>
-              {timeStr}
-            </p>
-            <p className="text-xs tracking-wide" style={{ color: C.textMuted }}>
-              {dateStr}
-            </p>
-          </div>
+          <h1 className="text-lg font-bold tracking-wide uppercase">
+            <span style={{ color: C.gold }}>KUET</span>
+            <span className="mx-2" style={{ color: C.textDim }}>|</span>
+            <span>DEPT. OF COMPUTER SCIENCE & ENGINEERING</span>
+          </h1>
+        </div>
+        <div className="text-right px-5 py-1.5 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}` }}>
+          <p className="text-2xl font-mono font-bold tracking-wider tabular-nums" style={{ color: C.gold }}>{timeStr}</p>
+          <p className="text-xs tracking-wide mt-0.5" style={{ color: C.textMuted }}>{dateStr}</p>
         </div>
       </header>
 
-      {/* ═══════════ MAIN CONTENT — 2 PANELS ═══════════ */}
+      {/* â•â•â•â•â•â•â•â•â•â•â• MAIN CONTENT â€” 2 PANELS â•â•â•â•â•â•â•â•â•â•â• */}
       <main className="flex-1 min-h-0 flex overflow-hidden">
-        {/* ───── LEFT PANEL: News & Events (~40%) ───── */}
-        <section className="flex-[40] min-w-0 flex flex-col p-5 pr-2.5 overflow-hidden">
-          {/* Section title */}
-          <div className="flex items-center justify-between mb-3">
+
+        {/* â”€â”€â”€â”€â”€ LEFT PANEL: News & Events (58%) â”€â”€â”€â”€â”€ */}
+        <section className="flex-[58] min-w-0 flex flex-col p-4 pr-2 overflow-hidden">
+          <div className="flex-shrink-0 flex items-center justify-between mb-2">
             <h2 className="text-sm font-black tracking-[0.2em] uppercase" style={{ color: C.gold }}>
               Department News &amp; Events
             </h2>
             {events.length > 1 && (
               <div className="flex items-center gap-2">
-                {/* Dots */}
                 <div className="flex gap-1">
                   {events.map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setEventPage(i)}
+                    <button key={i} onClick={() => setEventPage(i)}
                       className="w-1.5 h-1.5 rounded-full transition-all"
-                      style={{ background: i === eventPage ? C.gold : C.textDim }}
-                    />
+                      style={{ background: i === eventPage ? C.gold : C.textDim }} />
                   ))}
                 </div>
-                {/* Nav arrows */}
-                <button onClick={prevEvents} className="p-1 rounded transition-opacity hover:opacity-70" style={{ background: 'rgba(255,255,255,0.07)' }}>
+                <button onClick={prevEvents} className="p-1 rounded" style={{ background: 'rgba(255,255,255,0.07)' }}>
                   <ChevronLeft className="w-4 h-4" style={{ color: C.textMuted }} />
                 </button>
-                <button onClick={nextEvents} className="p-1 rounded transition-opacity hover:opacity-70" style={{ background: 'rgba(255,255,255,0.07)' }}>
+                <button onClick={nextEvents} className="p-1 rounded" style={{ background: 'rgba(255,255,255,0.07)' }}>
                   <ChevronRight className="w-4 h-4" style={{ color: C.textMuted }} />
                 </button>
               </div>
             )}
           </div>
 
-          {/* Event Card — full height, one at a time */}
           <div className="flex-1 min-h-0">
             <AnimatePresence mode="wait">
               {currentEvent ? (
-                <motion.div
-                  key={currentEvent.id}
-                  initial={{ opacity: 0, x: 60 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -60 }}
+                <motion.div key={currentEvent.id}
+                  initial={{ opacity: 0, scale: 0.97 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 1.02 }}
                   transition={{ duration: 0.4 }}
-                  className="h-full"
-                >
+                  className="h-full">
                   <EventCard event={currentEvent} />
                 </motion.div>
               ) : (
-                <div className="h-full flex items-center justify-center rounded-2xl" style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${C.border}` }}>
+                <div className="h-full flex items-center justify-center rounded-2xl"
+                  style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${C.border}` }}>
                   <p style={{ color: C.textDim }}>No events to display</p>
                 </div>
               )}
@@ -284,188 +249,212 @@ export default function TvDisplayPublicPage() {
           </div>
         </section>
 
-        {/* ───── RIGHT PANEL: Room & Class Schedule (~60%) ───── */}
-        <section className="flex-[60] min-w-0 flex flex-col p-5 pl-2.5 overflow-hidden">
-          {/* Section title */}
-          <h2 className="text-lg font-bold tracking-widest uppercase mb-2" style={{ color: C.gold }}>
-            Room & Class Schedule
+        {/* â”€â”€â”€â”€â”€ RIGHT PANEL: Live Room Schedule (42%) â”€â”€â”€â”€â”€ */}
+        <section className="flex-[42] min-w-0 flex flex-col p-4 pl-2 overflow-hidden gap-3">
+          <h2 className="flex-shrink-0 text-sm font-black tracking-[0.2em] uppercase" style={{ color: C.gold }}>
+            Live Room Schedule
           </h2>
-          {/* Room / Class badge */}
-          <div className="mb-4">
-            <span className="text-2xl font-black tracking-wide" style={{ color: C.tealLight }}>
-              {roomNumber}
-            </span>
-            <span className="mx-3 text-xl" style={{ color: C.textDim }}>|</span>
-            <span className="text-2xl font-black tracking-wide" style={{ color: C.tealLight }}>
-              {classLabel}
-            </span>
-          </div>
 
-          {/* Schedule Table */}
-          <div
-            className="flex-1 rounded-2xl overflow-hidden flex flex-col"
-            style={{ background: C.navyLight, border: `1px solid rgba(0,121,107,0.3)` }}
-          >
-            {/* Table header */}
-            <div
-              className="grid grid-cols-[140px_1fr_180px] gap-0 flex-shrink-0"
-              style={{ background: C.gold }}
-            >
-              <div className="px-5 py-3.5">
-                <span className="text-sm font-black tracking-wider uppercase" style={{ color: C.navyDark }}>Time</span>
-              </div>
-              <div className="px-5 py-3.5">
-                <span className="text-sm font-black tracking-wider uppercase" style={{ color: C.navyDark }}>Subject</span>
-              </div>
-              <div className="px-5 py-3.5">
-                <span className="text-sm font-black tracking-wider uppercase" style={{ color: C.navyDark }}>Faculty</span>
-              </div>
+          {/* â”€â”€ CURRENT PERIOD (top ~55%) â”€â”€ */}
+          <div className="flex-[55] min-h-0 rounded-2xl overflow-hidden flex flex-col"
+            style={{
+              background: currentPeriod
+                ? 'linear-gradient(135deg, #004d40 0%, #00695c 60%, #00796b 100%)'
+                : `linear-gradient(135deg, ${C.navy} 0%, ${C.navyDark} 100%)`,
+              border: `1px solid ${currentPeriod ? 'rgba(0,200,150,0.3)' : C.border}`,
+            }}>
+            {/* Header row */}
+            <div className="flex-shrink-0 px-5 py-3 flex items-center gap-3"
+              style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              {currentPeriod ? (
+                <>
+                  <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black tracking-widest uppercase"
+                    style={{ background: 'rgba(255,193,7,0.2)', color: C.gold, border: '1px solid rgba(255,193,7,0.4)' }}>
+                    <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: C.gold }} />
+                    NOW
+                  </span>
+                  <span className="text-base font-mono font-bold" style={{ color: C.white }}>
+                    {formatTime12(currentPeriod.start_time)} â€“ {formatTime12(currentPeriod.end_time)}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black tracking-widest uppercase"
+                    style={{ background: 'rgba(255,255,255,0.07)', color: C.textMuted, border: `1px solid ${C.border}` }}>
+                    <Clock className="w-3 h-3" />
+                    BETWEEN CLASSES
+                  </span>
+                  {upcomingPeriods[0] && (
+                    <span className="text-sm font-mono" style={{ color: C.textMuted }}>
+                      Next: {formatTime12(upcomingPeriods[0].start_time)}
+                    </span>
+                  )}
+                </>
+              )}
             </div>
 
-            {/* Table rows — flex-1 per row so they fill height evenly, no scrollbar */}
-            <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-              {displaySchedule.length === 0 ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center">
-                    <Clock className="w-10 h-10 mx-auto mb-3" style={{ color: C.textDim }} />
-                    <p style={{ color: C.textDim }}>No classes scheduled for today</p>
-                  </div>
-                </div>
-              ) : (
-                displaySchedule.map((slot, i) => (
-                  <div
-                    key={slot.id}
-                    className="flex-1 min-h-0 grid gap-0"
-                    style={{
-                      gridTemplateColumns: '140px 1fr 180px',
-                      borderBottom: i < displaySchedule.length - 1 ? `1px solid ${C.border}` : 'none',
-                      background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)',
-                    }}
-                  >
-                    {/* Time */}
-                    <div className="px-5 py-4 flex flex-col justify-center">
-                      <span className="text-base font-mono font-bold" style={{ color: C.gold }}>
-                        {formatTime12(slot.start_time)}
-                      </span>
-                      <span className="text-xs font-mono" style={{ color: C.textDim }}>
-                        {formatTime12(slot.end_time)}
-                      </span>
-                    </div>
-                    {/* Subject */}
-                    <div className="px-5 py-4 flex flex-col justify-center">
-                      <p className="text-base font-semibold text-white">
-                        {slot.course_offerings?.courses?.title || slot.course_offerings?.courses?.code || '—'}
+            {/* Slot rows */}
+            <div className="flex-1 min-h-0 overflow-hidden flex flex-col p-3 gap-2">
+              {currentPeriod ? (
+                currentPeriod.slots.map(slot => (
+                  <div key={slot.id} className="flex-1 min-h-0 flex items-center gap-3 px-4 py-2 rounded-xl"
+                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <span className="flex-shrink-0 px-3 py-1.5 rounded-lg text-sm font-black tabular-nums"
+                      style={{ background: C.gold, color: C.navyDark, minWidth: '3.5rem', textAlign: 'center' }}>
+                      {slot.room_number}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-white truncate text-base">
+                        {slot.course_offerings?.courses?.code || 'â€”'}
                       </p>
-                      <p className="text-xs mt-0.5" style={{ color: C.textMuted }}>
-                        {slot.course_offerings?.courses?.code || ''}
-                        {slot.course_offerings?.courses?.course_type === 'lab' && (
-                          <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold" style={{ background: 'rgba(0,121,107,0.25)', color: C.tealLight }}>
-                            LAB
-                          </span>
-                        )}
+                      <p className="text-xs truncate" style={{ color: C.textMuted }}>
+                        {slot.course_offerings?.courses?.title || ''}
                       </p>
                     </div>
-                    {/* Faculty */}
-                    <div className="px-5 py-4 flex items-center">
-                      <span className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.75)' }}>
-                        {slot.course_offerings?.teachers?.full_name || '—'}
-                      </span>
-                    </div>
+                    <span className="flex-shrink-0 text-xs font-medium text-right"
+                      style={{ color: 'rgba(255,255,255,0.7)', maxWidth: '8rem' }}>
+                      {slot.course_offerings?.teachers?.full_name || ''}
+                    </span>
                   </div>
                 ))
+              ) : (
+                <div className="flex-1 flex items-center justify-center flex-col gap-2">
+                  <Clock className="w-10 h-10" style={{ color: C.textDim }} />
+                  <p className="text-sm" style={{ color: C.textDim }}>
+                    {upcomingPeriods.length === 0 ? 'No more classes today' : 'Rooms vacant'}
+                  </p>
+                </div>
               )}
+            </div>
+          </div>
+
+          {/* â”€â”€ UPCOMING PERIODS (bottom ~45%, slides every 20 s) â”€â”€ */}
+          <div className="flex-[45] min-h-0 rounded-2xl overflow-hidden flex flex-col"
+            style={{ background: C.navyLight, border: `1px solid rgba(0,121,107,0.25)` }}>
+            <div className="flex-shrink-0 px-5 py-2.5 flex items-center justify-between"
+              style={{ borderBottom: `1px solid ${C.border}` }}>
+              <span className="text-xs font-black tracking-[0.18em] uppercase" style={{ color: C.tealLight }}>
+                Upcoming
+              </span>
+              {upcomingPeriods.length > 1 && (
+                <div className="flex gap-1">
+                  {upcomingPeriods.map((_, i) => (
+                    <div key={i} className="w-1.5 h-1.5 rounded-full transition-all"
+                      style={{ background: i === (upcomingIdx % upcomingPeriods.length) ? C.tealLight : C.textDim }} />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <AnimatePresence mode="wait">
+                {upcomingPeriods.length === 0 ? (
+                  <div key="empty" className="h-full flex items-center justify-center">
+                    <p className="text-sm" style={{ color: C.textDim }}>No upcoming classes</p>
+                  </div>
+                ) : (() => {
+                  const period = upcomingPeriods[upcomingIdx % upcomingPeriods.length];
+                  const num = (upcomingIdx % upcomingPeriods.length) + 1;
+                  return (
+                    <motion.div key={`${upcomingIdx}-${period.start_time}`}
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -16 }}
+                      transition={{ duration: 0.3 }}
+                      className="h-full flex flex-col p-3 gap-2">
+                      <div className="flex-shrink-0 flex items-center gap-2 mb-1">
+                        <Clock className="w-3.5 h-3.5" style={{ color: C.tealLight }} />
+                        <span className="text-sm font-mono font-bold" style={{ color: C.white }}>
+                          {formatTime12(period.start_time)} â€“ {formatTime12(period.end_time)}
+                        </span>
+                        <span className="ml-auto text-[10px] font-bold tracking-wider" style={{ color: C.textDim }}>
+                          {num}/{upcomingPeriods.length}
+                        </span>
+                      </div>
+                      {period.slots.map(slot => (
+                        <div key={slot.id} className="flex-1 min-h-0 flex items-center gap-3 px-3 py-1.5 rounded-xl"
+                          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                          <span className="flex-shrink-0 px-2.5 py-1 rounded-lg text-xs font-black"
+                            style={{ background: 'rgba(0,121,107,0.35)', color: C.tealLight, border: '1px solid rgba(0,121,107,0.5)', minWidth: '3rem', textAlign: 'center' }}>
+                            {slot.room_number}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-white truncate">
+                              {slot.course_offerings?.courses?.code || 'â€”'}
+                            </p>
+                            <p className="text-[11px] truncate" style={{ color: C.textMuted }}>
+                              {slot.course_offerings?.teachers?.full_name || ''}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </motion.div>
+                  );
+                })()}
+              </AnimatePresence>
             </div>
           </div>
         </section>
       </main>
 
-      {/* ═══════════ TICKER BAR (Special Update) ═══════════ */}
+      {/* â•â•â•â•â•â•â•â•â•â•â• TICKER BAR â•â•â•â•â•â•â•â•â•â•â• */}
       {ticker.length > 0 && (
-        <div className="flex-shrink-0 relative overflow-hidden">
-          <div className="flex items-stretch">
-            {/* Label */}
-            <div
-              className="flex-shrink-0 px-5 py-2.5 flex items-center gap-2 z-10 shadow-lg"
-              style={{ background: `linear-gradient(135deg, ${C.teal} 0%, ${C.tealDark} 100%)` }}
-            >
-              <Zap className="w-4 h-4 text-white" />
-              <span className="text-white font-black text-xs tracking-[0.2em] uppercase">
-                {ticker[tickerIndex]?.label || 'SPECIAL UPDATE'}
-              </span>
-            </div>
-            {/* Content */}
-            <div
-              className="flex-1 px-5 py-2.5 flex items-center gap-4 overflow-hidden"
-              style={{ background: C.navy, borderTop: `1px solid ${C.border}` }}
-            >
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={tickerIndex}
-                  initial={{ opacity: 0, x: 40 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -40 }}
-                  transition={{ duration: 0.4 }}
-                  className="flex items-center gap-3 whitespace-nowrap"
-                >
-                  {ticker[tickerIndex] && (
-                    <>
-                      <span
-                        className="px-2 py-0.5 rounded text-[10px] font-bold uppercase border"
-                        style={{ background: 'rgba(0,121,107,0.2)', color: C.tealLight, borderColor: 'rgba(0,121,107,0.4)' }}
-                      >
-                        {ticker[tickerIndex].type.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-                      </span>
-                      <span className="text-white font-semibold text-sm">
-                        {ticker[tickerIndex].text}
-                      </span>
-                      {ticker[tickerIndex].course_code && (
-                        <span className="text-xs" style={{ color: C.textMuted }}>
-                          {ticker[tickerIndex].course_code}
-                        </span>
-                      )}
-                    </>
-                  )}
-                </motion.div>
-              </AnimatePresence>
-              {/* Dots */}
-              <div className="flex-shrink-0 ml-auto flex items-center gap-1.5">
-                {ticker.map((_, i) => (
-                  <div
-                    key={i}
-                    className="w-2 h-2 rounded-full transition-colors"
-                    style={{ background: i === tickerIndex ? C.teal : C.textDim }}
-                  />
-                ))}
-              </div>
+        <div className="flex-shrink-0 flex items-stretch overflow-hidden" style={{ height: '36px' }}>
+          <div className="flex-shrink-0 px-4 flex items-center gap-2"
+            style={{ background: `linear-gradient(135deg, ${C.teal}, ${C.tealDark})` }}>
+            <Zap className="w-3.5 h-3.5 text-white" />
+            <span className="text-white font-black text-[11px] tracking-[0.2em] uppercase whitespace-nowrap">
+              {ticker[tickerIndex]?.label || 'SPECIAL UPDATE'}
+            </span>
+          </div>
+          <div className="flex-1 px-4 flex items-center overflow-hidden"
+            style={{ background: C.navy, borderTop: `1px solid ${C.border}` }}>
+            <AnimatePresence mode="wait">
+              <motion.div key={tickerIndex}
+                initial={{ opacity: 0, x: 30 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -30 }}
+                transition={{ duration: 0.3 }}
+                className="flex items-center gap-3 whitespace-nowrap overflow-hidden">
+                {ticker[tickerIndex] && (
+                  <>
+                    <span className="flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-bold border"
+                      style={{ background: 'rgba(0,121,107,0.2)', color: C.tealLight, borderColor: 'rgba(0,121,107,0.4)' }}>
+                      {ticker[tickerIndex].type.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                    </span>
+                    <span className="text-white font-semibold text-sm truncate">{ticker[tickerIndex].text}</span>
+                    {ticker[tickerIndex].course_code && (
+                      <span className="text-xs flex-shrink-0" style={{ color: C.textMuted }}>{ticker[tickerIndex].course_code}</span>
+                    )}
+                  </>
+                )}
+              </motion.div>
+            </AnimatePresence>
+            <div className="flex-shrink-0 ml-auto flex items-center gap-1 pl-4">
+              {ticker.map((_, i) => (
+                <div key={i} className="w-1.5 h-1.5 rounded-full" style={{ background: i === tickerIndex ? C.teal : C.textDim }} />
+              ))}
             </div>
           </div>
         </div>
       )}
 
-      {/* ═══════════ HEADLINES MARQUEE ═══════════ */}
+      {/* â•â•â•â•â•â•â•â•â•â•â• HEADLINES MARQUEE â•â•â•â•â•â•â•â•â•â•â• */}
       {announcements.length > 0 && (
-        <div className="flex-shrink-0 flex items-stretch overflow-hidden">
-          {/* Label */}
-          <div
-            className="flex-shrink-0 px-5 py-2 flex items-center gap-2 z-10"
-            style={{ background: C.gold }}
-          >
-            <Radio className="w-3.5 h-3.5 animate-pulse" style={{ color: C.navyDark }} />
-            <span className="font-black text-xs tracking-[0.2em] uppercase" style={{ color: C.navyDark }}>
+        <div className="flex-shrink-0 flex items-stretch overflow-hidden" style={{ height: '34px' }}>
+          <div className="flex-shrink-0 px-4 flex items-center gap-2" style={{ background: C.gold }}>
+            <Radio className="w-3 h-3 animate-pulse" style={{ color: C.navyDark }} />
+            <span className="font-black text-[11px] tracking-[0.2em] uppercase whitespace-nowrap" style={{ color: C.navyDark }}>
               {headlinePrefix}
             </span>
           </div>
-          {/* Scrolling marquee */}
-          <div
-            className="flex-1 py-2 overflow-hidden"
-            style={{ background: `linear-gradient(90deg, ${C.goldDark}33 0%, ${C.navyDark} 20%)` }}
-          >
-            <div className="flex animate-marquee whitespace-nowrap">
+          <div className="flex-1 overflow-hidden" style={{ background: C.navyDark }}>
+            <div className="flex h-full items-center animate-marquee whitespace-nowrap">
               {[...announcements, ...announcements].map((a, i) => (
-                <span key={`${a.id}-${i}`} className="mx-8 flex items-center gap-2 text-sm">
-                  <span className="font-bold" style={{ color: C.gold }}>●</span>
-                  <span className="font-semibold text-white/80">{a.title}</span>
-                  <span style={{ color: C.textMuted }}>{a.content.slice(0, 60)}...</span>
+                <span key={`${a.id}-${i}`} className="mx-8 inline-flex items-center gap-2 text-sm">
+                  <span style={{ color: C.gold }}>â—</span>
+                  <span className="font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>{a.title}</span>
+                  <span style={{ color: C.textMuted }}>{a.content.slice(0, 80)}</span>
                 </span>
               ))}
             </div>
@@ -473,162 +462,152 @@ export default function TvDisplayPublicPage() {
         </div>
       )}
 
-      {/* Marquee CSS keyframes */}
       <style jsx>{`
         @keyframes marquee {
-          0% { transform: translateX(0); }
+          0%   { transform: translateX(0); }
           100% { transform: translateX(-50%); }
         }
-        .animate-marquee {
-          animation: marquee 30s linear infinite;
-        }
+        .animate-marquee { animation: marquee 35s linear infinite; }
       `}</style>
     </div>
   );
 }
 
 
-// ══════════════════════════════════════════════
-// Event Card Component
-// Shows image hero (top 42%) + content when image_url is present.
-// Falls back to gradient background + watermark when no image.
-// ══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// EventCard â€” Liquid Glass 3D Design
+// â€¢ Full-card image fills entire background
+// â€¢ Speaker info floats as glass panel at TOP
+// â€¢ Title/content floats as glass panel at BOTTOM
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 function EventCard({ event }: { event: CmsTvEvent }) {
   const hasImage = Boolean(event.image_url);
 
   return (
-    <div
-      className="h-full rounded-2xl overflow-hidden flex flex-col"
-      style={{
-        background: `linear-gradient(135deg, #004d40 0%, #00695c 40%, #00796b 100%)`,
-        border: `1px solid rgba(255,255,255,0.1)`,
-      }}
-    >
-      {/* ── IMAGE HERO (shown when image_url is set) ── */}
-      {hasImage && (
-        <div className="relative flex-shrink-0" style={{ height: '42%' }}>
-          <Image
-            src={event.image_url!}
-            alt={event.title}
-            fill
-            className="object-cover"
-            unoptimized
-          />
-          {/* Gradient overlay for smooth blend into content area */}
-          <div
-            className="absolute inset-0"
-            style={{ background: 'linear-gradient(to bottom, transparent 45%, rgba(0,50,40,0.9) 100%)' }}
-          />
-          {/* Badge pinned top-right on image */}
-          {event.badge_text && (
-            <div className="absolute top-3 right-3 z-10">
-              <span
-                className="px-3 py-1 rounded-lg text-xs font-black uppercase tracking-widest shadow-lg"
-                style={{ background: '#ffc107', color: '#091428' }}
-              >
-                {event.badge_text}
-              </span>
-            </div>
-          )}
-        </div>
+    <div className="h-full relative overflow-hidden rounded-2xl">
+
+      {/* Full-card image OR gradient background */}
+      {hasImage ? (
+        <Image src={event.image_url!} alt={event.title} fill className="object-cover" unoptimized priority />
+      ) : (
+        <div className="absolute inset-0"
+          style={{ background: 'linear-gradient(140deg, #002820 0%, #004d40 35%, #006654 55%, #0c2340 100%)' }} />
       )}
 
-      {/* ── CONTENT SECTION ── */}
-      <div className="flex-1 min-h-0 flex flex-col p-5 justify-between">
+      {/* Base dark overlay for legibility */}
+      <div className="absolute inset-0"
+        style={{
+          background: hasImage
+            ? 'linear-gradient(to bottom, rgba(5,10,20,0.25) 0%, rgba(5,10,20,0.45) 45%, rgba(5,10,20,0.85) 100%)'
+            : 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.35) 100%)',
+        }} />
 
-        {/* Upper content: badge + watermark + title + description */}
-        <div>
-          {/* Badge when no image */}
-          {!hasImage && event.badge_text && (
-            <div className="mb-2">
-              <span
-                className="inline-block px-3 py-1 rounded-lg text-xs font-black uppercase tracking-widest"
-                style={{ background: 'rgba(255,193,7,0.2)', color: '#ffc107', border: '1px solid rgba(255,193,7,0.35)' }}
-              >
-                {event.badge_text}
-              </span>
+      {/* â”€â”€ TOP GLASS PANEL: Speaker info + badge â”€â”€ */}
+      <div className="absolute top-4 left-4 right-4 flex items-start justify-between z-10 gap-3">
+        {event.speaker_name ? (
+          <div className="flex items-center gap-3 px-4 py-3 rounded-2xl"
+            style={{
+              background: 'rgba(8,18,36,0.5)',
+              backdropFilter: 'blur(18px) saturate(160%)',
+              WebkitBackdropFilter: 'blur(18px) saturate(160%)',
+              border: '1px solid rgba(255,255,255,0.14)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.08)',
+            }}>
+            {event.speaker_image_url ? (
+              <div className="relative w-11 h-11 rounded-full overflow-hidden flex-shrink-0 border-2" style={{ borderColor: C.gold }}>
+                <Image src={event.speaker_image_url} alt={event.speaker_name} fill className="object-cover" unoptimized />
+              </div>
+            ) : (
+              <div className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0"
+                style={{ background: 'rgba(255,193,7,0.2)', border: '2px solid rgba(255,193,7,0.5)' }}>
+                <User className="w-5 h-5" style={{ color: C.gold }} />
+              </div>
+            )}
+            <div>
+              <p className="text-sm font-bold text-white leading-none">{event.speaker_name}</p>
+              <p className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.5)' }}>Speaker</p>
             </div>
-          )}
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <GraduationCap className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.35)' }} />
+            <span className="text-[10px] font-bold tracking-widest uppercase" style={{ color: 'rgba(255,255,255,0.35)' }}>
+              CSE Â· KUET
+            </span>
+          </div>
+        )}
 
-          {/* University watermark — only when no image */}
-          {!hasImage && (
-            <div className="flex items-center gap-2 mb-3">
-              <GraduationCap className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.4)' }} />
-              <span className="text-[11px] font-bold tracking-widest uppercase" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                CSE · KUET
-              </span>
-            </div>
-          )}
+        {event.badge_text && (
+          <span className="px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-widest"
+            style={{
+              background: 'rgba(255,193,7,0.25)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              border: '1px solid rgba(255,193,7,0.5)',
+              color: C.gold,
+              boxShadow: '0 4px 16px rgba(255,193,7,0.2)',
+              textShadow: '0 1px 8px rgba(255,193,7,0.6)',
+            }}>
+            {event.badge_text}
+          </span>
+        )}
+      </div>
+
+      {/* â”€â”€ BOTTOM GLASS PANEL: Title + content + footer â”€â”€ */}
+      <div className="absolute bottom-0 left-0 right-0 z-10 p-4">
+        <div className="rounded-2xl p-5"
+          style={{
+            background: 'rgba(6,14,28,0.55)',
+            backdropFilter: 'blur(20px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+            border: '1px solid rgba(255,255,255,0.13)',
+            boxShadow: '0 -4px 24px rgba(0,0,0,0.2), 0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)',
+          }}>
 
           {event.subtitle && (
-            <p className="text-sm font-medium mb-1" style={{ color: 'rgba(255,255,255,0.65)' }}>
+            <p className="text-sm font-medium mb-1" style={{ color: 'rgba(255,255,255,0.6)', textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
               {event.subtitle}
             </p>
           )}
 
-          <h3
-            className="font-black text-white leading-tight"
-            style={{ fontSize: hasImage ? '1.55rem' : '2rem' }}
-          >
+          <h3 className="font-black leading-tight mb-2"
+            style={{
+              fontSize: '2rem',
+              color: '#ffffff',
+              textShadow: '0 2px 12px rgba(0,0,0,0.6), 0 0 40px rgba(0,200,160,0.15)',
+              letterSpacing: '-0.01em',
+            }}>
             {event.title}
           </h3>
 
           {event.description && (
-            <p
-              className={`mt-2 text-sm leading-relaxed ${hasImage ? 'line-clamp-2' : 'line-clamp-4'}`}
-              style={{ color: 'rgba(255,255,255,0.6)' }}
-            >
+            <p className="text-sm leading-relaxed line-clamp-2 mb-3"
+              style={{ color: 'rgba(255,255,255,0.6)', textShadow: '0 1px 4px rgba(0,0,0,0.4)' }}>
               {event.description}
             </p>
           )}
-        </div>
 
-        {/* Speaker */}
-        {event.speaker_name && (
-          <div className="mt-3 flex items-center gap-3">
-            {event.speaker_image_url ? (
-              <div className="relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0 border-2" style={{ borderColor: '#ffc107' }}>
-                <Image src={event.speaker_image_url} alt={event.speaker_name} fill className="object-cover" unoptimized />
-              </div>
-            ) : (
-              <div
-                className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-                style={{ background: 'rgba(255,193,7,0.2)', border: '2px solid rgba(255,193,7,0.5)' }}
-              >
-                <User className="w-5 h-5" style={{ color: '#ffc107' }} />
-              </div>
+          <div className="flex items-center gap-5 pt-3 flex-wrap" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+            {event.event_date && (
+              <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                <Calendar className="w-3.5 h-3.5 flex-shrink-0" style={{ color: C.gold }} />
+                {formatEventDate(event.event_date)}
+              </span>
             )}
-            <div>
-              <p className="text-sm font-bold text-white">{event.speaker_name}</p>
-              <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.5)' }}>Speaker</p>
-            </div>
+            {event.event_time && (
+              <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                <Clock className="w-3.5 h-3.5 flex-shrink-0" style={{ color: C.gold }} />
+                {event.event_time}
+              </span>
+            )}
+            {event.location && (
+              <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                <MapPin className="w-3.5 h-3.5 flex-shrink-0" style={{ color: C.gold }} />
+                {event.location}
+              </span>
+            )}
           </div>
-        )}
-
-        {/* Footer: date / time / location */}
-        <div
-          className="flex items-center gap-4 pt-3 mt-3 flex-wrap"
-          style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}
-        >
-          {event.event_date && (
-            <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>
-              <Calendar className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#ffc107' }} />
-              {formatEventDate(event.event_date)}
-            </span>
-          )}
-          {event.event_time && (
-            <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>
-              <Clock className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#ffc107' }} />
-              {event.event_time}
-            </span>
-          )}
-          {event.location && (
-            <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>
-              <MapPin className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#ffc107' }} />
-              {event.location}
-            </span>
-          )}
         </div>
       </div>
     </div>
@@ -636,19 +615,16 @@ function EventCard({ event }: { event: CmsTvEvent }) {
 }
 
 
-// ══════════════════════════════════════════════
-// Helpers
-// ══════════════════════════════════════════════
+// â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function formatTime12(time: string | null | undefined): string {
-  if (!time) return '—';
+  if (!time) return 'â€”';
   const [h, m] = time.split(':').map(Number);
   const period = h >= 12 ? 'PM' : 'AM';
-  const hour12 = h % 12 || 12;
-  return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
+  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${period}`;
 }
 
 function formatEventDate(dateStr: string): string {
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
+
