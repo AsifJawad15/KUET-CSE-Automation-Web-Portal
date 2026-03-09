@@ -32,6 +32,9 @@ export const isSupabaseConfigured = () => isConfigured;
 // ── Re-export all DB types for backward compatibility ──
 
 export type {
+  CRRoomRequest,
+  CRRoomRequestStatus,
+  CRRoomRequestWithDetails,
   DBCourse,
   DBCourseOffering,
   DBCourseOfferingWithTeacher,

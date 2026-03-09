@@ -56,6 +56,7 @@ export interface Student {
   batch: string | null;
   section: string | null;
   cgpa: number;
+  is_cr: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -120,6 +121,8 @@ export interface DBRoutineSlot {
   start_time: string;
   end_time: string;
   section: string | null;
+  valid_from: string | null;
+  valid_until: string | null;
   created_at: string;
 }
 
@@ -161,5 +164,44 @@ export interface TermUpgradeRequestWithStudent extends TermUpgradeRequest {
     batch: string | null;
     section: string | null;
     cgpa: number;
+  };
+}
+
+// ── CR Room Request ────────────────────────────────────
+
+export type CRRoomRequestStatus = 'pending' | 'approved' | 'rejected';
+
+export interface CRRoomRequest {
+  id: string;
+  student_user_id: string;
+  course_code: string;
+  teacher_user_id: string;
+  room_number: string | null;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  term: string;
+  session: string;
+  section: string | null;
+  reason: string | null;
+  request_date: string | null;
+  status: CRRoomRequestStatus;
+  admin_remarks: string | null;
+  admin_user_id: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CRRoomRequestWithDetails extends CRRoomRequest {
+  students: {
+    full_name: string;
+    roll_no: string;
+    term: string;
+    session: string;
+  };
+  teachers: {
+    full_name: string;
+    teacher_uid: string;
   };
 }

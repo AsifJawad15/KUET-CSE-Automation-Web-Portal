@@ -12,6 +12,7 @@ import { useAuth, UserRole } from '@/contexts/AuthContext';
 import { AddStudentPage } from '@/modules/AddStudent';
 import { ClassRoutinePage } from '@/modules/ClassRoutine';
 import { CourseAllocationPage } from '@/modules/CourseAllocation';
+import { CRManagementPage } from '@/modules/CRManagement';
 import { CourseInfoPage } from '@/modules/CourseInfo';
 import { DashboardOverview } from '@/modules/Dashboard';
 import { FacultyInfoPage } from '@/modules/FacultyInfo';
@@ -46,6 +47,7 @@ const PAGE_REGISTRY: Record<string, PageEntry> = {
   'class-routine':      { render: () => <ClassRoutinePage /> },
   'schedule':           { render: () => <SchedulePage /> },
   'add-student':        { render: () => <AddStudentPage />,       requiredRole: 'admin' },
+  'cr-management':      { render: () => <CRManagementPage />,     requiredRole: 'admin' },
   'term-upgrade':       { render: () => <TermUpgradePage /> },
   'result':             { render: () => <ResultPage /> },
   'teacher-portal':     { render: () => <TeacherPortalPage />,    requiredRole: 'teacher' },

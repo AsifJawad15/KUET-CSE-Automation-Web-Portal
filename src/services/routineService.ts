@@ -27,12 +27,14 @@ const ENDPOINT = '/routine-slots';
 export async function getRoutineSlots(
   term?: string,
   session?: string,
-  section?: string
+  section?: string,
+  date?: string,
 ): Promise<DBRoutineSlotWithDetails[]> {
   const params: Record<string, string> = {};
   if (term) params.term = term;
   if (session) params.session = session;
   if (section) params.section = section;
+  if (date) params.date = date;
 
   return apiClient.getList<DBRoutineSlotWithDetails>(ENDPOINT, params);
 }

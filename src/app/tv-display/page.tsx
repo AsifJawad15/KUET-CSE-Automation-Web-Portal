@@ -40,8 +40,6 @@ const POLL_MS = 30_000;
 
 // â”€â”€ Routine helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-const JS_DAY_TO_ROUTINE: Record<number, number> = { 0:0, 1:1, 2:2, 3:3, 4:4 };
-function getTodayDayOfWeek() { return JS_DAY_TO_ROUTINE[new Date().getDay()] ?? 0; }
 function timeToMins(t: string): number {
   const [h, m] = t.split(':').map(Number);
   return h * 60 + (m || 0);
@@ -55,12 +53,11 @@ interface TimePeriod {
 }
 
 function buildPeriods(slots: DBRoutineSlotWithDetails[]): TimePeriod[] {
-  const today = getTodayDayOfWeek();
-  const todaySlots = slots
-    .filter(s => s.day_of_week === today)
-    .sort((a, b) => a.start_time.localeCompare(b.start_time));
+  // The API already returns only slots valid for the requested date,
+  // so no need to re-filter by day_of_week here
+  const sorted = [...slots].sort((a, b) => a.start_time.localeCompare(b.start_time));
   const map = new Map<string, TimePeriod>();
-  for (const s of todaySlots) {
+  for (const s of sorted) {
     if (!map.has(s.start_time)) map.set(s.start_time, { start_time: s.start_time, end_time: s.end_time, slots: [] });
     map.get(s.start_time)!.slots.push(s);
   }
@@ -91,9 +88,12 @@ export default function TvDisplayPublicPage() {
   // â”€â”€ Fetch all data â”€â”€
   const fetchData = useCallback(async () => {
     try {
+      // Pass today's date so the API returns routine_slots valid today
+      // (both permanent routines and date-scoped CR bookings)
+      const todayStr = new Date().toISOString().split('T')[0];
       const [tvData, slots] = await Promise.all([
         fetchTvDisplayData(),
-        getRoutineSlots().catch(() => [] as DBRoutineSlotWithDetails[]),
+        getRoutineSlots(undefined, undefined, undefined, todayStr).catch(() => [] as DBRoutineSlotWithDetails[]),
       ]);
       setAnnouncements(tvData.announcements);
       setTicker(tvData.ticker);

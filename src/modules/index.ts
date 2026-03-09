@@ -4,6 +4,7 @@ export { AddStudentPage } from './AddStudent';
 export { ClassRoutinePage } from './ClassRoutine';
 export { CourseAllocationPage } from './CourseAllocation';
 export { CourseInfoPage } from './CourseInfo';
+export { CRManagementPage } from './CRManagement';
 export { DashboardOverview } from './Dashboard';
 export { FacultyInfoPage } from './FacultyInfo';
 export { ResultPage } from './Result';

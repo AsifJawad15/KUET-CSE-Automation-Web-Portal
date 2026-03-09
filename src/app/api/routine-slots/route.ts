@@ -63,6 +63,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const term = searchParams.get('term');
     const section = searchParams.get('section');
+    const forDate = searchParams.get('date'); // optional: filter slots valid on this date
 
     let query = supabase
       .from('routine_slots')
@@ -76,6 +77,147 @@ export async function GET(request: NextRequest) {
     if (error) throw error;
 
     let filtered = data || [];
+
+    if (forDate) {
+      const checkDate = new Date(forDate + 'T00:00:00Z');
+      const dow = checkDate.getUTCDay();
+
+      // Keep slots that are valid on this date:
+      // - Permanent slots (no valid_from): match by day_of_week
+      // - Date-scoped slots (valid_from set): match by date range (ignore day_of_week)
+      filtered = filtered.filter((slot: Record<string, unknown>) => {
+        const vFrom = slot.valid_from ? new Date(slot.valid_from + 'T00:00:00Z') : null;
+        const vUntil = slot.valid_until ? new Date(slot.valid_until + 'T00:00:00Z') : null;
+
+        if (!vFrom && !vUntil) {
+          return slot.day_of_week === dow;
+        }
+        return (!vFrom || checkDate >= vFrom) && (!vUntil || checkDate <= vUntil);
+      });
+
+      // Normalize day_of_week for date-scoped slots to match the actual date
+      filtered = filtered.map((slot: Record<string, unknown>) =>
+        slot.valid_from ? { ...slot, day_of_week: dow } : slot
+      );
+
+      // ── Merge approved CR room requests for this date ──
+      // This ensures CR bookings appear on Schedule/TV even if routine_slot sync failed
+      try {
+        const { data: crRequests } = await supabase
+          .from('cr_room_requests')
+          .select(`
+            id, course_code, room_number, day_of_week,
+            start_time, end_time, term, session, section, request_date,
+            teachers!cr_room_requests_teacher_user_id_fkey(full_name, teacher_uid)
+          `)
+          .eq('request_date', forDate)
+          .eq('status', 'approved')
+          .not('room_number', 'is', null);
+
+        if (crRequests && crRequests.length > 0) {
+          const codes = [...new Set(crRequests.map((r: Record<string, unknown>) => r.course_code as string))];
+          const { data: courseRows } = await supabase
+            .from('courses')
+            .select('code, title, credit, course_type')
+            .in('code', codes);
+          const courseMap = new Map((courseRows || []).map((c: Record<string, unknown>) => [c.code, c]));
+
+          for (const cr of crRequests) {
+            // Skip if already represented by a synced routine_slot
+            const alreadySynced = filtered.some((s: Record<string, unknown>) =>
+              s.room_number === cr.room_number &&
+              s.start_time === cr.start_time &&
+              s.end_time === cr.end_time &&
+              s.valid_from != null
+            );
+            if (alreadySynced) continue;
+
+            const course = courseMap.get(cr.course_code as string) as Record<string, unknown> | undefined;
+            const teachers = cr.teachers as unknown as { full_name: string; teacher_uid: string };
+            filtered.push({
+              id: `cr-${cr.id}`,
+              offering_id: '',
+              room_number: cr.room_number,
+              day_of_week: dow,
+              start_time: cr.start_time,
+              end_time: cr.end_time,
+              section: cr.section || null,
+              valid_from: cr.request_date,
+              valid_until: cr.request_date,
+              created_at: cr.request_date,
+              rrule: null,
+              course_offerings: {
+                id: '',
+                term: cr.term,
+                session: cr.session,
+                batch: null,
+                courses: course
+                  ? { code: course.code, title: course.title, credit: course.credit, course_type: course.course_type }
+                  : { code: cr.course_code, title: cr.course_code, credit: 0, course_type: 'Theory' },
+                teachers,
+              },
+              rooms: { room_type: null, room_number: cr.room_number },
+            });
+          }
+        }
+      } catch (mergeErr) {
+        console.error('Merge CR bookings into schedule failed:', mergeErr);
+      }
+
+      // ── Merge approved teacher room booking requests for this date ──
+      try {
+        const { data: teacherBookings } = await supabase
+          .from('room_booking_requests')
+          .select(`
+            id, offering_id, room_number, day_of_week,
+            start_time, end_time, section, booking_date,
+            course_offerings!rbr_offering_fkey(
+              id, term, session, batch,
+              courses(code, title, credit, course_type),
+              teachers!course_offerings_teacher_user_id_fkey(full_name, teacher_uid)
+            ),
+            rooms!rbr_room_fkey(room_type, room_number)
+          `)
+          .eq('booking_date', forDate)
+          .eq('status', 'approved');
+
+        if (teacherBookings && teacherBookings.length > 0) {
+          for (const tb of teacherBookings) {
+            const alreadySynced = filtered.some((s: Record<string, unknown>) =>
+              s.room_number === tb.room_number &&
+              s.start_time === tb.start_time &&
+              s.end_time === tb.end_time &&
+              s.valid_from != null
+            );
+            if (alreadySynced) continue;
+
+            if (tb.course_offerings) {
+              filtered.push({
+                id: `tb-${tb.id}`,
+                offering_id: tb.offering_id,
+                room_number: tb.room_number,
+                day_of_week: dow,
+                start_time: tb.start_time,
+                end_time: tb.end_time,
+                section: tb.section || null,
+                valid_from: tb.booking_date,
+                valid_until: tb.booking_date,
+                created_at: tb.booking_date,
+                rrule: null,
+                course_offerings: tb.course_offerings,
+                rooms: tb.rooms || { room_type: null, room_number: tb.room_number },
+              });
+            }
+          }
+        }
+      } catch (mergeErr) {
+        console.error('Merge teacher bookings into schedule failed:', mergeErr);
+      }
+    } else {
+      // No date given: return only permanent slots (exclude date-scoped bookings)
+      filtered = filtered.filter((slot: Record<string, unknown>) => !slot.valid_from);
+    }
+
     if (term) {
       filtered = filtered.filter((slot: Record<string, unknown>) => {
         const offerings = slot.course_offerings as { courses?: { code?: string } } | null;
@@ -98,7 +240,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { offering_id, room_number, day_of_week, start_time, end_time, section } = body;
+    const { offering_id, room_number, day_of_week, start_time, end_time, section, valid_from, valid_until } = body;
 
     const fieldCheck = requireFields({ offering_id, room_number, day_of_week, start_time, end_time });
     if (!fieldCheck.valid) return badRequest(fieldCheck.error!);
@@ -118,7 +260,11 @@ export async function POST(request: NextRequest) {
 
     const { data, error } = await supabase
       .from('routine_slots')
-      .insert({ offering_id, room_number, day_of_week, start_time, end_time, section })
+      .insert({
+        offering_id, room_number, day_of_week, start_time, end_time, section,
+        valid_from: valid_from || null,
+        valid_until: valid_until || null,
+      })
       .select(ROUTINE_SLOT_WITH_DETAILS)
       .single();
 
