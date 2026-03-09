@@ -204,7 +204,7 @@ export default function TvDisplayPublicPage() {
       <main className="flex-1 min-h-0 flex overflow-hidden">
 
         {/* ----- LEFT PANEL: News & Events (58%) ----- */}
-        <section className="flex-[75] min-w-0 flex flex-col p-4 pr-2 overflow-hidden">
+        <section className="flex-[80] min-w-0 flex flex-col p-4 pr-2 overflow-hidden">
           <div className="flex-shrink-0 flex items-center justify-between mb-2">
             <h2 className="text-sm font-black tracking-[0.2em] uppercase" style={{ color: C.gold }}>
               Department News &amp; Events
@@ -250,7 +250,7 @@ export default function TvDisplayPublicPage() {
         </section>
 
         {/* - RIGHT PANEL: Live Room Schedule (42%) - */}
-        <section className="flex-[25] min-w-0 flex flex-col p-4 pl-2 overflow-hidden gap-2">
+        <section className="flex-[20] min-w-0 flex flex-col p-4 pl-2 overflow-hidden gap-2">
           <h2 className="flex-shrink-0 text-xs font-black tracking-[0.18em] uppercase" style={{ color: C.gold }}>
             Live Room Schedule
           </h2>
@@ -445,8 +445,8 @@ export default function TvDisplayPublicPage() {
           <div className="flex-1 overflow-hidden" style={{ background: C.navyDark }}>
             <div className="flex h-full items-center animate-marquee whitespace-nowrap">
               {[...announcements, ...announcements].map((a, i) => (
-                <span key={`${a.id}-${i}`} className="mx-8 inline-flex items-center gap-2 text-sm">
-                  <span style={{ color: C.gold }}>{"\u25CF"}</span>
+                <span key={`${a.id}-${i}`} className="mx-8 inline-flex items-center gap-3 text-sm">
+                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: C.gold }} />
                   <span className="font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>{a.title}</span>
                   <span style={{ color: C.textMuted }}>{a.content.slice(0, 80)}</span>
                 </span>
