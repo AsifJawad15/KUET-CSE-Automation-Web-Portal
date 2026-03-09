@@ -21,7 +21,7 @@ import {
 import Image from 'next/image';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-// â”€â”€ Color palette â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// - Color palette -
 const C = {
   navyDark: '#091428',
   navy:     '#0c2340',
@@ -38,7 +38,7 @@ const C = {
 
 const POLL_MS = 30_000;
 
-// â”€â”€ Routine helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// - Routine helpers -
 
 const JS_DAY_TO_ROUTINE: Record<number, number> = { 0:0, 1:1, 2:2, 3:3, 4:4 };
 function getTodayDayOfWeek() { return JS_DAY_TO_ROUTINE[new Date().getDay()] ?? 0; }
@@ -67,7 +67,7 @@ function buildPeriods(slots: DBRoutineSlotWithDetails[]): TimePeriod[] {
   return Array.from(map.values()).sort((a, b) => a.start_time.localeCompare(b.start_time));
 }
 
-// â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// - Main Component -
 
 export default function TvDisplayPublicPage() {
   // Data state
@@ -88,7 +88,7 @@ export default function TvDisplayPublicPage() {
   const headlinePrefix = settings.headline_prefix || 'HEADLINES';
   const eventRotationSec = parseInt(settings.event_rotation_sec || '8', 10);
 
-  // â”€â”€ Fetch all data â”€â”€
+  // -- Fetch all data --
   const fetchData = useCallback(async () => {
     try {
       const [tvData, slots] = await Promise.all([
@@ -141,7 +141,7 @@ export default function TvDisplayPublicPage() {
     return () => clearInterval(interval);
   }, [ticker.length]);
 
-  // â”€â”€ Schedule derived data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // -- Schedule derived data ------------------------------
   const periods = useMemo(() => buildPeriods(routineSlots), [routineSlots]);
   const nowMins = now.getHours() * 60 + now.getMinutes();
 
@@ -154,17 +154,17 @@ export default function TvDisplayPublicPage() {
     [periods, nowMins],
   );
 
-  // â”€â”€ Clock formatting â”€â”€
+  // -- Clock formatting --
   const timeStr = now.toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit' });
   const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
-  // â”€â”€ Event pagination â”€â”€
+  // -- Event pagination --
   const maxPage = Math.max(0, events.length - 1);
   const currentEvent = events[eventPage] ?? null;
   const prevEvents = () => setEventPage(p => (p <= 0 ? maxPage : p - 1));
   const nextEvents = () => setEventPage(p => (p >= maxPage ? 0 : p + 1));
 
-  // â”€â”€ Loading â”€â”€
+  // -- Loading --
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center" style={{ background: C.navyDark }}>
@@ -179,7 +179,7 @@ export default function TvDisplayPublicPage() {
   return (
     <div className="h-screen overflow-hidden flex flex-col select-none" style={{ background: C.navyDark, color: C.white }}>
 
-      {/* â•â•â•â•â•â•â•â•â•â•â• HEADER BAR â•â•â•â•â•â•â•â•â•â•â• */}
+      {/* =========== HEADER BAR =========== */}
       <header
         className="flex-shrink-0 px-6 py-2.5 flex items-center justify-between"
         style={{ background: `linear-gradient(135deg, ${C.navy} 0%, ${C.navyLight} 100%)`, borderBottom: `2px solid ${C.teal}` }}
@@ -200,11 +200,11 @@ export default function TvDisplayPublicPage() {
         </div>
       </header>
 
-      {/* â•â•â•â•â•â•â•â•â•â•â• MAIN CONTENT - 2 PANELS â•â•â•â•â•â•â•â•â•â•â• */}
+      {/* =========== MAIN CONTENT - 2 PANELS =========== */}
       <main className="flex-1 min-h-0 flex overflow-hidden">
 
-        {/* â”€â”€â”€â”€â”€ LEFT PANEL: News & Events (58%) â”€â”€â”€â”€â”€ */}
-        <section className="flex-[58] min-w-0 flex flex-col p-4 pr-2 overflow-hidden">
+        {/* ----- LEFT PANEL: News & Events (58%) ----- */}
+        <section className="flex-[75] min-w-0 flex flex-col p-4 pr-2 overflow-hidden">
           <div className="flex-shrink-0 flex items-center justify-between mb-2">
             <h2 className="text-sm font-black tracking-[0.2em] uppercase" style={{ color: C.gold }}>
               Department News &amp; Events
@@ -249,13 +249,13 @@ export default function TvDisplayPublicPage() {
           </div>
         </section>
 
-        {/* â”€â”€â”€â”€â”€ RIGHT PANEL: Live Room Schedule (42%) â”€â”€â”€â”€â”€ */}
-        <section className="flex-[32] min-w-0 flex flex-col p-4 pl-2 overflow-hidden gap-2">
+        {/* - RIGHT PANEL: Live Room Schedule (42%) - */}
+        <section className="flex-[25] min-w-0 flex flex-col p-4 pl-2 overflow-hidden gap-2">
           <h2 className="flex-shrink-0 text-xs font-black tracking-[0.18em] uppercase" style={{ color: C.gold }}>
             Live Room Schedule
           </h2>
 
-          {/* â”€â”€ CURRENT PERIOD (top ~55%) â”€â”€ */}
+          {/* - CURRENT PERIOD (top ~55%) - */}
           <div className="flex-[55] min-h-0 rounded-2xl overflow-hidden flex flex-col"
             style={{
               background: currentPeriod
@@ -323,7 +323,7 @@ export default function TvDisplayPublicPage() {
             </div>
           </div>
 
-          {/* â”€â”€ UPCOMING PERIODS (bottom ~45%, slides every 20 s) â”€â”€ */}
+          {/* -- UPCOMING PERIODS (bottom ~45%, slides every 20 s) -- */}
           <div className="flex-[45] min-h-0 rounded-2xl overflow-hidden flex flex-col"
             style={{ background: C.navyLight, border: `1px solid rgba(0,121,107,0.25)` }}>
             <div className="flex-shrink-0 px-3 py-2 flex items-center justify-between"
@@ -391,7 +391,7 @@ export default function TvDisplayPublicPage() {
         </section>
       </main>
 
-      {/* â•â•â•â•â•â•â•â•â•â•â• TICKER BAR â•â•â•â•â•â•â•â•â•â•â• */}
+      {/* =========== TICKER BAR =========== */}
       {ticker.length > 0 && (
         <div className="flex-shrink-0 flex items-stretch overflow-hidden" style={{ height: '36px' }}>
           <div className="flex-shrink-0 px-4 flex items-center gap-2"
@@ -433,7 +433,7 @@ export default function TvDisplayPublicPage() {
         </div>
       )}
 
-      {/* â•â•â•â•â•â•â•â•â•â•â• HEADLINES MARQUEE â•â•â•â•â•â•â•â•â•â•â• */}
+      {/* =========== HEADLINES MARQUEE =========== */}
       {announcements.length > 0 && (
         <div className="flex-shrink-0 flex items-stretch overflow-hidden" style={{ height: '34px' }}>
           <div className="flex-shrink-0 px-4 flex items-center gap-2" style={{ background: C.gold }}>
@@ -446,7 +446,7 @@ export default function TvDisplayPublicPage() {
             <div className="flex h-full items-center animate-marquee whitespace-nowrap">
               {[...announcements, ...announcements].map((a, i) => (
                 <span key={`${a.id}-${i}`} className="mx-8 inline-flex items-center gap-2 text-sm">
-                  <span style={{ color: C.gold }}>â—</span>
+                  <span style={{ color: C.gold }}>{"\u25CF"}</span>
                   <span className="font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>{a.title}</span>
                   <span style={{ color: C.textMuted }}>{a.content.slice(0, 80)}</span>
                 </span>
@@ -468,12 +468,12 @@ export default function TvDisplayPublicPage() {
 }
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ==============================================
 // EventCard - Liquid Glass 3D Design
 // - Full-card image fills entire background
 // - Speaker info floats as glass panel at TOP
 // - Title/content floats as glass panel at BOTTOM
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ==============================================
 
 function EventCard({ event }: { event: CmsTvEvent }) {
   const hasImage = Boolean(event.image_url);
@@ -497,7 +497,7 @@ function EventCard({ event }: { event: CmsTvEvent }) {
             : 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.35) 100%)',
         }} />
 
-      {/* â”€â”€ TOP GLASS PANEL: Speaker info + badge â”€â”€ */}
+      {/* -- TOP GLASS PANEL: Speaker info + badge -- */}
       <div className="absolute top-4 left-4 right-4 flex items-start justify-between z-10 gap-3">
         {event.speaker_name ? (
           <div className="flex items-center gap-3 px-4 py-3 rounded-2xl"
@@ -527,7 +527,7 @@ function EventCard({ event }: { event: CmsTvEvent }) {
           <div className="flex items-center gap-2">
             <GraduationCap className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.35)' }} />
             <span className="text-[10px] font-bold tracking-widest uppercase" style={{ color: 'rgba(255,255,255,0.35)' }}>
-              CSE Â· KUET
+              CSE &middot; KUET
             </span>
           </div>
         )}
@@ -548,7 +548,7 @@ function EventCard({ event }: { event: CmsTvEvent }) {
         )}
       </div>
 
-      {/* â”€â”€ BOTTOM GLASS PANEL: Title + content + footer â”€â”€ */}
+      {/* -- BOTTOM GLASS PANEL: Title + content + footer -- */}
       <div className="absolute bottom-0 left-0 right-0 z-10 p-3">
         <div className="rounded-2xl px-4 py-3"
           style={{
@@ -609,7 +609,7 @@ function EventCard({ event }: { event: CmsTvEvent }) {
 }
 
 
-// â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// - Helpers -
 
 function formatTime12(time: string | null | undefined): string {
   if (!time) return '-';
