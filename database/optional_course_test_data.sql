@@ -507,9 +507,9 @@ BEGIN
   SELECT COUNT(*) INTO student_42_count FROM public.students
     WHERE roll_no IN ('2006001','2006002','2006003','2006061','2006062');
   SELECT COUNT(*) INTO offering_41_count FROM public.course_offerings
-    WHERE id LIKE 'a0000000-0000-0000%';
+    WHERE id::text LIKE 'a0000000-0000-0000%';
   SELECT COUNT(*) INTO offering_42_count FROM public.course_offerings
-    WHERE id LIKE 'b0000000-0000-0000%';
+    WHERE id::text LIKE 'b0000000-0000-0000%';
   SELECT COUNT(*) INTO assignment_count FROM public.optional_course_assignments;
 
   RAISE NOTICE '════════════════════════════════════════════════════════════';
