@@ -205,3 +205,36 @@ export interface CRRoomRequestWithDetails extends CRRoomRequest {
     teacher_uid: string;
   };
 }
+
+// ── Optional Course Assignment ─────────────────────────
+
+export type ElectiveGroup = 'OPTIONAL_I' | 'OPTIONAL_II' | 'OPTIONAL_III';
+
+export interface OptionalCourseAssignment {
+  id: string;
+  student_user_id: string;
+  offering_id: string;
+  assigned_by: string | null;
+  assigned_at: string;
+}
+
+export interface OptionalCourseAssignmentWithDetails extends OptionalCourseAssignment {
+  students: {
+    user_id: string;
+    roll_no: string;
+    full_name: string;
+    term: string;
+    session: string;
+    batch: string | null;
+    section: string | null;
+  };
+  course_offerings: {
+    id: string;
+    course_id: string;
+    term: string;
+    session: string;
+    is_active: boolean;
+    courses: { code: string; title: string; credit: number; course_type: string };
+    teachers: { full_name: string; teacher_uid: string };
+  };
+}

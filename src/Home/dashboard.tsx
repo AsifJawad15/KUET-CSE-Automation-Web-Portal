@@ -12,17 +12,18 @@ import { useAuth, UserRole } from '@/contexts/AuthContext';
 import { AddStudentPage } from '@/modules/AddStudent';
 import { ClassRoutinePage } from '@/modules/ClassRoutine';
 import { CourseAllocationPage } from '@/modules/CourseAllocation';
-import { CRManagementPage } from '@/modules/CRManagement';
 import { CourseInfoPage } from '@/modules/CourseInfo';
+import { CRManagementPage } from '@/modules/CRManagement';
 import { DashboardOverview } from '@/modules/Dashboard';
 import { FacultyInfoPage } from '@/modules/FacultyInfo';
+import { OptionalCourseAllocationPage } from '@/modules/OptionalCourseAllocation';
 import { ResultPage } from '@/modules/Result';
 import { RoomAllocationPage } from '@/modules/RoomAllocation';
 import { SchedulePage } from '@/modules/Schedule';
+import { AnnouncementTab, ChangePasswordTab, CourseStudentsTab, EditProfileTab, MyScheduleTab, RoomRequestTab, TakeAttendanceTab, TeacherPortalPage, UploadCSVTab } from '@/modules/TeacherPortal';
 import { TermUpgradePage } from '@/modules/TermUpgrade';
 import { TVDisplayPage } from '@/modules/TVDisplay';
 import { WebsiteCMSPage } from '@/modules/WebsiteCMS';
-import { TeacherPortalPage, UploadCSVTab, TakeAttendanceTab, AnnouncementTab, RoomRequestTab, MyScheduleTab, CourseStudentsTab, EditProfileTab, ChangePasswordTab } from '@/modules/TeacherPortal';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -48,6 +49,7 @@ const PAGE_REGISTRY: Record<string, PageEntry> = {
   'schedule':           { render: () => <SchedulePage /> },
   'add-student':        { render: () => <AddStudentPage />,       requiredRole: 'admin' },
   'cr-management':      { render: () => <CRManagementPage />,     requiredRole: 'admin' },
+  'optional-courses':   { render: () => <OptionalCourseAllocationPage />, requiredRole: 'admin' },
   'term-upgrade':       { render: () => <TermUpgradePage /> },
   'result':             { render: () => <ResultPage /> },
   'teacher-portal':     { render: () => <TeacherPortalPage />,    requiredRole: 'teacher' },

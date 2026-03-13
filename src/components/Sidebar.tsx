@@ -94,6 +94,7 @@ export default function Sidebar({ activeItem, onMenuChange, isCollapsed, onToggl
     { id: 'schedule', label: 'Schedule', icon: Calendar },
     { id: 'add-student', label: 'Add Student', icon: UserPlus },
     { id: 'cr-management', label: 'CR Management', icon: Crown },
+    { id: 'optional-courses', label: 'Optional Courses', icon: Sparkles },
     { id: 'term-upgrade', label: 'Term Upgrade', icon: TrendingUp },
     { id: 'result', label: 'Result', icon: FileText },
     { id: 'website-cms', label: 'Website CMS', icon: Globe },
