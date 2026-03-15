@@ -17,7 +17,8 @@ import {
   type GeoAttendanceRoom,
   type GeoAttendanceLog,
 } from '@/services/teacherPortalService';
-import { CheckCircle2, Loader2, AlertCircle, ClipboardCheck, ArrowLeft, GraduationCap, Eye, MapPin, Radio, XCircle, Clock, DoorOpen, Users } from 'lucide-react';
+import { CheckCircle2, Loader2, AlertCircle, ClipboardCheck, ArrowLeft, GraduationCap, Eye, MapPin, Radio, XCircle, Clock, DoorOpen, Users, Download } from 'lucide-react';
+import { downloadAttendancePDF } from '@/lib/pdfGenerator';
 
 const MAX_THEORY_ROOMS = 2;
 const MAX_LAB_ROOMS = 4;
@@ -479,11 +480,32 @@ export default function TakeAttendanceTab() {
                   {g.label}
                 </button>
               ))}
-              {previewTable.dates.length > 0 && (
-                <span className="ml-auto text-xs text-[#8B7355] dark:text-[#b1a7a6]">
-                  {previewTable.dates.length} class{previewTable.dates.length !== 1 ? 'es' : ''} recorded
-                </span>
-              )}
+              <div className="ml-auto flex items-center gap-2">
+                {previewTable.dates.length > 0 && (
+                  <span className="text-xs text-[#8B7355] dark:text-[#b1a7a6]">
+                    {previewTable.dates.length} class{previewTable.dates.length !== 1 ? 'es' : ''} recorded
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() =>
+                  downloadAttendancePDF({
+                    courseCode: selectedCourse.course_code,
+                    courseTitle: selectedCourse.course_title,
+                    term: selectedCourse.term,
+                    session: selectedCourse.session,
+                    courseType: selectedCourse.course_type,
+                    sectionLabel: groups[previewGroup].label,
+                    dates: previewTable.dates,
+                    rows: previewTable.rows,
+                  })
+                }
+                disabled={previewTable.dates.length === 0}
+                className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#5D4037] dark:bg-[#ba181b] text-white text-xs font-medium hover:bg-[#4E342E] dark:hover:bg-[#e5191e] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Download PDF
+              </button>
             </div>
 
             {/* ── Attendance Table ── */}
