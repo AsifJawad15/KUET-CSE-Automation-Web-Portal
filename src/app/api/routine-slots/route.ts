@@ -4,17 +4,97 @@
 // DRY: Uses shared query constants & response helpers
 // ==========================================
 
-import { NextRequest, NextResponse } from 'next/server';
-import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { badRequest, conflict, guardSupabase, internalError, noContent, notFound, ok } from '@/lib/apiResponse';
-import { requireField, requireFields } from '@/lib/validators';
+import { buildStudentAudience, createNotification } from '@/lib/notifications';
 import { ROUTINE_SLOT_WITH_DETAILS } from '@/lib/queryConstants';
-import { createNotification } from '@/lib/notifications';
+import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { requireField, requireFields } from '@/lib/validators';
+import { NextRequest, NextResponse } from 'next/server';
 
 // ── Helpers ────────────────────────────────────────────
 
 function extractErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
+}
+
+function normalizeValue(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function formatSlotDate(slot: Record<string, unknown>): string {
+  const validFrom = normalizeValue(slot.valid_from);
+  const validUntil = normalizeValue(slot.valid_until);
+  if (validFrom && validUntil && validFrom !== validUntil) {
+    return `${validFrom} to ${validUntil}`;
+  }
+  return validFrom || 'the updated schedule';
+}
+
+async function sendStudentScheduleNotification(
+  type: 'class_cancelled' | 'class_rescheduled' | 'makeup_class',
+  slot: Record<string, unknown>,
+) {
+  const offering = slot.course_offerings as {
+    term?: string;
+    courses?: { code?: string; title?: string };
+  } | null;
+
+  const courseCode = offering?.courses?.code?.trim();
+  if (!courseCode) return;
+
+  const courseTitle = offering?.courses?.title?.trim() || courseCode;
+  const audience = buildStudentAudience({
+    courseCode,
+    term: offering?.term ?? null,
+    section: normalizeValue(slot.section),
+  });
+  const room = normalizeValue(slot.room_number) || 'TBA';
+  const startTime = normalizeValue(slot.start_time) || 'TBA';
+  const endTime = normalizeValue(slot.end_time) || 'TBA';
+  const scheduleDate = formatSlotDate(slot);
+  const dayIndex = typeof slot.day_of_week === 'number' ? slot.day_of_week : Number(slot.day_of_week ?? -1);
+  const dayLabel = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dayIndex] || 'the updated day';
+  const isDateScoped = !!normalizeValue(slot.valid_from);
+
+  const payloadByType = {
+    makeup_class: {
+      title: `Makeup class scheduled for ${courseCode}`,
+      body: `${courseTitle} has a makeup class on ${scheduleDate}, ${startTime}-${endTime}, Room ${room}.`,
+    },
+    class_rescheduled: {
+      title: `Class rescheduled for ${courseCode}`,
+      body: isDateScoped
+        ? `${courseTitle} now runs on ${scheduleDate}, ${startTime}-${endTime}, Room ${room}.`
+        : `${courseTitle} now runs on ${dayLabel}, ${startTime}-${endTime}, Room ${room}.`,
+    },
+    class_cancelled: {
+      title: `Class cancelled for ${courseCode}`,
+      body: isDateScoped
+        ? `${courseTitle} on ${scheduleDate}, ${startTime}-${endTime} has been cancelled.`
+        : `The ${dayLabel} ${startTime}-${endTime} class for ${courseTitle} has been cancelled.`,
+    },
+  }[type];
+
+  await createNotification({
+    type,
+    title: payloadByType.title,
+    body: payloadByType.body,
+    targetType: audience.targetType,
+    targetValue: audience.targetValue,
+    targetYearTerm: audience.targetYearTerm,
+    createdByRole: 'ADMIN',
+    metadata: {
+      offering_id: slot.offering_id,
+      course_code: courseCode,
+      course_title: courseTitle,
+      room_number: room,
+      start_time: startTime,
+      end_time: endTime,
+      valid_from: normalizeValue(slot.valid_from),
+      valid_until: normalizeValue(slot.valid_until),
+    },
+    dedupeKey: `${type}:${slot.id}:${normalizeValue(slot.valid_from) || 'weekly'}:${startTime}:${endTime}:${room}`,
+  });
 }
 
 /** Derive term from course code digits (e.g., "CSE 3201" → "3-2"). */
@@ -270,30 +350,10 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) throw error;
-
-    // Notify students about the new/makeup class slot
-    const newOffering = (data as Record<string, unknown>).course_offerings as Record<string, unknown>;
-    const newCode = (newOffering?.courses as Record<string, unknown>)?.code as string ?? '';
-    const newTerm = newOffering?.term as string ?? '';
-    const newSection = (data as Record<string, unknown>).section as string | null;
-    const newDayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const newDayName = newDayNames[day_of_week as number] ?? `Day ${day_of_week}`;
-    const isDateScoped = !!valid_from;
-    if (newCode && newTerm) {
-      await createNotification({
-        type: isDateScoped ? 'makeup_class' : 'class_rescheduled',
-        title: isDateScoped ? `Makeup Class — ${newCode}` : `Class Scheduled — ${newCode}`,
-        body: isDateScoped
-          ? `Makeup class for ${newCode} on ${valid_from} (${start_time}–${end_time}, Room ${room_number}).`
-          : `${newCode}: new class on ${newDayName} ${start_time}–${end_time} in Room ${room_number}.`,
-        target_type: newSection ? 'SECTION' : 'YEAR_TERM',
-        target_value: newSection ?? newTerm,
-        target_year_term: newSection ? newTerm : undefined,
-        created_by: null,
-        created_by_role: 'ADMIN',
-        metadata: { course_code: newCode, room_number: room_number, day: newDayName },
-      });
-    }
+    await sendStudentScheduleNotification(
+      data.valid_from ? 'makeup_class' : 'class_rescheduled',
+      data as unknown as Record<string, unknown>,
+    );
     return ok(data);
   } catch (error: unknown) {
     return internalError(extractErrorMessage(error, 'Failed to add routine slot'));
@@ -312,6 +372,14 @@ export async function PATCH(request: NextRequest) {
 
     const idCheck = requireField(id, 'id');
     if (!idCheck.valid) return badRequest(idCheck.error!);
+
+    const { data: existingSlot } = await supabase
+      .from('routine_slots')
+      .select(ROUTINE_SLOT_WITH_DETAILS)
+      .eq('id', id)
+      .maybeSingle();
+
+    if (!existingSlot) return notFound('Slot not found');
 
     // If changing room/time, check for conflicts
     if (updates.room_number || updates.start_time || updates.end_time || updates.day_of_week !== undefined) {
@@ -345,31 +413,18 @@ export async function PATCH(request: NextRequest) {
 
     if (error) throw error;
 
-    // Notify students when schedule-relevant fields changed
-    if (updates.room_number || updates.start_time || updates.end_time || updates.day_of_week !== undefined) {
-      const pSlot = data as Record<string, unknown>;
-      const pOffering = (pSlot?.course_offerings ?? {}) as Record<string, unknown>;
-      const pCode = (pOffering?.courses as Record<string, unknown>)?.code as string ?? '';
-      const pTerm = pOffering?.term as string ?? '';
-      const pSection = pSlot?.section as string | null;
-      const pDayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      const pDayName = pDayNames[pSlot?.day_of_week as number] ?? `Day ${pSlot?.day_of_week}`;
-      const pStart = pSlot?.start_time as string;
-      const pEnd = pSlot?.end_time as string;
-      const pRoom = pSlot?.room_number as string;
-      if (pCode && pTerm) {
-        await createNotification({
-          type: 'class_rescheduled',
-          title: `Schedule Updated — ${pCode}`,
-          body: `${pCode} class has been updated: ${pDayName} ${pStart}–${pEnd}, Room ${pRoom}.`,
-          target_type: pSection ? 'SECTION' : 'YEAR_TERM',
-          target_value: pSection ?? pTerm,
-          target_year_term: pSection ? pTerm : undefined,
-          created_by: null,
-          created_by_role: 'ADMIN',
-          metadata: { course_code: pCode, room_number: pRoom, day: pDayName },
-        });
-      }
+    const changedSchedule = [
+      'room_number',
+      'day_of_week',
+      'start_time',
+      'end_time',
+      'section',
+      'valid_from',
+      'valid_until',
+    ].some((key) => (existingSlot as Record<string, unknown>)[key] !== (data as Record<string, unknown>)[key]);
+
+    if (changedSchedule) {
+      await sendStudentScheduleNotification('class_rescheduled', data as unknown as Record<string, unknown>);
     }
     return ok(data);
   } catch (error: unknown) {
@@ -389,41 +444,18 @@ export async function DELETE(request: NextRequest) {
 
     if (!id) return badRequest('id is required');
 
-    // Fetch slot details before deletion so we can notify students
-    const { data: slotToDelete } = await supabase
+    const { data: existingSlot } = await supabase
       .from('routine_slots')
       .select(ROUTINE_SLOT_WITH_DETAILS)
       .eq('id', id)
       .maybeSingle();
 
+    if (!existingSlot) return notFound('Slot not found');
+
     const { error } = await supabase.from('routine_slots').delete().eq('id', id);
     if (error) throw error;
 
-    // Notify students about the cancelled class
-    if (slotToDelete) {
-      const dSlot = slotToDelete as Record<string, unknown>;
-      const dOffering = (dSlot?.course_offerings ?? {}) as Record<string, unknown>;
-      const dCode = (dOffering?.courses as Record<string, unknown>)?.code as string ?? '';
-      const dTerm = dOffering?.term as string ?? '';
-      const dSection = dSlot?.section as string | null;
-      const dDayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      const dDayName = dDayNames[dSlot?.day_of_week as number] ?? `Day ${dSlot?.day_of_week}`;
-      const dStart = dSlot?.start_time as string;
-      const dEnd = dSlot?.end_time as string;
-      if (dCode && dTerm) {
-        await createNotification({
-          type: 'class_cancelled',
-          title: `Class Cancelled — ${dCode}`,
-          body: `The ${dDayName} ${dStart}–${dEnd} class for ${dCode} has been removed from the schedule.`,
-          target_type: dSection ? 'SECTION' : 'YEAR_TERM',
-          target_value: dSection ?? dTerm,
-          target_year_term: dSection ? dTerm : undefined,
-          created_by: null,
-          created_by_role: 'ADMIN',
-          metadata: { course_code: dCode, day: dDayName, start_time: dStart, end_time: dEnd },
-        });
-      }
-    }
+    await sendStudentScheduleNotification('class_cancelled', existingSlot as unknown as Record<string, unknown>);
     return noContent();
   } catch (error: unknown) {
     return internalError(extractErrorMessage(error, 'Failed to delete routine slot'));

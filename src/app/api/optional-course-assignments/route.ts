@@ -4,9 +4,9 @@
 // ==========================================
 
 import { badRequest, created, guardSupabase, internalError, noContent } from '@/lib/apiResponse';
+import { notifyOptionalCourseAssigned } from '@/lib/notifications';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { NextRequest, NextResponse } from 'next/server';
-import { notifyOptionalCourseAssigned } from '@/lib/notifications';
 
 function extractErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
@@ -111,14 +111,13 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
-    // Notify each newly assigned student
     const offeringRecord = offering as Record<string, unknown>;
-    const ocCode = (offeringRecord?.courses as Record<string, unknown>)?.code as string ?? '';
-    const ocTitle = (offeringRecord?.courses as Record<string, unknown>)?.title as string ?? '';
+    const ocCode = (offeringRecord.courses as Record<string, unknown>)?.code as string ?? '';
+    const ocTitle = (offeringRecord.courses as Record<string, unknown>)?.title as string ?? '';
     for (const assignment of (data ?? [])) {
-      const a = assignment as Record<string, unknown>;
+      const resolvedAssignment = assignment as Record<string, unknown>;
       await notifyOptionalCourseAssigned({
-        studentUserId: a.student_user_id as string,
+        studentUserId: resolvedAssignment.student_user_id as string,
         courseCode: ocCode,
         courseTitle: ocTitle,
         assignedBy: assigned_by ?? null,
