@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { badRequest, guardSupabase, internalError, noContent, ok } from '@/lib/apiResponse';
 import { requireFields, runValidations } from '@/lib/validators';
+import { notifyAnnouncement } from '@/lib/notifications';
 
 function extractError(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
@@ -43,6 +44,16 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    // Notify students/teachers about the announcement
+    await notifyAnnouncement({
+      createdBy: created_by || '',
+      createdByRole: 'TEACHER',
+      title,
+      bodyText: content,
+      courseCode: course_code || undefined,
+    });
+
     return ok(data);
   } catch (error: unknown) {
     return internalError(extractError(error, 'Failed to create announcement'));

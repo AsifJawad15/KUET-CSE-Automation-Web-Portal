@@ -9,6 +9,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { badRequest, conflict, created, guardSupabase, internalError, noContent, notFound, ok, serviceUnavailable } from '@/lib/apiResponse';
 import { requireFields, validateUUID } from '@/lib/validators';
 import { TERM_UPGRADE_WITH_STUDENT } from '@/lib/queryConstants';
+import { notifyTermUpgrade } from '@/lib/notifications';
 
 // ── Helpers ────────────────────────────────────────────
 
@@ -157,6 +158,14 @@ export async function PATCH(request: NextRequest) {
         return internalError('Failed to update student term: ' + studentUpdateError.message);
       }
     }
+
+    // Notify the student about the decision
+    await notifyTermUpgrade({
+      studentUserId: upgradeRequest.student_user_id as string,
+      approved: status === 'approved',
+      newTerm: status === 'approved' ? upgradeRequest.requested_term as string : undefined,
+      remarks: admin_remarks ?? undefined,
+    });
 
     return ok({ status });
   } catch (error: unknown) {
