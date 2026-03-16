@@ -6,10 +6,11 @@
 // so all attendance methods share the same count.
 // ==========================================
 
-import { NextRequest, NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { badRequest, guardSupabase, internalError } from '@/lib/apiResponse';
+import { createNotification, getStudentUsersByRolls } from '@/lib/notifications';
+import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { requireField, runValidations } from '@/lib/validators';
+import { NextRequest, NextResponse } from 'next/server';
 
 function extractError(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
@@ -25,6 +26,82 @@ function toNormalizedStatus(status: string): string {
   }
 }
 
+const LOW_ATTENDANCE_THRESHOLD = 75;
+
+interface AttendanceUploadRecord {
+  course_code: string;
+  student_roll: string;
+  date: string;
+  status: string;
+}
+
+async function notifyAttendanceUpdates(records: AttendanceUploadRecord[]) {
+  const absentRecords = records.filter((record) => record.status?.toLowerCase() === 'absent');
+  if (absentRecords.length === 0) return;
+
+  const studentByRoll = await getStudentUsersByRolls(absentRecords.map((record) => record.student_roll));
+  const warnedThresholds = new Set<string>();
+
+  for (const record of absentRecords) {
+    const student = studentByRoll.get(record.student_roll);
+    if (!student) continue;
+
+    await createNotification({
+      type: 'attendance_absent',
+      title: `Absent in ${record.course_code}`,
+      body: `You were marked absent in ${record.course_code} on ${record.date}. Contact your teacher if this looks incorrect.`,
+      targetType: 'USER',
+      targetValue: student.userId,
+      createdByRole: 'TEACHER',
+      metadata: {
+        course_code: record.course_code,
+        date: record.date,
+        student_roll: record.student_roll,
+      },
+      dedupeKey: `attendance-absent:${record.course_code}:${record.date}:${student.userId}`,
+    });
+
+    const thresholdKey = `${record.course_code}:${student.userId}:${LOW_ATTENDANCE_THRESHOLD}`;
+    if (warnedThresholds.has(thresholdKey)) continue;
+
+    const { data: attendanceRows, error } = await supabase
+      .from('attendance')
+      .select('status')
+      .eq('course_code', record.course_code)
+      .eq('student_roll', record.student_roll);
+
+    if (error) throw error;
+
+    const totalSessions = attendanceRows?.length || 0;
+    if (totalSessions < 4) continue;
+
+    const attendedSessions = (attendanceRows || []).filter((row) => {
+      const status = (row.status as string | undefined)?.toLowerCase();
+      return status === 'present' || status === 'late';
+    }).length;
+    const percentage = (attendedSessions / totalSessions) * 100;
+
+    if (percentage >= LOW_ATTENDANCE_THRESHOLD) continue;
+
+    warnedThresholds.add(thresholdKey);
+    await createNotification({
+      type: 'attendance_low',
+      title: `Low attendance warning in ${record.course_code}`,
+      body: `Your attendance is ${percentage.toFixed(1)}%. Reach ${LOW_ATTENDANCE_THRESHOLD}% to stay clear of shortage.`,
+      targetType: 'USER',
+      targetValue: student.userId,
+      createdByRole: 'SYSTEM',
+      metadata: {
+        course_code: record.course_code,
+        student_roll: record.student_roll,
+        percentage: Number(percentage.toFixed(1)),
+        threshold: LOW_ATTENDANCE_THRESHOLD,
+      },
+      dedupeKey: `attendance-low:${record.course_code}:${student.userId}:${LOW_ATTENDANCE_THRESHOLD}`,
+    });
+  }
+}
+
 // ── POST /api/teacher-portal/attendance ────────────────
 
 export async function POST(request: NextRequest) {
@@ -37,6 +114,7 @@ export async function POST(request: NextRequest) {
     // Optional: offering_id and teacher_id for normalized write
     const offeringId: string | undefined = body.offering_id;
     const teacherId: string | undefined = body.teacher_id;
+    const savedRecords: AttendanceUploadRecord[] = [];
 
     if (!Array.isArray(records) || records.length === 0) {
       return badRequest('No attendance records provided');
@@ -72,12 +150,19 @@ export async function POST(request: NextRequest) {
         errors.push(`Roll ${record.student_roll}: ${error.message}`);
       } else {
         inserted++;
+        savedRecords.push({
+          course_code: record.course_code,
+          student_roll: record.student_roll,
+          date: record.date,
+          status: record.status,
+        });
       }
     }
 
     // 2. Also write to normalized tables (class_sessions + attendance_records)
     //    Group records by course_code + date to create one session per group
     await syncToNormalizedTables(records, offeringId, teacherId);
+    await notifyAttendanceUpdates(savedRecords);
 
     return NextResponse.json({ inserted, skipped: 0, errors });
   } catch (error: unknown) {
