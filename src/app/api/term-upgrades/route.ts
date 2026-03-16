@@ -4,12 +4,12 @@
 // Uses shared response helpers, validators & query constants
 // ==========================================
 
-import { NextRequest, NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { badRequest, conflict, created, guardSupabase, internalError, noContent, notFound, ok, serviceUnavailable } from '@/lib/apiResponse';
-import { requireFields, validateUUID } from '@/lib/validators';
+import { badRequest, conflict, created, guardSupabase, internalError, noContent, notFound, ok } from '@/lib/apiResponse';
 import { TERM_UPGRADE_WITH_STUDENT } from '@/lib/queryConstants';
 import { notifyTermUpgrade } from '@/lib/notifications';
+import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { requireFields, validateUUID } from '@/lib/validators';
+import { NextRequest, NextResponse } from 'next/server';
 
 // ── Helpers ────────────────────────────────────────────
 
@@ -159,7 +159,6 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    // Notify the student about the decision
     await notifyTermUpgrade({
       studentUserId: upgradeRequest.student_user_id as string,
       approved: status === 'approved',
