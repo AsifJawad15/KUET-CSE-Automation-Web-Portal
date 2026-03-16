@@ -6,6 +6,7 @@
 import { badRequest, created, guardSupabase, internalError, noContent } from '@/lib/apiResponse';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { NextRequest, NextResponse } from 'next/server';
+import { notifyOptionalCourseAssigned } from '@/lib/notifications';
 
 function extractErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
@@ -82,7 +83,7 @@ export async function POST(request: NextRequest) {
     // Verify the offering exists and is for an elective course
     const { data: offering, error: offeringError } = await supabase
       .from('course_offerings')
-      .select('id, course_id, term')
+      .select('id, course_id, term, courses(code, title)')
       .eq('id', offering_id)
       .single();
 
@@ -109,6 +110,20 @@ export async function POST(request: NextRequest) {
       `);
 
     if (error) throw error;
+
+    // Notify each newly assigned student
+    const offeringRecord = offering as Record<string, unknown>;
+    const ocCode = (offeringRecord?.courses as Record<string, unknown>)?.code as string ?? '';
+    const ocTitle = (offeringRecord?.courses as Record<string, unknown>)?.title as string ?? '';
+    for (const assignment of (data ?? [])) {
+      const a = assignment as Record<string, unknown>;
+      await notifyOptionalCourseAssigned({
+        studentUserId: a.student_user_id as string,
+        courseCode: ocCode,
+        courseTitle: ocTitle,
+        assignedBy: assigned_by ?? null,
+      });
+    }
 
     return created({
       assigned_count: data?.length ?? 0,

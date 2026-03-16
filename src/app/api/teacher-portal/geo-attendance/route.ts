@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { badRequest, guardSupabase, internalError } from '@/lib/apiResponse';
+import { notifyGeoAttendanceOpened } from '@/lib/notifications';
 
 function extractError(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
@@ -38,19 +39,39 @@ export async function POST(request: NextRequest) {
       .eq('is_active', true)
       .lt('end_time', new Date().toISOString());
 
-    // Check course type to determine room limit
+    // Resolve the offering first (without inner joins) to avoid false "not found" from relation issues.
     const { data: offering, error: offeringError } = await supabase
       .from('course_offerings')
-      .select('id, courses!inner(course_type)')
+      .select('id, term, batch, course_id, teacher_user_id')
       .eq('id', offering_id)
-      .single();
+      .maybeSingle();
 
-    if (offeringError || !offering) {
-      return badRequest('Course offering not found');
+    if (offeringError) {
+      return badRequest(`Course offering lookup failed: ${offeringError.message}`);
     }
 
-    const courses = offering.courses as unknown as { course_type: string } | { course_type: string }[] | null;
-    const courseType = (Array.isArray(courses) ? courses[0]?.course_type : courses?.course_type || 'theory').toLowerCase();
+    if (!offering) {
+      return badRequest('Course offering not found. Please refresh your course list and try again.');
+    }
+
+    if (offering.teacher_user_id !== teacher_user_id) {
+      return badRequest('Selected course offering is not assigned to this teacher.');
+    }
+
+    const { data: courseRow, error: courseError } = await supabase
+      .from('courses')
+      .select('code, title, course_type')
+      .eq('id', offering.course_id)
+      .maybeSingle();
+
+    if (courseError) {
+      return badRequest(`Failed to load course details for offering: ${courseError.message}`);
+    }
+
+    const courseType = (courseRow?.course_type || 'theory').toLowerCase();
+    const courseCode = courseRow?.code || null;
+    const offeringTerm = offering.term as string | null;
+    const resolvedSection = (section || offering.batch || null) as string | null;
     const maxRooms = courseType === 'lab' ? MAX_LAB_ROOMS : MAX_THEORY_ROOMS;
 
     // Count currently active rooms for this teacher
@@ -102,6 +123,30 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    // Notify target students immediately when a geo-attendance room is opened.
+    if (courseCode && offeringTerm) {
+      const startMs = new Date(start_time).getTime();
+      const endMs = new Date(end_time).getTime();
+      const computedDuration = Number.isFinite(startMs) && Number.isFinite(endMs)
+        ? Math.max(1, Math.round((endMs - startMs) / 60000))
+        : 50;
+
+      const endDate = new Date(end_time);
+      const endLabel = Number.isNaN(endDate.getTime())
+        ? end_time
+        : endDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+      await notifyGeoAttendanceOpened({
+        teacherUserId: teacher_user_id,
+        courseCode,
+        term: offeringTerm,
+        section: resolvedSection,
+        roomNumber: room_number || null,
+        durationMinutes: computedDuration,
+        endTime: endLabel,
+      });
+    }
 
     return NextResponse.json({ success: true, data });
   } catch (error: unknown) {

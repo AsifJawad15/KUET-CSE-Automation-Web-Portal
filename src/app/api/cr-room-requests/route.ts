@@ -6,6 +6,7 @@
 import { badRequest, guardSupabase, internalError, ok, notFound } from '@/lib/apiResponse';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { requireFields } from '@/lib/validators';
+import { notifyCRRoomAllocated } from '@/lib/notifications';
 import { NextRequest, NextResponse } from 'next/server';
 
 // ── GET /api/cr-room-requests ──────────────────────────
@@ -250,6 +251,20 @@ export async function POST(request: NextRequest) {
       // Log but don't fail the whole request — the CR booking itself succeeded
       console.error('CR sync to routine_slots failed:', syncErr);
     }
+
+    // Fire notification to all students in this section/year-term
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayIndex = Number(day_of_week);
+    await notifyCRRoomAllocated({
+      createdBy: student_user_id,
+      courseCode: course_code,
+      roomNumber: availableRoom.room_number,
+      dayName: dayNames[dayIndex] ?? `Day ${day_of_week}`,
+      startTime: start_time,
+      endTime: end_time,
+      term,
+      section: section || null,
+    });
 
     return ok(data);
   } catch (error: unknown) {

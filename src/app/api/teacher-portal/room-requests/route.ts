@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { badRequest, guardSupabase, internalError, ok } from '@/lib/apiResponse';
 import { requireFields, runValidations } from '@/lib/validators';
+import { notifyTeacherRoomApproved } from '@/lib/notifications';
 
 function extractError(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
@@ -43,6 +44,18 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    // Notify the teacher that their booking is pending
+    if (teacher_user_id) {
+      await notifyTeacherRoomApproved({
+        teacherUserId: teacher_user_id,
+        courseCode: purpose || 'Room Request',
+        roomNumber: room_number,
+        period: `${start_time}–${end_time}`,
+        dayName: new Date(date).toLocaleDateString('en-US', { weekday: 'long' }),
+      });
+    }
+
     return ok(data);
   } catch (error: unknown) {
     return internalError(extractError(error, 'Failed to submit room request'));
