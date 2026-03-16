@@ -3,10 +3,11 @@
 // Handles exam marks upload (CSV bulk)
 // ==========================================
 
-import { NextRequest, NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { badRequest, guardSupabase, internalError } from '@/lib/apiResponse';
+import { createNotification, getStudentUsersByRolls } from '@/lib/notifications';
+import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { requireField, runValidations } from '@/lib/validators';
+import { NextRequest, NextResponse } from 'next/server';
 
 function extractError(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
@@ -21,6 +22,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const records = body.items || body.records;
+    const successfulRecords: Array<{ course_code: string; student_roll: string; exam_type: string }> = [];
 
     if (!Array.isArray(records) || records.length === 0) {
       return badRequest('No marks records provided');
@@ -65,6 +67,40 @@ export async function POST(request: NextRequest) {
         errors.push(`Roll ${record.student_roll}: ${error.message}`);
       } else {
         inserted++;
+        successfulRecords.push({
+          course_code: record.course_code,
+          student_roll: record.student_roll,
+          exam_type: record.exam_type,
+        });
+      }
+    }
+
+    if (successfulRecords.length > 0) {
+      const studentByRoll = await getStudentUsersByRolls(successfulRecords.map((record) => record.student_roll));
+      const notificationKeys = new Set<string>();
+
+      for (const record of successfulRecords) {
+        const student = studentByRoll.get(record.student_roll);
+        if (!student) continue;
+
+        const dedupeKey = `exam-result:${record.course_code}:${record.exam_type}:${student.userId}`;
+        if (notificationKeys.has(dedupeKey)) continue;
+        notificationKeys.add(dedupeKey);
+
+        await createNotification({
+          type: 'exam_result_published',
+          title: `${record.exam_type} result published for ${record.course_code}`,
+          body: `Your ${record.exam_type} marks for ${record.course_code} are now available in the result section.`,
+          targetType: 'USER',
+          targetValue: student.userId,
+          createdByRole: 'TEACHER',
+          metadata: {
+            course_code: record.course_code,
+            exam_type: record.exam_type,
+            student_roll: record.student_roll,
+          },
+          dedupeKey,
+        });
       }
     }
 
