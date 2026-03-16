@@ -1,11 +1,11 @@
 // ==========================================
 // lib/notifications.ts
 // Centralized helper to create notifications from any API route.
-// Call createNotification() after any significant event.
 // ==========================================
 
-import { supabase } from './supabase';
 import { createClient } from '@supabase/supabase-js';
+
+import { supabase } from './supabase';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -25,46 +25,139 @@ export type NotificationType =
   | 'room_request_rejected'
   | 'notice_posted'
   | 'exam_scheduled'
+  | 'exam_result_published'
+  | 'exam_room_assigned'
+  | 'exam_reminder'
   | 'class_cancelled'
   | 'class_rescheduled'
   | 'assignment_due'
+  | 'attendance_absent'
   | 'attendance_low'
   | 'announcement'
   | 'term_upgrade'
   | 'makeup_class'
   | 'geo_attendance_open'
-  | 'optional_course';
+  | 'optional_course'
+  | 'cr_room_request_submitted'
+  | 'attendance_marking_reminder'
+  | 'course_anomaly_alert';
 
-export interface CreateNotificationInput {
-  type: NotificationType;
-  title: string;
-  body: string;
-  target_type: NotificationTargetType;
-  target_value?: string;
-  target_year_term?: string;
-  created_by?: string | null;
-  created_by_role?: 'STUDENT_CR' | 'TEACHER' | 'ADMIN';
-  metadata?: Record<string, unknown>;
-  expires_at?: string | null;
+export interface NotificationTarget {
+  targetType: NotificationTargetType;
+  targetValue?: string | null;
+  targetYearTerm?: string | null;
 }
 
-/**
- * Insert a notification into the notifications table.
- * Errors are silently logged — caller's primary flow should never break for notifications.
- */
+export interface CreateNotificationInput {
+  type: NotificationType | string;
+  title: string;
+  body: string;
+  target_type?: NotificationTargetType;
+  target_value?: string | null;
+  target_year_term?: string | null;
+  created_by?: string | null;
+  created_by_role?: 'STUDENT_CR' | 'TEACHER' | 'ADMIN' | 'SYSTEM' | null;
+  metadata?: Record<string, unknown>;
+  expires_at?: string | null;
+  targetType?: NotificationTargetType;
+  targetValue?: string | null;
+  targetYearTerm?: string | null;
+  createdBy?: string | null;
+  createdByRole?: 'STUDENT_CR' | 'TEACHER' | 'ADMIN' | 'SYSTEM' | null;
+  expiresAt?: string | null;
+  dedupeKey?: string;
+}
+
+export interface OfferingNotificationContext {
+  offeringId: string;
+  teacherUserId: string | null;
+  term: string | null;
+  section: string | null;
+  courseCode: string;
+  courseTitle: string;
+}
+
+export interface StudentLookup {
+  userId: string;
+  rollNo: string;
+  term: string | null;
+  section: string | null;
+}
+
+function cleanText(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+export function buildStudentAudience(context: {
+  courseCode: string;
+  term?: string | null;
+  section?: string | null;
+}): NotificationTarget {
+  const section = cleanText(context.section);
+  if (section) {
+    return {
+      targetType: 'SECTION',
+      targetValue: section,
+      targetYearTerm: cleanText(context.term),
+    };
+  }
+
+  return {
+    targetType: 'COURSE',
+    targetValue: context.courseCode,
+    targetYearTerm: null,
+  };
+}
+
 export async function createNotification(input: CreateNotificationInput): Promise<void> {
   try {
+    const targetType = input.target_type ?? input.targetType;
+    const targetValue = cleanText(input.target_value ?? input.targetValue);
+    const targetYearTerm = cleanText(input.target_year_term ?? input.targetYearTerm);
+    const createdBy = input.created_by ?? input.createdBy ?? null;
+    const createdByRole = input.created_by_role ?? input.createdByRole ?? 'SYSTEM';
+    const dedupeKey = cleanText(input.dedupeKey);
+    const metadata = {
+      ...(input.metadata ?? {}),
+      ...(dedupeKey ? { event_key: dedupeKey } : {}),
+    };
+
+    if (!targetType) {
+      console.error('[NotificationHelper] Missing target type for notification:', input.type);
+      return;
+    }
+
+    if (dedupeKey) {
+      const { data: existing, error: lookupError } = await notificationClient
+        .from('notifications')
+        .select('id')
+        .eq('type', input.type)
+        .contains('metadata', { event_key: dedupeKey })
+        .limit(1)
+        .maybeSingle();
+
+      if (lookupError) {
+        console.error('[NotificationHelper] Failed to check duplicate notification:', lookupError.message);
+        return;
+      }
+
+      if (existing) {
+        return;
+      }
+    }
+
     const { error } = await notificationClient.from('notifications').insert({
       type: input.type,
       title: input.title,
       body: input.body,
-      target_type: input.target_type,
-      target_value: input.target_value ?? null,
-      target_year_term: input.target_year_term ?? null,
-      created_by: input.created_by ?? null,
-      created_by_role: input.created_by_role ?? null,
-      metadata: input.metadata ?? {},
-      expires_at: input.expires_at ?? null,
+      target_type: targetType,
+      target_value: targetValue,
+      target_year_term: targetYearTerm,
+      created_by: createdBy,
+      created_by_role: createdByRole,
+      metadata,
+      expires_at: input.expires_at ?? input.expiresAt ?? null,
     });
 
     if (error) {
@@ -75,9 +168,61 @@ export async function createNotification(input: CreateNotificationInput): Promis
   }
 }
 
-// ── Pre-built factory functions for common events ──────────────────────────────
+export async function getOfferingNotificationContext(offeringId: string): Promise<OfferingNotificationContext | null> {
+  const { data, error } = await notificationClient
+    .from('course_offerings')
+    .select(`
+      id,
+      teacher_user_id,
+      term,
+      section,
+      courses!inner(code, title)
+    `)
+    .eq('id', offeringId)
+    .maybeSingle();
 
-/** CR allocated a room for their section */
+  if (error) throw error;
+  if (!data) return null;
+
+  const course = data.courses as { code?: string; title?: string } | { code?: string; title?: string }[] | null;
+  const resolvedCourse = Array.isArray(course) ? course[0] : course;
+  const courseCode = resolvedCourse?.code?.trim();
+
+  if (!courseCode) return null;
+
+  return {
+    offeringId: data.id,
+    teacherUserId: data.teacher_user_id ?? null,
+    term: cleanText(data.term),
+    section: cleanText(data.section),
+    courseCode,
+    courseTitle: resolvedCourse?.title?.trim() || courseCode,
+  };
+}
+
+export async function getStudentUsersByRolls(rolls: string[]): Promise<Map<string, StudentLookup>> {
+  const uniqueRolls = [...new Set(rolls.map((roll) => roll.trim()).filter(Boolean))];
+  if (uniqueRolls.length === 0) return new Map();
+
+  const { data, error } = await notificationClient
+    .from('students')
+    .select('user_id, roll_no, term, section')
+    .in('roll_no', uniqueRolls);
+
+  if (error) throw error;
+
+  const result = new Map<string, StudentLookup>();
+  for (const row of data || []) {
+    result.set(row.roll_no, {
+      userId: row.user_id,
+      rollNo: row.roll_no,
+      term: cleanText(row.term),
+      section: cleanText(row.section),
+    });
+  }
+  return result;
+}
+
 export function notifyCRRoomAllocated(opts: {
   createdBy: string;
   courseCode: string;
@@ -111,7 +256,6 @@ export function notifyCRRoomAllocated(opts: {
   });
 }
 
-/** Teacher room booking request auto-approved */
 export function notifyTeacherRoomApproved(opts: {
   teacherUserId: string;
   courseCode: string;
@@ -136,7 +280,6 @@ export function notifyTeacherRoomApproved(opts: {
   });
 }
 
-/** Teacher room booking rejected (conflict) */
 export function notifyTeacherRoomRejected(opts: {
   teacherUserId: string;
   courseCode: string;
@@ -163,7 +306,6 @@ export function notifyTeacherRoomRejected(opts: {
   });
 }
 
-/** Teacher / Admin posted a notice to a year-term */
 export function notifyNoticePosted(opts: {
   createdBy: string;
   createdByRole: 'TEACHER' | 'ADMIN';
@@ -187,13 +329,12 @@ export function notifyNoticePosted(opts: {
   });
 }
 
-/** Exam / class test scheduled */
 export function notifyExamScheduled(opts: {
   createdBy: string;
   createdByRole: 'TEACHER' | 'ADMIN';
   courseCode: string;
   examType: 'Class Test' | 'Mid Term' | 'Final' | 'Lab Exam' | string;
-  date: string;           // e.g. "March 20, 2026"
+  date: string;
   venue: string;
   term: string;
   section?: string;
@@ -217,7 +358,6 @@ export function notifyExamScheduled(opts: {
   });
 }
 
-/** Announcement to all students or all teachers */
 export function notifyAnnouncement(opts: {
   createdBy: string;
   createdByRole: 'TEACHER' | 'ADMIN' | 'STUDENT_CR';
@@ -260,7 +400,6 @@ export function notifyAnnouncement(opts: {
   });
 }
 
-/** Term upgrade approved/rejected */
 export function notifyTermUpgrade(opts: {
   studentUserId: string;
   approved: boolean;
@@ -281,7 +420,6 @@ export function notifyTermUpgrade(opts: {
   });
 }
 
-/** Teacher opened a geo-attendance room for a section/year-term */
 export function notifyGeoAttendanceOpened(opts: {
   teacherUserId: string;
   courseCode: string;
@@ -293,17 +431,12 @@ export function notifyGeoAttendanceOpened(opts: {
 }): Promise<void> {
   const normalizedTerm = opts.term.trim();
   const rawSection = opts.section?.trim() ?? '';
-
-  // Web geo-attendance uses labels like "Section A (01–60)"; extract canonical section key.
   const extractedSection = (() => {
     if (!rawSection) return null;
-
     const single = rawSection.match(/^[A-Za-z]$/);
     if (single) return single[0].toUpperCase();
-
     const named = rawSection.match(/section\s+([A-Za-z])/i);
     if (named) return named[1].toUpperCase();
-
     return null;
   })();
 
@@ -327,7 +460,6 @@ export function notifyGeoAttendanceOpened(opts: {
   });
 }
 
-/** Student assigned to an optional/elective course */
 export function notifyOptionalCourseAssigned(opts: {
   studentUserId: string;
   courseCode: string;
