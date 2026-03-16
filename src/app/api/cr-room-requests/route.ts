@@ -6,7 +6,7 @@
 import { badRequest, guardSupabase, internalError, ok, notFound } from '@/lib/apiResponse';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { requireFields } from '@/lib/validators';
-import { notifyCRRoomAllocated } from '@/lib/notifications';
+import { notifyCRRoomAllocated, notifyCRRoomRequestSubmitted } from '@/lib/notifications';
 import { NextRequest, NextResponse } from 'next/server';
 
 // ── GET /api/cr-room-requests ──────────────────────────
@@ -265,6 +265,24 @@ export async function POST(request: NextRequest) {
       term,
       section: section || null,
     });
+
+    if (teacher_user_id) {
+      const studentRecord = (data as Record<string, unknown>).students as Record<string, unknown> | null;
+      await notifyCRRoomRequestSubmitted({
+        teacherUserId: teacher_user_id,
+        courseCode: course_code,
+        roomNumber: availableRoom.room_number,
+        requestDate: request_date,
+        startTime: start_time,
+        endTime: end_time,
+        term,
+        section: section || null,
+        studentName: studentRecord?.full_name as string | null,
+        studentRoll: studentRecord?.roll_no as string | null,
+        createdBy: student_user_id,
+        requestId: (data as Record<string, unknown>).id as string,
+      });
+    }
 
     return ok(data);
   } catch (error: unknown) {

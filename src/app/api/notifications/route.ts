@@ -18,13 +18,22 @@ export type NotificationType =
   | 'room_request_rejected'
   | 'notice_posted'
   | 'exam_scheduled'
+  | 'exam_result_published'
+  | 'exam_room_assigned'
+  | 'exam_reminder'
   | 'class_cancelled'
   | 'class_rescheduled'
   | 'assignment_due'
+  | 'attendance_absent'
   | 'attendance_low'
   | 'announcement'
   | 'term_upgrade'
-  | 'makeup_class';
+  | 'makeup_class'
+  | 'geo_attendance_open'
+  | 'optional_course'
+  | 'cr_room_request_submitted'
+  | 'attendance_marking_reminder'
+  | 'course_anomaly_alert';
 
 // ── GET /api/notifications ─────────────────────────────────────────────────────
 // Query params:

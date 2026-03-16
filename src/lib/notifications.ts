@@ -262,11 +262,14 @@ export function notifyTeacherRoomApproved(opts: {
   roomNumber: string;
   period: string;
   dayName: string;
+  remarks?: string | null;
+  requestId?: string | null;
 }): Promise<void> {
+  const remarks = cleanText(opts.remarks);
   return createNotification({
     type: 'room_request_approved',
     title: `Room Request Approved — ${opts.courseCode}`,
-    body: `Your room booking for ${opts.courseCode} in Room ${opts.roomNumber} on ${opts.dayName} (${opts.period}) was approved.`,
+    body: `Your room booking for ${opts.courseCode} in Room ${opts.roomNumber} on ${opts.dayName} (${opts.period}) was approved.${remarks ? ` Remark: ${remarks}` : ''}`,
     target_type: 'USER',
     target_value: opts.teacherUserId,
     created_by: null,
@@ -276,7 +279,10 @@ export function notifyTeacherRoomApproved(opts: {
       room_number: opts.roomNumber,
       period: opts.period,
       day: opts.dayName,
+      ...(remarks ? { remarks } : {}),
+      ...(opts.requestId ? { request_id: opts.requestId } : {}),
     },
+    dedupeKey: opts.requestId ? `room-request:${opts.requestId}:approved` : undefined,
   });
 }
 
@@ -287,11 +293,13 @@ export function notifyTeacherRoomRejected(opts: {
   period: string;
   dayName: string;
   reason: string;
+  requestId?: string | null;
 }): Promise<void> {
+  const reason = cleanText(opts.reason) ?? 'No remarks provided.';
   return createNotification({
     type: 'room_request_rejected',
     title: `Room Request Rejected — ${opts.courseCode}`,
-    body: `Room booking for ${opts.courseCode} on ${opts.dayName} (${opts.period}) was rejected. ${opts.reason}`,
+    body: `Room booking for ${opts.courseCode} on ${opts.dayName} (${opts.period}) was rejected. ${reason}`,
     target_type: 'USER',
     target_value: opts.teacherUserId,
     created_by: null,
@@ -301,8 +309,110 @@ export function notifyTeacherRoomRejected(opts: {
       room: opts.roomNumber,
       period: opts.period,
       day: opts.dayName,
-      reason: opts.reason,
+      reason,
+      ...(opts.requestId ? { request_id: opts.requestId } : {}),
     },
+    dedupeKey: opts.requestId ? `room-request:${opts.requestId}:rejected` : undefined,
+  });
+}
+
+export function notifyCRRoomRequestSubmitted(opts: {
+  teacherUserId: string;
+  courseCode: string;
+  roomNumber: string;
+  requestDate: string;
+  startTime: string;
+  endTime: string;
+  term: string;
+  section?: string | null;
+  studentName?: string | null;
+  studentRoll?: string | null;
+  createdBy?: string | null;
+  requestId?: string | null;
+}): Promise<void> {
+  const studentLabel = cleanText(opts.studentName)
+    || (cleanText(opts.studentRoll) ? `Roll ${cleanText(opts.studentRoll)}` : 'A class representative');
+  const sectionLabel = cleanText(opts.section);
+
+  return createNotification({
+    type: 'cr_room_request_submitted',
+    title: `CR room request submitted — ${opts.courseCode}`,
+    body: `${studentLabel} booked Room ${opts.roomNumber} for ${opts.courseCode} on ${opts.requestDate}, ${opts.startTime}-${opts.endTime}.${sectionLabel ? ` Section ${sectionLabel}.` : ` Term ${opts.term}.`}`,
+    target_type: 'USER',
+    target_value: opts.teacherUserId,
+    created_by: opts.createdBy ?? null,
+    created_by_role: 'STUDENT_CR',
+    metadata: {
+      course_code: opts.courseCode,
+      room_number: opts.roomNumber,
+      request_date: opts.requestDate,
+      start_time: opts.startTime,
+      end_time: opts.endTime,
+      term: opts.term,
+      ...(sectionLabel ? { section: sectionLabel } : {}),
+      ...(cleanText(opts.studentRoll) ? { student_roll: cleanText(opts.studentRoll) } : {}),
+      ...(opts.requestId ? { request_id: opts.requestId } : {}),
+    },
+    dedupeKey: opts.requestId ? `cr-room-request:${opts.requestId}` : undefined,
+  });
+}
+
+export function notifyAttendanceMarkingReminder(opts: {
+  teacherUserId: string;
+  courseCode: string;
+  courseTitle?: string | null;
+  date: string;
+  startTime: string;
+  endTime: string;
+  roomNumber?: string | null;
+  section?: string | null;
+  offeringId?: string | null;
+}): Promise<void> {
+  const sectionLabel = cleanText(opts.section);
+  const roomLabel = cleanText(opts.roomNumber);
+
+  return createNotification({
+    type: 'attendance_marking_reminder',
+    title: `Attendance reminder — ${opts.courseCode}`,
+    body: `Attendance has not been recorded yet for ${opts.courseTitle || opts.courseCode} on ${opts.date} (${opts.startTime}-${opts.endTime})${roomLabel ? ` in Room ${roomLabel}` : ''}${sectionLabel ? ` for Section ${sectionLabel}` : ''}.`,
+    target_type: 'USER',
+    target_value: opts.teacherUserId,
+    created_by: null,
+    created_by_role: 'SYSTEM',
+    metadata: {
+      course_code: opts.courseCode,
+      date: opts.date,
+      start_time: opts.startTime,
+      end_time: opts.endTime,
+      ...(roomLabel ? { room_number: roomLabel } : {}),
+      ...(sectionLabel ? { section: sectionLabel } : {}),
+      ...(opts.offeringId ? { offering_id: opts.offeringId } : {}),
+    },
+    dedupeKey: `attendance-reminder:${opts.teacherUserId}:${opts.offeringId || opts.courseCode}:${opts.date}:${opts.startTime}`,
+  });
+}
+
+export function notifyCourseAnomalyAlert(opts: {
+  teacherUserId: string;
+  courseCode: string;
+  title: string;
+  body: string;
+  dedupeKey: string;
+  metadata?: Record<string, unknown>;
+}): Promise<void> {
+  return createNotification({
+    type: 'course_anomaly_alert',
+    title: opts.title,
+    body: opts.body,
+    target_type: 'USER',
+    target_value: opts.teacherUserId,
+    created_by: null,
+    created_by_role: 'SYSTEM',
+    metadata: {
+      course_code: opts.courseCode,
+      ...(opts.metadata ?? {}),
+    },
+    dedupeKey: opts.dedupeKey,
   });
 }
 
