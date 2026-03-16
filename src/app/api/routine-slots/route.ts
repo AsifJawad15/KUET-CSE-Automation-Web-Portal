@@ -4,16 +4,90 @@
 // DRY: Uses shared query constants & response helpers
 // ==========================================
 
-import { NextRequest, NextResponse } from 'next/server';
-import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { badRequest, conflict, guardSupabase, internalError, noContent, notFound, ok } from '@/lib/apiResponse';
-import { requireField, requireFields } from '@/lib/validators';
+import { buildStudentAudience, createNotification } from '@/lib/notifications';
 import { ROUTINE_SLOT_WITH_DETAILS } from '@/lib/queryConstants';
+import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { requireField, requireFields } from '@/lib/validators';
+import { NextRequest, NextResponse } from 'next/server';
 
 // ── Helpers ────────────────────────────────────────────
 
 function extractErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
+}
+
+function normalizeValue(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function formatSlotDate(slot: Record<string, unknown>): string {
+  const validFrom = normalizeValue(slot.valid_from);
+  const validUntil = normalizeValue(slot.valid_until);
+  if (validFrom && validUntil && validFrom !== validUntil) {
+    return `${validFrom} to ${validUntil}`;
+  }
+  return validFrom || 'the updated schedule';
+}
+
+async function sendStudentScheduleNotification(
+  type: 'class_cancelled' | 'class_rescheduled' | 'makeup_class',
+  slot: Record<string, unknown>,
+) {
+  const offering = slot.course_offerings as {
+    term?: string;
+    courses?: { code?: string; title?: string };
+  } | null;
+
+  const courseCode = offering?.courses?.code?.trim();
+  if (!courseCode) return;
+
+  const courseTitle = offering?.courses?.title?.trim() || courseCode;
+  const audience = buildStudentAudience({
+    courseCode,
+    term: offering?.term ?? null,
+    section: normalizeValue(slot.section),
+  });
+  const room = normalizeValue(slot.room_number) || 'TBA';
+  const startTime = normalizeValue(slot.start_time) || 'TBA';
+  const endTime = normalizeValue(slot.end_time) || 'TBA';
+  const scheduleDate = formatSlotDate(slot);
+
+  const payloadByType = {
+    makeup_class: {
+      title: `Makeup class scheduled for ${courseCode}`,
+      body: `${courseTitle} has a makeup class on ${scheduleDate}, ${startTime}-${endTime}, Room ${room}.`,
+    },
+    class_rescheduled: {
+      title: `Class rescheduled for ${courseCode}`,
+      body: `${courseTitle} now runs on ${scheduleDate}, ${startTime}-${endTime}, Room ${room}.`,
+    },
+    class_cancelled: {
+      title: `Class cancelled for ${courseCode}`,
+      body: `${courseTitle} on ${scheduleDate}, ${startTime}-${endTime} has been cancelled.`,
+    },
+  }[type];
+
+  await createNotification({
+    type,
+    title: payloadByType.title,
+    body: payloadByType.body,
+    targetType: audience.targetType,
+    targetValue: audience.targetValue,
+    targetYearTerm: audience.targetYearTerm,
+    createdByRole: 'ADMIN',
+    metadata: {
+      offering_id: slot.offering_id,
+      course_code: courseCode,
+      course_title: courseTitle,
+      room_number: room,
+      start_time: startTime,
+      end_time: endTime,
+      valid_from: normalizeValue(slot.valid_from),
+      valid_until: normalizeValue(slot.valid_until),
+    },
+    dedupeKey: `${type}:${slot.id}:${normalizeValue(slot.valid_from) || 'weekly'}:${startTime}:${endTime}:${room}`,
+  });
 }
 
 /** Derive term from course code digits (e.g., "CSE 3201" → "3-2"). */
@@ -269,6 +343,9 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) throw error;
+    if (data.valid_from) {
+      await sendStudentScheduleNotification('makeup_class', data as unknown as Record<string, unknown>);
+    }
     return ok(data);
   } catch (error: unknown) {
     return internalError(extractErrorMessage(error, 'Failed to add routine slot'));
@@ -287,6 +364,14 @@ export async function PATCH(request: NextRequest) {
 
     const idCheck = requireField(id, 'id');
     if (!idCheck.valid) return badRequest(idCheck.error!);
+
+    const { data: existingSlot } = await supabase
+      .from('routine_slots')
+      .select(ROUTINE_SLOT_WITH_DETAILS)
+      .eq('id', id)
+      .maybeSingle();
+
+    if (!existingSlot) return notFound('Slot not found');
 
     // If changing room/time, check for conflicts
     if (updates.room_number || updates.start_time || updates.end_time || updates.day_of_week !== undefined) {
@@ -319,6 +404,20 @@ export async function PATCH(request: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    const changedSchedule = [
+      'room_number',
+      'day_of_week',
+      'start_time',
+      'end_time',
+      'section',
+      'valid_from',
+      'valid_until',
+    ].some((key) => (existingSlot as Record<string, unknown>)[key] !== (data as Record<string, unknown>)[key]);
+
+    if (changedSchedule && (data.valid_from || existingSlot.valid_from)) {
+      await sendStudentScheduleNotification('class_rescheduled', data as unknown as Record<string, unknown>);
+    }
     return ok(data);
   } catch (error: unknown) {
     return internalError(extractErrorMessage(error, 'Failed to update routine slot'));
@@ -337,8 +436,20 @@ export async function DELETE(request: NextRequest) {
 
     if (!id) return badRequest('id is required');
 
+    const { data: existingSlot } = await supabase
+      .from('routine_slots')
+      .select(ROUTINE_SLOT_WITH_DETAILS)
+      .eq('id', id)
+      .maybeSingle();
+
+    if (!existingSlot) return notFound('Slot not found');
+
     const { error } = await supabase.from('routine_slots').delete().eq('id', id);
     if (error) throw error;
+
+    if (existingSlot.valid_from) {
+      await sendStudentScheduleNotification('class_cancelled', existingSlot as unknown as Record<string, unknown>);
+    }
 
     return noContent();
   } catch (error: unknown) {

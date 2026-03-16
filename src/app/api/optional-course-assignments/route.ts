@@ -4,6 +4,7 @@
 // ==========================================
 
 import { badRequest, created, guardSupabase, internalError, noContent } from '@/lib/apiResponse';
+import { createNotification, getOfferingNotificationContext } from '@/lib/notifications';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -109,6 +110,28 @@ export async function POST(request: NextRequest) {
       `);
 
     if (error) throw error;
+
+    const offeringContext = await getOfferingNotificationContext(offering_id);
+    if (offeringContext) {
+      for (const studentId of student_user_ids as string[]) {
+        await createNotification({
+          type: 'optional_course',
+          title: `Optional course assigned: ${offeringContext.courseCode}`,
+          body: `You have been assigned ${offeringContext.courseTitle}. Check your routine and course list for details.`,
+          targetType: 'USER',
+          targetValue: studentId,
+          createdBy: assigned_by || null,
+          createdByRole: 'ADMIN',
+          metadata: {
+            offering_id,
+            course_code: offeringContext.courseCode,
+            course_title: offeringContext.courseTitle,
+            term: offeringContext.term,
+          },
+          dedupeKey: `optional-course:${offering_id}:${studentId}`,
+        });
+      }
+    }
 
     return created({
       assigned_count: data?.length ?? 0,

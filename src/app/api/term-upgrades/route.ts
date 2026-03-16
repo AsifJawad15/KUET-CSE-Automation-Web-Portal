@@ -4,11 +4,12 @@
 // Uses shared response helpers, validators & query constants
 // ==========================================
 
-import { NextRequest, NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { badRequest, conflict, created, guardSupabase, internalError, noContent, notFound, ok, serviceUnavailable } from '@/lib/apiResponse';
-import { requireFields, validateUUID } from '@/lib/validators';
+import { badRequest, conflict, created, guardSupabase, internalError, noContent, notFound, ok } from '@/lib/apiResponse';
+import { createNotification } from '@/lib/notifications';
 import { TERM_UPGRADE_WITH_STUDENT } from '@/lib/queryConstants';
+import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { requireFields, validateUUID } from '@/lib/validators';
+import { NextRequest, NextResponse } from 'next/server';
 
 // ── Helpers ────────────────────────────────────────────
 
@@ -157,6 +158,25 @@ export async function PATCH(request: NextRequest) {
         return internalError('Failed to update student term: ' + studentUpdateError.message);
       }
     }
+
+    await createNotification({
+      type: 'term_upgrade',
+      title: `Term upgrade ${status}`,
+      body: status === 'approved'
+        ? `Your term upgrade request has been approved. Your new term is ${upgradeRequest.requested_term}.`
+        : `Your term upgrade request was rejected.${admin_remarks ? ` Remark: ${admin_remarks}` : ''}`,
+      targetType: 'USER',
+      targetValue: upgradeRequest.student_user_id,
+      createdBy: validAdminId,
+      createdByRole: 'ADMIN',
+      metadata: {
+        request_id: id,
+        current_term: upgradeRequest.current_term,
+        requested_term: upgradeRequest.requested_term,
+        status,
+      },
+      dedupeKey: `term-upgrade:${id}:${status}`,
+    });
 
     return ok({ status });
   } catch (error: unknown) {
