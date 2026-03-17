@@ -468,6 +468,77 @@ export function notifyExamScheduled(opts: {
   });
 }
 
+function resolveExamAudience(opts: { term: string; section?: string | null; courseCode: string }): NotificationTarget {
+  const section = cleanText(opts.section);
+  if (section) {
+    return {
+      targetType: 'SECTION',
+      targetValue: section,
+      targetYearTerm: cleanText(opts.term),
+    };
+  }
+
+  return {
+    targetType: 'COURSE',
+    targetValue: opts.courseCode,
+    targetYearTerm: null,
+  };
+}
+
+export function notifyExamReminder(opts: {
+  examId: string;
+  examName?: string | null;
+  courseCode: string;
+  courseTitle?: string | null;
+  examType?: string | null;
+  examDate: string;
+  examTime: string;
+  roomNumbers?: string[];
+  term: string;
+  section?: string | null;
+  minutesRemaining: number;
+}): Promise<void> {
+  const audience = resolveExamAudience({
+    term: opts.term,
+    section: opts.section,
+    courseCode: opts.courseCode,
+  });
+  const roomText = (opts.roomNumbers || []).filter(Boolean).join(', ');
+  const minutes = Math.max(1, Math.round(opts.minutesRemaining));
+  const roundedMinutes = minutes <= 15
+    ? 15
+    : minutes <= 30
+      ? 30
+      : minutes <= 60
+        ? 60
+        : 120;
+
+  return createNotification({
+    type: 'exam_reminder',
+    title: `Exam reminder — ${opts.courseCode}`,
+    body: `${opts.examType || opts.examName || 'Exam'} for ${opts.courseTitle || opts.courseCode} starts in about ${minutes} minutes on ${opts.examDate} at ${opts.examTime}${roomText ? ` in room ${roomText}` : ''}.`,
+    target_type: audience.targetType,
+    target_value: audience.targetValue,
+    target_year_term: audience.targetYearTerm,
+    created_by: null,
+    created_by_role: 'SYSTEM',
+    metadata: {
+      exam_id: opts.examId,
+      course_code: opts.courseCode,
+      course_title: opts.courseTitle || opts.courseCode,
+      exam_name: opts.examName,
+      exam_type: opts.examType,
+      exam_date: opts.examDate,
+      exam_time: opts.examTime,
+      term: opts.term,
+      section: opts.section,
+      room_numbers: opts.roomNumbers || [],
+      reminder_minutes_remaining: minutes,
+    },
+    dedupeKey: `exam-reminder:${opts.examId}:${roundedMinutes}`,
+  });
+}
+
 export function notifyAnnouncement(opts: {
   createdBy: string;
   createdByRole: 'TEACHER' | 'ADMIN' | 'STUDENT_CR';
