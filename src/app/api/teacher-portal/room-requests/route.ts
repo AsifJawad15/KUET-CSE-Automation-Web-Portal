@@ -4,7 +4,7 @@
 // ==========================================
 
 import { badRequest, guardSupabase, internalError, ok } from '@/lib/apiResponse';
-import { notifyTeacherRoomApproved, notifyTeacherRoomRejected } from '@/lib/notifications';
+import { notifyAdminRoomRequestPending, notifyTeacherRoomApproved, notifyTeacherRoomRejected } from '@/lib/notifications';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { requireFields, runValidations } from '@/lib/validators';
 import { NextRequest, NextResponse } from 'next/server';
@@ -51,6 +51,18 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    // Notify admin so they can review and approve the request
+    await notifyAdminRoomRequestPending({
+      teacherUserId: teacher_user_id || null,
+      teacherName: teacher_name || null,
+      roomNumber: room_number,
+      date,
+      startTime: start_time,
+      endTime: end_time,
+      purpose,
+      requestId: data.id as string,
+    });
 
     return ok(data);
   } catch (error: unknown) {

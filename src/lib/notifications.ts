@@ -39,6 +39,7 @@ export type NotificationType =
   | 'geo_attendance_open'
   | 'optional_course'
   | 'cr_room_request_submitted'
+  | 'room_request_submitted'
   | 'attendance_marking_reminder'
   | 'course_anomaly_alert';
 
@@ -176,15 +177,13 @@ export async function createNotification(input: CreateNotificationInput): Promis
         .from('notification_push_outbox')
         .upsert({ notification_id: inserted.id, status: 'pending' }, { onConflict: 'notification_id', ignoreDuplicates: true });
 
-      // Trigger immediate push dispatch (does not wait for Vercel cron)
-      void (async () => {
-        try {
-          const { dispatchPendingPushNotifications } = await import('./pushDispatch');
-          await dispatchPendingPushNotifications(10);
-        } catch (dispatchErr) {
-          console.error('[NotificationHelper] Immediate push dispatch failed:', dispatchErr);
-        }
-      })();
+      // Trigger immediate push dispatch
+      try {
+        const { dispatchPendingPushNotifications } = await import('./pushDispatch');
+        await dispatchPendingPushNotifications(10);
+      } catch (dispatchErr) {
+        console.error('[NotificationHelper] Immediate push dispatch failed:', dispatchErr);
+      }
     }
   } catch (err) {
     console.error('[NotificationHelper] Unexpected error:', err);
@@ -763,5 +762,43 @@ export function notifyStudentCourseAssigned(opts: {
       ...(opts.section?.trim() ? { section: opts.section.trim() } : {}),
     },
     dedupeKey: `student-course-assigned:${opts.courseCode}:${opts.term}:${opts.section?.trim() ?? 'all'}`,
+  });
+}
+
+// ── Notify admin when teacher submits a room request (web portal) ─────────────
+export function notifyAdminRoomRequestPending(opts: {
+  teacherUserId: string | null;
+  teacherName: string | null;
+  roomNumber: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  purpose: string;
+  requestId: string;
+}): Promise<void> {
+  const dayName = (() => {
+    const parsed = new Date(`${opts.date}T12:00:00`);
+    return Number.isNaN(parsed.getTime())
+      ? opts.date
+      : parsed.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+  })();
+  const who = opts.teacherName?.trim() || 'A teacher';
+  return createNotification({
+    type: 'room_request_submitted',
+    title: `Room Request — ${opts.roomNumber}`,
+    body: `${who} requested Room ${opts.roomNumber} on ${dayName} (${opts.startTime}–${opts.endTime}). Purpose: ${opts.purpose}.`,
+    target_type: 'ROLE',
+    target_value: 'ADMIN',
+    created_by: opts.teacherUserId,
+    created_by_role: 'TEACHER',
+    metadata: {
+      room_number: opts.roomNumber,
+      date: opts.date,
+      start_time: opts.startTime,
+      end_time: opts.endTime,
+      purpose: opts.purpose,
+      request_id: opts.requestId,
+    },
+    dedupeKey: `room-request:${opts.requestId}:submitted`,
   });
 }

@@ -6,7 +6,9 @@ import {
   createAnnouncement,
   getMyAnnouncements,
   deleteAnnouncement,
+  getMyCourses,
   type TeacherAnnouncement,
+  type TeacherCourse,
 } from '@/services/teacherPortalService';
 import { Plus, Trash2, Loader2, AlertCircle, CheckCircle2, Megaphone } from 'lucide-react';
 
@@ -32,6 +34,7 @@ const typeLabels: Record<string, string> = {
 export default function AnnouncementTab() {
   const { user } = useAuth();
   const [announcements, setAnnouncements] = useState<TeacherAnnouncement[]>([]);
+  const [courses, setCourses] = useState<TeacherCourse[]>([]);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -55,6 +58,11 @@ export default function AnnouncementTab() {
   }, [user?.id]);
 
   useEffect(() => { loadAnnouncements(); }, [loadAnnouncements]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    getMyCourses(user.id).then(setCourses);
+  }, [user?.id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,8 +124,15 @@ export default function AnnouncementTab() {
               <input type="text" value={form.title} onChange={e => updateField('title', e.target.value)} placeholder="Announcement title" className={inputClass} required />
             </div>
             <div>
-              <label className="block text-xs font-medium text-[#8B7355] dark:text-[#b1a7a6] mb-1">Course Code</label>
-              <input type="text" value={form.course_code} onChange={e => updateField('course_code', e.target.value)} placeholder="CSE 3201 (optional)" className={inputClass} />
+              <label className="block text-xs font-medium text-[#8B7355] dark:text-[#b1a7a6] mb-1">Course</label>
+              <select value={form.course_code} onChange={e => updateField('course_code', e.target.value)} className={inputClass}>
+                <option value="">All my students (no course filter)</option>
+                {courses.map(c => (
+                  <option key={c.offering_id} value={c.course_code}>
+                    {c.course_code} – {c.course_title}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 

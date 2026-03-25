@@ -85,7 +85,7 @@ async function resolveRecipients(target: NotificationRow): Promise<string[]> {
 
       let offeringQuery = db
         .from('course_offerings')
-        .select('term, section, courses!inner(code)')
+        .select('term, section, teacher_user_id, courses!inner(code)')
         .eq('courses.code', target.target_value)
         .eq('is_active', true);
 
@@ -96,13 +96,18 @@ async function resolveRecipients(target: NotificationRow): Promise<string[]> {
       const { data: offerings, error: offeringError } = await offeringQuery;
       if (offeringError) throw offeringError;
 
+      // Collect teacher user IDs from course offerings
+      const teacherIds = (offerings ?? [])
+        .map((row: { teacher_user_id?: string | null }) => row.teacher_user_id?.trim())
+        .filter((id): id is string => !!id);
+
       const pairs = uniq((offerings ?? []).map((row: { term?: string | null; section?: string | null }) => {
         const term = row.term?.trim() || '';
         const section = row.section?.trim() || '';
         return term && section ? `${term}::${section}` : '';
       }));
 
-      const recipients: string[] = [];
+      const recipients: string[] = [...teacherIds];
       for (const pair of pairs) {
         const [term, section] = pair.split('::');
         const { data: students, error: studentError } = await db
