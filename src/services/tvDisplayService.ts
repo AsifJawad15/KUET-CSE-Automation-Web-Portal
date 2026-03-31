@@ -11,6 +11,7 @@ import type {
   CmsTvSetting,
   CmsTvTicker,
   TvDisplayData,
+  TvTarget,
 } from '@/types/cms';
 
 // ── Fetch (used by both admin + public TV page) ────────
@@ -43,6 +44,49 @@ export async function fetchTvDisplayData(): Promise<TvDisplayData> {
   ]);
 
   // Convert settings array → key-value map
+  const settings: Record<string, string> = {};
+  (settingsRes.data as CmsTvSetting[] | null)?.forEach((row) => {
+    settings[row.key] = row.value;
+  });
+
+  return {
+    announcements: (announcementsRes.data as CmsTvAnnouncement[]) || [],
+    ticker: (tickerRes.data as CmsTvTicker[]) || [],
+    events: (eventsRes.data as CmsTvEvent[]) || [],
+    settings,
+  };
+}
+
+/**
+ * Fetch TV display data filtered by target (for Electron desktop player).
+ * Returns content where target matches the given value OR 'all'.
+ */
+export async function fetchTvDisplayDataForTarget(target: TvTarget): Promise<TvDisplayData> {
+  const [announcementsRes, tickerRes, settingsRes, eventsRes] = await Promise.all([
+    cmsSupabase
+      .from('cms_tv_announcements')
+      .select('*')
+      .eq('is_active', true)
+      .in('target', [target, 'all'])
+      .order('priority', { ascending: false })
+      .order('created_at', { ascending: false }),
+    cmsSupabase
+      .from('cms_tv_ticker')
+      .select('*')
+      .eq('is_active', true)
+      .in('target', [target, 'all'])
+      .order('sort_order', { ascending: true }),
+    cmsSupabase
+      .from('cms_tv_settings')
+      .select('*'),
+    cmsSupabase
+      .from('cms_tv_events')
+      .select('*')
+      .eq('is_active', true)
+      .in('target', [target, 'all'])
+      .order('display_order', { ascending: true }),
+  ]);
+
   const settings: Record<string, string> = {};
   (settingsRes.data as CmsTvSetting[] | null)?.forEach((row) => {
     settings[row.key] = row.value;

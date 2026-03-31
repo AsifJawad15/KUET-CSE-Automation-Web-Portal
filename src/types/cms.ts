@@ -152,6 +152,7 @@ export interface CmsProgram {
 
 export type TvAnnouncementType = 'notice' | 'class-test' | 'assignment' | 'lab-test' | 'quiz' | 'event' | 'other';
 export type TvAnnouncementPriority = 'low' | 'medium' | 'high';
+export type TvTarget = 'all' | 'TV1' | 'TV2';
 
 export interface CmsTvAnnouncement {
   id: string;
@@ -161,6 +162,7 @@ export interface CmsTvAnnouncement {
   course_code: string | null;
   priority: TvAnnouncementPriority;
   scheduled_date: string | null;
+  target: TvTarget;
   is_active: boolean;
   created_by: string;
   created_at: string;
@@ -174,6 +176,7 @@ export interface CmsTvTicker {
   type: TvAnnouncementType;
   course_code: string | null;
   announcement_id: string | null;
+  target: TvTarget;
   is_active: boolean;
   sort_order: number;
   created_at: string;
@@ -198,6 +201,7 @@ export interface CmsTvEvent {
   event_time: string | null;
   location: string | null;
   badge_text: string | null;
+  target: TvTarget;
   is_active: boolean;
   display_order: number;
   created_at: string;

@@ -1,0 +1,19 @@
+-- ============================================================
+-- TV Player Database Setup — DEPRECATED
+-- ============================================================
+--
+-- The TV Player app now uses the EXISTING CMS tables:
+--   - cms_tv_announcements
+--   - cms_tv_ticker
+--   - cms_tv_events
+--   - cms_tv_settings
+--
+-- These tables are created by:
+--   database/tv_display_setup.sql
+--   database/tv_display_v2_setup.sql
+--
+-- To add per-TV targeting (TV1 / TV2 / all), run the migration:
+--   database/tv_target_migration.sql
+--
+-- The tv_content table is no longer needed.
+-- ============================================================

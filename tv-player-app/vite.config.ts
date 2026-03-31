@@ -1,0 +1,25 @@
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+
+export default defineConfig({
+  plugins: [react()],
+  base: './',
+  // Read .env.local from the root project directory (shared with Next.js)
+  envDir: path.resolve(__dirname, '..'),
+  // Expose NEXT_PUBLIC_* vars alongside VITE_* vars
+  envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
+  build: {
+    outDir: 'dist',
+    emptyOutDir: true,
+  },
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, 'src'),
+    },
+  },
+  server: {
+    port: 5173,
+    strictPort: true,
+  },
+});

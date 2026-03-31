@@ -21,7 +21,7 @@ import {
     updateSetting,
     updateTicker,
 } from '@/services/tvDisplayService';
-import type { CmsTvAnnouncement, CmsTvEvent, CmsTvTicker, TvAnnouncementPriority, TvAnnouncementType } from '@/types/cms';
+import type { CmsTvAnnouncement, CmsTvEvent, CmsTvTicker, TvAnnouncementPriority, TvAnnouncementType, TvTarget } from '@/types/cms';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BarChart3, Bell, Calendar, ExternalLink, Monitor, Settings, Zap } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
@@ -67,6 +67,7 @@ export default function TVDisplayPage() {
     course_code: '',
     priority: 'medium' as TvAnnouncementPriority,
     scheduled_date: '',
+    target: 'all' as TvTarget,
   });
 
   // Ticker form
@@ -78,6 +79,7 @@ export default function TVDisplayPage() {
     type: 'notice' as TvAnnouncementType,
     course_code: '',
     sort_order: 0,
+    target: 'all' as TvTarget,
   });
 
   // Events
@@ -96,6 +98,7 @@ export default function TVDisplayPage() {
     location: '',
     badge_text: '',
     display_order: 0,
+    target: 'all' as TvTarget,
   });
 
   // ── Fetch all data ──
@@ -133,6 +136,7 @@ export default function TVDisplayPage() {
           course_code: formData.course_code || null,
           priority: formData.priority,
           scheduled_date: formData.scheduled_date || null,
+          target: formData.target,
         });
       } else {
         await createAnnouncement({
@@ -142,6 +146,7 @@ export default function TVDisplayPage() {
           course_code: formData.course_code || null,
           priority: formData.priority,
           scheduled_date: formData.scheduled_date || null,
+          target: formData.target,
           is_active: true,
           created_by: 'Admin',
         });
@@ -157,7 +162,7 @@ export default function TVDisplayPage() {
   };
 
   const resetForm = () => {
-    setFormData({ title: '', content: '', type: 'notice', course_code: '', priority: 'medium', scheduled_date: '' });
+    setFormData({ title: '', content: '', type: 'notice', course_code: '', priority: 'medium', scheduled_date: '', target: 'all' });
     setShowForm(false);
     setEditingId(null);
   };
@@ -170,6 +175,7 @@ export default function TVDisplayPage() {
       course_code: a.course_code || '',
       priority: a.priority as TvAnnouncementPriority,
       scheduled_date: a.scheduled_date || '',
+      target: (a.target || 'all') as TvTarget,
     });
     setEditingId(a.id);
     setShowForm(true);
@@ -199,6 +205,7 @@ export default function TVDisplayPage() {
           type: tickerFormData.type,
           course_code: tickerFormData.course_code || null,
           sort_order: tickerFormData.sort_order,
+          target: tickerFormData.target,
         });
       } else {
         await createTicker({
@@ -208,6 +215,7 @@ export default function TVDisplayPage() {
           course_code: tickerFormData.course_code || null,
           announcement_id: null,
           sort_order: tickerFormData.sort_order,
+          target: tickerFormData.target,
           is_active: true,
         });
       }
@@ -222,7 +230,7 @@ export default function TVDisplayPage() {
   };
 
   const resetTickerForm = () => {
-    setTickerFormData({ label: 'SPECIAL UPDATE', text: '', type: 'notice', course_code: '', sort_order: 0 });
+    setTickerFormData({ label: 'SPECIAL UPDATE', text: '', type: 'notice', course_code: '', sort_order: 0, target: 'all' });
     setShowTickerForm(false);
     setEditingTickerId(null);
   };
@@ -234,6 +242,7 @@ export default function TVDisplayPage() {
       type: t.type as TvAnnouncementType,
       course_code: t.course_code || '',
       sort_order: t.sort_order,
+      target: (t.target || 'all') as TvTarget,
     });
     setEditingTickerId(t.id);
     setShowTickerForm(true);
@@ -269,6 +278,7 @@ export default function TVDisplayPage() {
           location: eventFormData.location || null,
           badge_text: eventFormData.badge_text || null,
           display_order: eventFormData.display_order,
+          target: eventFormData.target,
         });
       } else {
         await createEvent({
@@ -283,6 +293,7 @@ export default function TVDisplayPage() {
           location: eventFormData.location || null,
           badge_text: eventFormData.badge_text || null,
           display_order: eventFormData.display_order,
+          target: eventFormData.target,
           is_active: true,
         });
       }
@@ -297,7 +308,7 @@ export default function TVDisplayPage() {
   };
 
   const resetEventForm = () => {
-    setEventFormData({ title: '', subtitle: '', description: '', image_url: '', speaker_name: '', speaker_image_url: '', event_date: '', event_time: '', location: '', badge_text: '', display_order: 0 });
+    setEventFormData({ title: '', subtitle: '', description: '', image_url: '', speaker_name: '', speaker_image_url: '', event_date: '', event_time: '', location: '', badge_text: '', display_order: 0, target: 'all' });
     setShowEventForm(false);
     setEditingEventId(null);
   };
@@ -315,6 +326,7 @@ export default function TVDisplayPage() {
       location: ev.location || '',
       badge_text: ev.badge_text || '',
       display_order: ev.display_order,
+      target: (ev.target || 'all') as TvTarget,
     });
     setEditingEventId(ev.id);
     setShowEventForm(true);
@@ -524,7 +536,7 @@ export default function TVDisplayPage() {
                   </select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-2">Course Code</label>
                   <input
@@ -543,6 +555,18 @@ export default function TVDisplayPage() {
                     onChange={(e) => setFormData({ ...formData, scheduled_date: e.target.value })}
                     className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all"
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-2">TV Target</label>
+                  <select
+                    value={formData.target}
+                    onChange={(e) => setFormData({ ...formData, target: e.target.value as TvTarget })}
+                    className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all"
+                  >
+                    <option value="all" className="bg-[#FAF7F3] dark:bg-[#161a1d]">All TVs</option>
+                    <option value="TV1" className="bg-[#FAF7F3] dark:bg-[#161a1d]">TV1 Only</option>
+                    <option value="TV2" className="bg-[#FAF7F3] dark:bg-[#161a1d]">TV2 Only</option>
+                  </select>
                 </div>
               </div>
               <div className="flex gap-3 pt-4 border-t border-[#DCC5B2] dark:border-[#3d4951]">
@@ -605,7 +629,7 @@ export default function TVDisplayPage() {
                   required
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-2">Type</label>
                   <select
@@ -629,6 +653,18 @@ export default function TVDisplayPage() {
                     onChange={(e) => setTickerFormData({ ...tickerFormData, sort_order: parseInt(e.target.value) || 0 })}
                     className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all"
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-2">TV Target</label>
+                  <select
+                    value={tickerFormData.target}
+                    onChange={(e) => setTickerFormData({ ...tickerFormData, target: e.target.value as TvTarget })}
+                    className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all"
+                  >
+                    <option value="all">All TVs</option>
+                    <option value="TV1">TV1 Only</option>
+                    <option value="TV2">TV2 Only</option>
+                  </select>
                 </div>
               </div>
               <div>
@@ -699,7 +735,7 @@ export default function TVDisplayPage() {
                   <input type="text" value={eventFormData.location} onChange={(e) => setEventFormData({ ...eventFormData, location: e.target.value })} placeholder="e.g., Seminar Room 301" className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white placeholder-[#8B7355] dark:placeholder-[#b1a7a6]/60 focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all" />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-4 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-2">Event Date</label>
                   <input type="date" value={eventFormData.event_date} onChange={(e) => setEventFormData({ ...eventFormData, event_date: e.target.value })} className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all" />
@@ -711,6 +747,14 @@ export default function TVDisplayPage() {
                 <div>
                   <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-2">Display Order</label>
                   <input type="number" value={eventFormData.display_order} onChange={(e) => setEventFormData({ ...eventFormData, display_order: parseInt(e.target.value) || 0 })} className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-2">TV Target</label>
+                  <select value={eventFormData.target} onChange={(e) => setEventFormData({ ...eventFormData, target: e.target.value as TvTarget })} className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all">
+                    <option value="all">All TVs</option>
+                    <option value="TV1">TV1 Only</option>
+                    <option value="TV2">TV2 Only</option>
+                  </select>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -859,6 +903,11 @@ export default function TVDisplayPage() {
                               {announcement.course_code}
                             </span>
                           )}
+                          {announcement.target && announcement.target !== 'all' && (
+                            <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+                              📺 {announcement.target}
+                            </span>
+                          )}
                         </div>
                       </div>
                       
@@ -981,6 +1030,11 @@ export default function TVDisplayPage() {
                           {item.course_code}
                         </span>
                       )}
+                      {item.target && item.target !== 'all' && (
+                        <span className="px-2 py-0.5 rounded text-xs font-bold bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+                          📺 {item.target}
+                        </span>
+                      )}
                       {!item.is_active && (
                         <span className="px-2 py-0.5 rounded text-xs font-medium bg-[#F0E4D3] dark:bg-[#3d4951]/30 text-[#8B7355] dark:text-[#b1a7a6]">
                           INACTIVE
@@ -1060,6 +1114,11 @@ export default function TVDisplayPage() {
                       {ev.badge_text && (
                         <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-teal-500/20 text-teal-400 border border-teal-500/30">
                           {ev.badge_text}
+                        </span>
+                      )}
+                      {ev.target && ev.target !== 'all' && (
+                        <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+                          📺 {ev.target}
                         </span>
                       )}
                       {!ev.is_active && (
