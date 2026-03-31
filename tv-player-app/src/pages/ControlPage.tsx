@@ -2,22 +2,21 @@ import { useEffect, useState, useCallback } from 'react';
 import {
   supabase,
   fetchAllTvDisplayData,
+  fetchActiveDevices,
   type CmsTvAnnouncement,
   type CmsTvTicker,
   type CmsTvEvent,
+  type CmsTvDevice,
 } from '../lib/supabase';
 
 export default function ControlPage() {
   const [displays, setDisplays] = useState<DisplayInfo[]>([]);
-  const [config, setConfig] = useState<DisplayConfig>({
-    tv1DisplayId: null,
-    tv2DisplayId: null,
-  });
+  const [config, setConfig] = useState<DisplayConfig>({});
   const [status, setStatus] = useState<AppStatus>({
-    tv1: 'stopped',
-    tv2: 'stopped',
+    tvStatus: {},
     displays: 0,
   });
+  const [devices, setDevices] = useState<CmsTvDevice[]>([]);
   const [announcements, setAnnouncements] = useState<CmsTvAnnouncement[]>([]);
   const [ticker, setTicker] = useState<CmsTvTicker[]>([]);
   const [events, setEvents] = useState<CmsTvEvent[]>([]);
@@ -25,6 +24,16 @@ export default function ControlPage() {
   const [message, setMessage] = useState('');
 
   const isElectron = !!window.electronAPI;
+
+  // ── Fetch active devices from Supabase ──
+  const refreshDevices = useCallback(async () => {
+    try {
+      const devs = await fetchActiveDevices();
+      setDevices(devs);
+    } catch (err) {
+      console.error('Failed to fetch devices:', err);
+    }
+  }, []);
 
   // ── Fetch Electron display/status info ──
   const refreshDisplays = useCallback(async () => {
@@ -52,23 +61,22 @@ export default function ControlPage() {
   }, []);
 
   useEffect(() => {
+    refreshDevices();
     refreshDisplays();
     fetchTvContent();
 
-    // Subscribe to realtime changes on CMS TV tables
     const channel = supabase
       .channel('tv-content-control')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cms_tv_announcements' }, () => fetchTvContent())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cms_tv_ticker' }, () => fetchTvContent())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cms_tv_events' }, () => fetchTvContent())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cms_tv_devices' }, () => refreshDevices())
       .subscribe();
 
-    // Listen for display hotplug events from Electron
     if (window.electronAPI) {
       window.electronAPI.onDisplaysChanged(() => refreshDisplays());
     }
 
-    // Poll app status every 5 seconds
     const interval = setInterval(async () => {
       if (window.electronAPI) {
         const s = await window.electronAPI.getAppStatus();
@@ -81,7 +89,7 @@ export default function ControlPage() {
       clearInterval(interval);
       window.electronAPI?.removeDisplaysChanged();
     };
-  }, [refreshDisplays, fetchTvContent]);
+  }, [refreshDisplays, refreshDevices, fetchTvContent]);
 
   // ── Actions ──
   const showMessage = (text: string) => {
@@ -115,6 +123,13 @@ export default function ControlPage() {
     refreshDisplays();
   };
 
+  // ── Derive TV names from devices or config ──
+  const tvNames = devices.length > 0
+    ? devices.map((d) => d.name)
+    : Object.keys(config).length > 0
+      ? Object.keys(config)
+      : ['TV1', 'TV2'];
+
   // ── Content preview helpers ──
   const countForTarget = (target: string) => {
     const a = announcements.filter((x) => x.target === target || x.target === 'all').length;
@@ -126,7 +141,7 @@ export default function ControlPage() {
   const renderContentPreview = (tv: string) => {
     const c = countForTarget(tv);
     return (
-      <div className="ctrl-card">
+      <div key={tv} className="ctrl-card">
         <h3 className="ctrl-card-title">{tv} Content</h3>
         <div className="ctrl-content-preview">
           <div className="ctrl-content-row">
@@ -165,20 +180,16 @@ export default function ControlPage() {
       <section className="ctrl-section">
         <h2>Status</h2>
         <div className="ctrl-status-grid">
-          <div
-            className={`ctrl-status-item ${
-              status.tv1 === 'running' ? 'status-ok' : 'status-off'
-            }`}
-          >
-            TV1: {status.tv1}
-          </div>
-          <div
-            className={`ctrl-status-item ${
-              status.tv2 === 'running' ? 'status-ok' : 'status-off'
-            }`}
-          >
-            TV2: {status.tv2}
-          </div>
+          {tvNames.map((name) => (
+            <div
+              key={name}
+              className={`ctrl-status-item ${
+                status.tvStatus[name] === 'running' ? 'status-ok' : 'status-off'
+              }`}
+            >
+              {name}: {status.tvStatus[name] || 'stopped'}
+            </div>
+          ))}
           <div className="ctrl-status-item">
             Displays connected: {status.displays}
           </div>
@@ -209,51 +220,28 @@ export default function ControlPage() {
             </div>
 
             <div className="ctrl-mapping-form">
-              <div className="ctrl-form-row">
-                <label>TV1 Display:</label>
-                <select
-                  value={config.tv1DisplayId ?? ''}
-                  onChange={(e) =>
-                    setConfig({
-                      ...config,
-                      tv1DisplayId: e.target.value
-                        ? Number(e.target.value)
-                        : null,
-                    })
-                  }
-                >
-                  <option value="">Auto-detect</option>
-                  {displays.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.isPrimary ? 'Primary' : 'External'} —{' '}
-                      {d.bounds.width}×{d.bounds.height} (ID: {d.id})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="ctrl-form-row">
-                <label>TV2 Display:</label>
-                <select
-                  value={config.tv2DisplayId ?? ''}
-                  onChange={(e) =>
-                    setConfig({
-                      ...config,
-                      tv2DisplayId: e.target.value
-                        ? Number(e.target.value)
-                        : null,
-                    })
-                  }
-                >
-                  <option value="">Auto-detect</option>
-                  {displays.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.isPrimary ? 'Primary' : 'External'} —{' '}
-                      {d.bounds.width}×{d.bounds.height} (ID: {d.id})
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {tvNames.map((name) => (
+                <div key={name} className="ctrl-form-row">
+                  <label>{name} Display:</label>
+                  <select
+                    value={config[name] ?? ''}
+                    onChange={(e) =>
+                      setConfig({
+                        ...config,
+                        [name]: e.target.value ? Number(e.target.value) : null,
+                      })
+                    }
+                  >
+                    <option value="">Auto-detect</option>
+                    {displays.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.isPrimary ? 'Primary' : 'External'} —{' '}
+                        {d.bounds.width}×{d.bounds.height} (ID: {d.id})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
 
               <div className="ctrl-form-actions">
                 <button onClick={handleSaveConfig} disabled={saving}>
@@ -279,8 +267,7 @@ export default function ControlPage() {
       <section className="ctrl-section">
         <h2>Current Content</h2>
         <div className="ctrl-content-grid">
-          {renderContentPreview('TV1')}
-          {renderContentPreview('TV2')}
+          {tvNames.map((name) => renderContentPreview(name))}
         </div>
       </section>
 
@@ -311,6 +298,10 @@ export default function ControlPage() {
           <li>
             If a TV is disconnected, use &quot;Reopen TV Windows&quot; after
             reconnecting.
+          </li>
+          <li>
+            Add new TVs from the admin web panel — they appear here
+            automatically.
           </li>
         </ul>
       </section>

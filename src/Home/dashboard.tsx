@@ -23,6 +23,7 @@ import { SchedulePage } from '@/modules/Schedule';
 import { AnnouncementTab, ChangePasswordTab, CourseStudentsTab, EditProfileTab, MyScheduleTab, RoomRequestTab, TakeAttendanceTab, TeacherPortalPage, UploadCSVTab } from '@/modules/TeacherPortal';
 import { TermUpgradePage } from '@/modules/TermUpgrade';
 import { TVDisplayPage } from '@/modules/TVDisplay';
+import { TVViewerPage } from '@/modules/TVDisplay';
 import { WebsiteCMSPage } from '@/modules/WebsiteCMS';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
@@ -40,7 +41,8 @@ interface PageEntry {
 
 const PAGE_REGISTRY: Record<string, PageEntry> = {
   'dashboard':          { render: (onMenuChange) => <DashboardOverview onMenuChange={onMenuChange} /> },
-  'tv-display':         { render: () => <TVDisplayPage /> },
+  'tv-display':         { render: (onMenuChange) => <TVDisplayPage onMenuChange={onMenuChange} /> },
+  'tv-viewer':           { render: (onMenuChange) => <TVViewerPage onMenuChange={onMenuChange} /> },
   'faculty-info':       { render: () => <FacultyInfoPage /> },
   'room-allocation':    { render: () => <RoomAllocationPage /> },
   'course-info':        { render: () => <CourseInfoPage /> },

@@ -152,7 +152,17 @@ export interface CmsProgram {
 
 export type TvAnnouncementType = 'notice' | 'class-test' | 'assignment' | 'lab-test' | 'quiz' | 'event' | 'other';
 export type TvAnnouncementPriority = 'low' | 'medium' | 'high';
-export type TvTarget = 'all' | 'TV1' | 'TV2';
+export type TvTarget = string; // 'all' | 'TV1' | 'TV2' | 'TV3' | ... (dynamic from cms_tv_devices)
+
+export interface CmsTvDevice {
+  id: string;
+  name: string;
+  label: string | null;
+  location: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
 export interface CmsTvAnnouncement {
   id: string;

@@ -7,6 +7,7 @@
 import { cmsSupabase } from '@/services/cmsService';
 import type {
   CmsTvAnnouncement,
+  CmsTvDevice,
   CmsTvEvent,
   CmsTvSetting,
   CmsTvTicker,
@@ -292,6 +293,73 @@ export async function toggleEvent(
 ): Promise<{ success: boolean; error?: string }> {
   const { error } = await cmsSupabase
     .from('cms_tv_events')
+    .update({ is_active: !isActive })
+    .eq('id', id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+// ── TV Device CRUD ─────────────────────────────────────
+
+export async function fetchAllDevices(): Promise<CmsTvDevice[]> {
+  const { data } = await cmsSupabase
+    .from('cms_tv_devices')
+    .select('*')
+    .order('name', { ascending: true });
+  return (data as CmsTvDevice[]) || [];
+}
+
+export async function fetchActiveDevices(): Promise<CmsTvDevice[]> {
+  const { data } = await cmsSupabase
+    .from('cms_tv_devices')
+    .select('*')
+    .eq('is_active', true)
+    .order('name', { ascending: true });
+  return (data as CmsTvDevice[]) || [];
+}
+
+export async function createDevice(
+  input: { name: string; label?: string; location?: string }
+): Promise<{ success: boolean; error?: string }> {
+  const { error } = await cmsSupabase.from('cms_tv_devices').insert({
+    name: input.name,
+    label: input.label || null,
+    location: input.location || null,
+    is_active: true,
+  });
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+export async function updateDevice(
+  id: string,
+  updates: Partial<CmsTvDevice>
+): Promise<{ success: boolean; error?: string }> {
+  const cleaned = { ...updates };
+  delete (cleaned as Record<string, unknown>).id;
+  delete (cleaned as Record<string, unknown>).created_at;
+  delete (cleaned as Record<string, unknown>).updated_at;
+
+  const { error } = await cmsSupabase
+    .from('cms_tv_devices')
+    .update(cleaned)
+    .eq('id', id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+export async function deleteDevice(id: string): Promise<{ success: boolean; error?: string }> {
+  const { error } = await cmsSupabase.from('cms_tv_devices').delete().eq('id', id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+export async function toggleDevice(
+  id: string,
+  isActive: boolean
+): Promise<{ success: boolean; error?: string }> {
+  const { error } = await cmsSupabase
+    .from('cms_tv_devices')
     .update({ is_active: !isActive })
     .eq('id', id);
   if (error) return { success: false, error: error.message };

@@ -15,5 +15,6 @@ export { StudentInfoPage } from './StudentInfo';
 export { TeacherPortalPage } from './TeacherPortal';
 export { TermUpgradePage } from './TermUpgrade';
 export { TVDisplayPage } from './TVDisplay';
+export { TVViewerPage } from './TVDisplay';
 export { WebsiteCMSPage } from './WebsiteCMS';
 

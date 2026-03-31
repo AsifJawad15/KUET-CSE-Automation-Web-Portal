@@ -2,15 +2,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { app } from 'electron';
 
+// Maps TV device names (e.g., 'TV1', 'TV2', 'TV3') to display IDs
 export interface DisplayMapping {
-  tv1DisplayId: number | null;
-  tv2DisplayId: number | null;
+  [tvName: string]: number | null;
 }
-
-const DEFAULT_CONFIG: DisplayMapping = {
-  tv1DisplayId: null,
-  tv2DisplayId: null,
-};
 
 export class DisplayConfigManager {
   private configPath: string;
@@ -25,15 +20,22 @@ export class DisplayConfigManager {
       if (fs.existsSync(this.configPath)) {
         const raw = fs.readFileSync(this.configPath, 'utf-8');
         const parsed = JSON.parse(raw);
-        return {
-          tv1DisplayId: typeof parsed.tv1DisplayId === 'number' ? parsed.tv1DisplayId : null,
-          tv2DisplayId: typeof parsed.tv2DisplayId === 'number' ? parsed.tv2DisplayId : null,
-        };
+        if (typeof parsed === 'object' && parsed !== null) {
+          // Migrate old format { tv1DisplayId, tv2DisplayId } to new format
+          if ('tv1DisplayId' in parsed && !('TV1' in parsed)) {
+            const migrated: DisplayMapping = {};
+            if (parsed.tv1DisplayId) migrated['TV1'] = parsed.tv1DisplayId;
+            if (parsed.tv2DisplayId) migrated['TV2'] = parsed.tv2DisplayId;
+            this.save(migrated);
+            return migrated;
+          }
+          return parsed as DisplayMapping;
+        }
       }
     } catch (err) {
       console.warn('Failed to load display config, using defaults:', err);
     }
-    return { ...DEFAULT_CONFIG };
+    return {};
   }
 
   save(config: DisplayMapping): void {
@@ -43,7 +45,7 @@ export class DisplayConfigManager {
         fs.mkdirSync(dir, { recursive: true });
       }
       fs.writeFileSync(this.configPath, JSON.stringify(config, null, 2), 'utf-8');
-      console.log('✅ Display config saved to:', this.configPath);
+      console.log('Display config saved to:', this.configPath);
     } catch (err) {
       console.error('Failed to save display config:', err);
     }
