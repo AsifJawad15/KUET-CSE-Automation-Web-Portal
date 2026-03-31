@@ -4,35 +4,42 @@ import SpotlightCard from '@/components/ui/SpotlightCard';
 import { cmsSupabase } from '@/services/cmsService';
 import {
     createAnnouncement,
+    createDevice,
     createEvent,
     createTicker,
     deleteAnnouncement,
+    deleteDevice,
     deleteEvent,
     deleteTicker,
+    fetchActiveDevices,
     fetchAllAnnouncements,
+    fetchAllDevices,
     fetchAllEvents,
     fetchAllTicker,
     fetchTvSettings,
     toggleAnnouncement,
+    toggleDevice,
     toggleEvent,
     toggleTicker,
     updateAnnouncement,
+    updateDevice,
     updateEvent,
     updateSetting,
     updateTicker,
 } from '@/services/tvDisplayService';
-import type { CmsTvAnnouncement, CmsTvEvent, CmsTvTicker, TvAnnouncementPriority, TvAnnouncementType, TvTarget } from '@/types/cms';
+import type { CmsTvAnnouncement, CmsTvDevice, CmsTvEvent, CmsTvTicker, TvAnnouncementPriority, TvAnnouncementType, TvTarget } from '@/types/cms';
 import { AnimatePresence, motion } from 'framer-motion';
-import { BarChart3, Bell, Calendar, ExternalLink, Monitor, Settings, Zap } from 'lucide-react';
+import { BarChart3, Bell, Calendar, ExternalLink, Eye, MapPin, Monitor, Plus, Settings, Tv, Zap } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
-type AdminTab = 'announcements' | 'ticker' | 'events' | 'settings';
+type AdminTab = 'announcements' | 'ticker' | 'events' | 'devices' | 'settings';
 
-export default function TVDisplayPage() {
+export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: string) => void }) {
   const [activeTab, setActiveTab] = useState<AdminTab>('announcements');
   const [announcements, setAnnouncements] = useState<CmsTvAnnouncement[]>([]);
   const [tickerItems, setTickerItems] = useState<CmsTvTicker[]>([]);
   const [settings, setSettings] = useState<Record<string, string>>({});
+  const [devices, setDevices] = useState<CmsTvDevice[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
@@ -104,16 +111,18 @@ export default function TVDisplayPage() {
   // ── Fetch all data ──
   const loadData = useCallback(async () => {
     try {
-      const [annData, tickData, settData, evtData] = await Promise.all([
+      const [annData, tickData, settData, evtData, devData] = await Promise.all([
         fetchAllAnnouncements(),
         fetchAllTicker(),
         fetchTvSettings(),
         fetchAllEvents(),
+        fetchAllDevices(),
       ]);
       setAnnouncements(annData);
       setTickerItems(tickData);
       setSettings(settData);
       setEventItems(evtData);
+      setDevices(devData);
     } catch (err) {
       console.error('Failed to load TV display data:', err);
     } finally {
@@ -189,7 +198,7 @@ export default function TVDisplayPage() {
   };
 
   const handleToggleActive = async (id: string, currentlyActive: boolean) => {
-    await toggleAnnouncement(id, !currentlyActive);
+    await toggleAnnouncement(id, currentlyActive);
     await loadData();
   };
 
@@ -256,7 +265,7 @@ export default function TVDisplayPage() {
   };
 
   const handleToggleTicker = async (id: string, currentlyActive: boolean) => {
-    await toggleTicker(id, !currentlyActive);
+    await toggleTicker(id, currentlyActive);
     await loadData();
   };
 
@@ -340,7 +349,7 @@ export default function TVDisplayPage() {
   };
 
   const handleToggleEvent = async (id: string, currentlyActive: boolean) => {
-    await toggleEvent(id, !currentlyActive);
+    await toggleEvent(id, currentlyActive);
     await loadData();
   };
 
@@ -393,6 +402,15 @@ export default function TVDisplayPage() {
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
+              onClick={() => onMenuChange?.('tv-viewer')}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-[#DCC5B2] dark:border-[#3d4951] text-[#5D4E37] dark:text-[#d3d3d3] hover:bg-[#F0E4D3] dark:hover:bg-[#0b090a] font-medium rounded-lg transition-all"
+            >
+              <Eye className="w-4 h-4" />
+              TV Viewer
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => window.open('/tv-display', '_blank')}
               className="inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-[#DCC5B2] dark:border-[#3d4951] text-[#5D4E37] dark:text-[#d3d3d3] hover:bg-[#F0E4D3] dark:hover:bg-[#0b090a] font-medium rounded-lg transition-all"
             >
@@ -414,7 +432,7 @@ export default function TVDisplayPage() {
         </div>
         
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-6 pt-6 border-t border-[#DCC5B2] dark:border-[#3d4951]">
+        <div className="grid grid-cols-2 sm:grid-cols-6 gap-4 mt-6 pt-6 border-t border-[#DCC5B2] dark:border-[#3d4951]">
           <div className="text-center">
             <p className="text-2xl font-bold text-[#5D4E37] dark:text-white">{announcements.length}</p>
             <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6]">Total</p>
@@ -436,8 +454,8 @@ export default function TVDisplayPage() {
             <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6]">Events</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold text-[#D9A299] dark:text-[#ba181b]">{announcements.filter(a => a.scheduled_date).length}</p>
-            <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6]">Scheduled</p>
+            <p className="text-2xl font-bold text-purple-500 dark:text-purple-400">{devices.filter(d => d.is_active).length}</p>
+            <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6]">Active TVs</p>
           </div>
         </div>
       </SpotlightCard>
@@ -448,6 +466,7 @@ export default function TVDisplayPage() {
           { id: 'announcements' as AdminTab, label: 'Announcements', icon: Bell },
           { id: 'ticker' as AdminTab, label: 'Ticker Items', icon: Zap },
           { id: 'events' as AdminTab, label: 'Events', icon: Calendar },
+          { id: 'devices' as AdminTab, label: 'TV Devices', icon: Tv },
           { id: 'settings' as AdminTab, label: 'Settings', icon: Settings },
         ]).map(tab => {
           const Icon = tab.icon;
@@ -564,8 +583,11 @@ export default function TVDisplayPage() {
                     className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all"
                   >
                     <option value="all" className="bg-[#FAF7F3] dark:bg-[#161a1d]">All TVs</option>
-                    <option value="TV1" className="bg-[#FAF7F3] dark:bg-[#161a1d]">TV1 Only</option>
-                    <option value="TV2" className="bg-[#FAF7F3] dark:bg-[#161a1d]">TV2 Only</option>
+                    {devices.filter(d => d.is_active).map(d => (
+                      <option key={d.id} value={d.name} className="bg-[#FAF7F3] dark:bg-[#161a1d]">
+                        {d.name}{d.label ? ` — ${d.label}` : ''}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -662,8 +684,9 @@ export default function TVDisplayPage() {
                     className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all"
                   >
                     <option value="all">All TVs</option>
-                    <option value="TV1">TV1 Only</option>
-                    <option value="TV2">TV2 Only</option>
+                    {devices.filter(d => d.is_active).map(d => (
+                      <option key={d.id} value={d.name}>{d.name}{d.label ? ` — ${d.label}` : ''}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -752,8 +775,9 @@ export default function TVDisplayPage() {
                   <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-2">TV Target</label>
                   <select value={eventFormData.target} onChange={(e) => setEventFormData({ ...eventFormData, target: e.target.value as TvTarget })} className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all">
                     <option value="all">All TVs</option>
-                    <option value="TV1">TV1 Only</option>
-                    <option value="TV2">TV2 Only</option>
+                    {devices.filter(d => d.is_active).map(d => (
+                      <option key={d.id} value={d.name}>{d.name}{d.label ? ` — ${d.label}` : ''}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -1171,6 +1195,11 @@ export default function TVDisplayPage() {
       {activeTab === 'settings' && (
         <SettingsTab settings={settings} onSave={handleSaveSetting} />
       )}
+
+      {/* ══════ TAB: TV Devices ══════ */}
+      {activeTab === 'devices' && (
+        <DevicesTab devices={devices} onReload={loadData} />
+      )}
     </div>
   );
 }
@@ -1266,6 +1295,228 @@ function SettingsTab({ settings, onSave }: { settings: Record<string, string>; o
           </SpotlightCard>
         );
       })}
+    </div>
+  );
+}
+
+
+// ══════════════════════════════════════
+// Devices Tab Component
+// ══════════════════════════════════════
+
+function DevicesTab({ devices, onReload }: { devices: CmsTvDevice[]; onReload: () => Promise<void> }) {
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState({ name: '', label: '', location: '' });
+
+  const resetForm = () => {
+    setFormData({ name: '', label: '', location: '' });
+    setShowForm(false);
+    setEditingId(null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      if (editingId) {
+        const res = await updateDevice(editingId, {
+          name: formData.name,
+          label: formData.label || null,
+          location: formData.location || null,
+        });
+        if (!res.success) { alert(res.error); return; }
+      } else {
+        const res = await createDevice({
+          name: formData.name,
+          label: formData.label || undefined,
+          location: formData.location || undefined,
+        });
+        if (!res.success) { alert(res.error); return; }
+      }
+      resetForm();
+      await onReload();
+    } catch (err) {
+      console.error('Failed to save device:', err);
+      alert('Failed to save device.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleEdit = (d: CmsTvDevice) => {
+    setFormData({ name: d.name, label: d.label || '', location: d.location || '' });
+    setEditingId(d.id);
+    setShowForm(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (confirm('Delete this TV device? Content targeting it will need to be updated.')) {
+      await deleteDevice(id);
+      await onReload();
+    }
+  };
+
+  const handleToggle = async (id: string, isActive: boolean) => {
+    await toggleDevice(id, !isActive);
+    await onReload();
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center mb-2">
+        <p className="text-sm text-[#8B7355] dark:text-[#b1a7a6]">
+          Manage physical TV screens. Each device can be targeted with specific content.
+        </p>
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => setShowForm(true)}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#ba181b] dark:to-[#e5383b] text-white font-medium rounded-lg transition-all text-sm"
+        >
+          <Plus className="w-4 h-4" />
+          Add TV Device
+        </motion.button>
+      </div>
+
+      {/* Device form modal */}
+      <AnimatePresence>
+        {showForm && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-[#FAF7F3] dark:bg-[#161a1d] rounded-2xl shadow-2xl w-full max-w-md border border-[#DCC5B2] dark:border-[#3d4951]"
+            >
+              <div className="p-6 border-b border-[#DCC5B2] dark:border-[#3d4951]">
+                <h2 className="text-xl font-bold text-[#5D4E37] dark:text-white">
+                  {editingId ? 'Edit TV Device' : 'Add New TV Device'}
+                </h2>
+              </div>
+              <form onSubmit={handleSubmit} className="p-6 space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-2">Device Name *</label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '') })}
+                    placeholder="e.g., TV3"
+                    className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white placeholder-[#8B7355] dark:placeholder-[#b1a7a6]/60 focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all font-mono"
+                    required
+                  />
+                  <p className="text-xs text-[#8B7355] dark:text-[#b1a7a6] mt-1">Unique identifier (uppercase, no spaces)</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-2">Label</label>
+                  <input
+                    type="text"
+                    value={formData.label}
+                    onChange={(e) => setFormData({ ...formData, label: e.target.value })}
+                    placeholder="e.g., Seminar Room TV"
+                    className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white placeholder-[#8B7355] dark:placeholder-[#b1a7a6]/60 focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#5D4E37] dark:text-[#d3d3d3] mb-2">Location</label>
+                  <input
+                    type="text"
+                    value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    placeholder="e.g., 3rd Floor Corridor"
+                    className="w-full px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg bg-[#FAF7F3] dark:bg-[#0b090a] text-[#5D4E37] dark:text-white placeholder-[#8B7355] dark:placeholder-[#b1a7a6]/60 focus:ring-2 focus:ring-[#D9A299] dark:focus:ring-[#ba181b] focus:border-transparent transition-all"
+                  />
+                </div>
+                <div className="flex gap-3 pt-4 border-t border-[#DCC5B2] dark:border-[#3d4951]">
+                  <button type="button" onClick={resetForm} className="flex-1 px-4 py-3 border border-[#DCC5B2] dark:border-[#3d4951] rounded-lg text-[#5D4E37] dark:text-[#d3d3d3] hover:bg-[#F0E4D3] dark:hover:bg-[#0b090a] font-medium transition-colors">
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={saving} className="flex-1 px-4 py-3 bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#ba181b] dark:to-[#e5383b] text-white rounded-lg font-medium transition-all disabled:opacity-50">
+                    {saving ? 'Saving...' : editingId ? 'Update' : 'Add Device'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Device list */}
+      {devices.length === 0 ? (
+        <SpotlightCard className="rounded-2xl border border-[#DCC5B2] dark:border-[#3d4951] bg-[#FAF7F3] dark:bg-transparent p-12 text-center" spotlightColor="rgba(217, 162, 153, 0.2)">
+          <Tv className="w-12 h-12 text-[#8B7355] dark:text-[#b1a7a6]/70 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-[#5D4E37] dark:text-white mb-2">No TV Devices</h3>
+          <p className="text-[#8B7355] dark:text-[#b1a7a6]">Add TV devices to target content to specific screens</p>
+        </SpotlightCard>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {devices.map((device) => (
+            <motion.div
+              key={device.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`bg-[#FAF7F3] dark:bg-[#161a1d] rounded-xl border border-[#DCC5B2] dark:border-[#3d4951] p-5 transition-all hover:border-[#D9A299] dark:hover:border-[#ba181b]/30 ${
+                !device.is_active && 'opacity-60'
+              }`}
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                    device.is_active
+                      ? 'bg-gradient-to-br from-[#D9A299] to-[#DCC5B2] dark:from-[#ba181b] dark:to-[#e5383b]'
+                      : 'bg-[#F0E4D3] dark:bg-[#3d4951]/30'
+                  }`}>
+                    <Tv className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-[#5D4E37] dark:text-white font-mono">{device.name}</h3>
+                    {device.label && <p className="text-sm text-[#8B7355] dark:text-[#b1a7a6]">{device.label}</p>}
+                  </div>
+                </div>
+                {!device.is_active && (
+                  <span className="px-2 py-0.5 rounded text-xs font-medium bg-[#F0E4D3] dark:bg-[#3d4951]/30 text-[#8B7355] dark:text-[#b1a7a6]">
+                    INACTIVE
+                  </span>
+                )}
+              </div>
+
+              {device.location && (
+                <div className="flex items-center gap-2 text-sm text-[#8B7355] dark:text-[#b1a7a6] mb-4">
+                  <MapPin className="w-4 h-4" />
+                  {device.location}
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 pt-3 border-t border-[#DCC5B2] dark:border-[#3d4951]">
+                <button
+                  onClick={() => handleToggle(device.id, device.is_active)}
+                  className={`p-2 rounded-lg transition-colors ${device.is_active ? 'text-emerald-400 hover:bg-emerald-500/10' : 'text-[#8B7355] dark:text-white/40 hover:bg-white/5'}`}
+                  title={device.is_active ? 'Deactivate' : 'Activate'}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {device.is_active ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M3 3l18 18" />
+                    )}
+                  </svg>
+                </button>
+                <button onClick={() => handleEdit(device)} className="p-2 rounded-lg text-[#8B7355] dark:text-[#d3d3d3] hover:bg-[#F0E4D3] dark:hover:bg-[#d3d3d3]/10 transition-colors" title="Edit">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+                <button onClick={() => handleDelete(device.id)} className="p-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors" title="Delete">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

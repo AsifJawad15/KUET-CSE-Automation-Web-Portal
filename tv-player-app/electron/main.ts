@@ -17,8 +17,8 @@ const isDev = !app.isPackaged;
 const VITE_DEV_URL = 'http://localhost:5173';
 
 let controlWindow: BrowserWindow | null = null;
-let tv1Window: BrowserWindow | null = null;
-let tv2Window: BrowserWindow | null = null;
+// Dynamic map of TV name → BrowserWindow
+const tvWindows = new Map<string, BrowserWindow>();
 let tray: Tray | null = null;
 let appQuitting = false;
 
@@ -77,7 +77,7 @@ function createControlWindow() {
 // ── TV Window ────────────────────────────────────────
 
 function createTvWindow(
-  target: 'TV1' | 'TV2',
+  target: string,
   display: Electron.Display
 ): BrowserWindow {
   const win = new BrowserWindow({
@@ -121,104 +121,93 @@ function createTvWindow(
 
 // ── Display Mapping ──────────────────────────────────
 
-function getDisplayMapping(): {
-  tv1Display: Electron.Display | null;
-  tv2Display: Electron.Display | null;
-} {
+function getDisplayMapping(): Map<string, Electron.Display | null> {
   const displays = screen.getAllDisplays();
   const config = configManager.load();
   const primary = screen.getPrimaryDisplay();
-
-  // External displays (not the primary monitor)
   const externals = displays.filter((d) => d.id !== primary.id);
 
-  let tv1Display: Electron.Display | null = null;
-  let tv2Display: Electron.Display | null = null;
+  const result = new Map<string, Electron.Display | null>();
+  const tvNames = Object.keys(config);
 
-  // Try saved config first
-  if (config.tv1DisplayId) {
-    tv1Display =
-      displays.find((d) => d.id === config.tv1DisplayId) || null;
-  }
-  if (config.tv2DisplayId) {
-    tv2Display =
-      displays.find((d) => d.id === config.tv2DisplayId) || null;
+  // If no config saved, default to TV1/TV2
+  if (tvNames.length === 0) {
+    tvNames.push('TV1', 'TV2');
   }
 
-  // Fallback: auto-assign external displays
-  if (!tv1Display && externals.length >= 1) {
-    tv1Display = externals[0];
-    console.log(
-      `Auto-assigned TV1 to external display ${tv1Display.id} (${tv1Display.bounds.width}×${tv1Display.bounds.height})`
-    );
+  const usedDisplayIds = new Set<number>();
+
+  // First pass: resolve configured display IDs
+  for (const name of tvNames) {
+    const savedId = config[name];
+    if (savedId != null) {
+      const found = displays.find((d) => d.id === savedId);
+      if (found) {
+        result.set(name, found);
+        usedDisplayIds.add(found.id);
+      } else {
+        result.set(name, null);
+      }
+    } else {
+      result.set(name, null);
+    }
   }
-  if (!tv2Display && externals.length >= 2) {
-    // Avoid assigning the same display as TV1
-    const remaining = externals.filter(
-      (d) => d.id !== tv1Display?.id
-    );
-    if (remaining.length > 0) {
-      tv2Display = remaining[0];
+
+  // Second pass: auto-assign unresolved TVs to available externals
+  const availableExternals = externals.filter(
+    (d) => !usedDisplayIds.has(d.id)
+  );
+  let extIdx = 0;
+  for (const name of tvNames) {
+    if (result.get(name) === null && extIdx < availableExternals.length) {
+      const ext = availableExternals[extIdx++];
+      result.set(name, ext);
       console.log(
-        `Auto-assigned TV2 to external display ${tv2Display.id} (${tv2Display.bounds.width}×${tv2Display.bounds.height})`
+        `Auto-assigned ${name} to external display ${ext.id} (${ext.bounds.width}×${ext.bounds.height})`
       );
     }
   }
 
-  // Warning logs
   if (externals.length === 0) {
     console.warn(
-      '⚠️  No external displays detected. Ensure Windows is in EXTEND display mode.'
-    );
-    console.warn(
-      '    Right-click Desktop → Display Settings → Multiple displays → Extend these displays'
-    );
-  }
-  if (!tv1Display) {
-    console.warn(
-      '⚠️  No display found for TV1. Connect a second monitor via HDMI.'
-    );
-  }
-  if (!tv2Display) {
-    console.warn(
-      '⚠️  No display found for TV2. Connect a third monitor via HDMI.'
+      'No external displays detected. Ensure Windows is in EXTEND display mode.'
     );
   }
 
-  return { tv1Display, tv2Display };
+  return result;
 }
 
 // ── Open / Close TV Windows ──────────────────────────
 
-function closeTvWindow(win: BrowserWindow | null): null {
+function closeTvWindow(name: string): void {
+  const win = tvWindows.get(name);
   if (win && !win.isDestroyed()) {
-    // Temporarily allow close
     appQuitting = true;
     win.close();
     appQuitting = false;
   }
-  return null;
+  tvWindows.delete(name);
+}
+
+function closeAllTvWindows(): void {
+  for (const name of Array.from(tvWindows.keys())) {
+    closeTvWindow(name);
+  }
 }
 
 function openTvWindows() {
-  // Close existing TV windows first
-  tv1Window = closeTvWindow(tv1Window);
-  tv2Window = closeTvWindow(tv2Window);
+  closeAllTvWindows();
 
-  const { tv1Display, tv2Display } = getDisplayMapping();
+  const mapping = getDisplayMapping();
 
-  if (tv1Display) {
-    tv1Window = createTvWindow('TV1', tv1Display);
-    console.log(
-      `✅ TV1 window opened on display ${tv1Display.id} — ${tv1Display.bounds.width}×${tv1Display.bounds.height} at (${tv1Display.bounds.x}, ${tv1Display.bounds.y})`
-    );
-  }
-
-  if (tv2Display) {
-    tv2Window = createTvWindow('TV2', tv2Display);
-    console.log(
-      `✅ TV2 window opened on display ${tv2Display.id} — ${tv2Display.bounds.width}×${tv2Display.bounds.height} at (${tv2Display.bounds.x}, ${tv2Display.bounds.y})`
-    );
+  for (const [name, display] of mapping) {
+    if (display) {
+      const win = createTvWindow(name, display);
+      tvWindows.set(name, win);
+      console.log(
+        `${name} window opened on display ${display.id} — ${display.bounds.width}×${display.bounds.height} at (${display.bounds.x}, ${display.bounds.y})`
+      );
+    }
   }
 }
 
@@ -321,17 +310,20 @@ function setupIPC() {
   });
 
   ipcMain.handle('close-tv-windows', () => {
-    tv1Window = closeTvWindow(tv1Window);
-    tv2Window = closeTvWindow(tv2Window);
+    closeAllTvWindows();
     return { success: true };
   });
 
   ipcMain.handle('get-app-status', () => {
+    const tvStatus: Record<string, 'running' | 'stopped'> = {};
+    const config = configManager.load();
+    const names = Object.keys(config).length > 0 ? Object.keys(config) : ['TV1', 'TV2'];
+    for (const name of names) {
+      const win = tvWindows.get(name);
+      tvStatus[name] = win && !win.isDestroyed() ? 'running' : 'stopped';
+    }
     return {
-      tv1:
-        tv1Window && !tv1Window.isDestroyed() ? 'running' : 'stopped',
-      tv2:
-        tv2Window && !tv2Window.isDestroyed() ? 'running' : 'stopped',
+      tvStatus,
       displays: screen.getAllDisplays().length,
     };
   });

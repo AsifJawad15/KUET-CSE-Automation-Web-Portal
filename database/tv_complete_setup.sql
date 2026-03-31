@@ -175,8 +175,7 @@ DO $$ BEGIN
       AND column_name = 'target'
   ) THEN
     ALTER TABLE public.cms_tv_announcements
-      ADD COLUMN target TEXT NOT NULL DEFAULT 'all'
-      CHECK (target IN ('all', 'TV1', 'TV2'));
+      ADD COLUMN target TEXT NOT NULL DEFAULT 'all';
   END IF;
 END $$;
 
@@ -188,8 +187,7 @@ DO $$ BEGIN
       AND column_name = 'target'
   ) THEN
     ALTER TABLE public.cms_tv_ticker
-      ADD COLUMN target TEXT NOT NULL DEFAULT 'all'
-      CHECK (target IN ('all', 'TV1', 'TV2'));
+      ADD COLUMN target TEXT NOT NULL DEFAULT 'all';
   END IF;
 END $$;
 
@@ -201,8 +199,7 @@ DO $$ BEGIN
       AND column_name = 'target'
   ) THEN
     ALTER TABLE public.cms_tv_events
-      ADD COLUMN target TEXT NOT NULL DEFAULT 'all'
-      CHECK (target IN ('all', 'TV1', 'TV2'));
+      ADD COLUMN target TEXT NOT NULL DEFAULT 'all';
   END IF;
 END $$;
 

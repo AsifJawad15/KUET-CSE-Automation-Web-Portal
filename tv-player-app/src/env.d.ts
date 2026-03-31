@@ -18,13 +18,11 @@ interface DisplayInfo {
 }
 
 interface DisplayConfig {
-  tv1DisplayId: number | null;
-  tv2DisplayId: number | null;
+  [tvName: string]: number | null;
 }
 
 interface AppStatus {
-  tv1: 'running' | 'stopped';
-  tv2: 'running' | 'stopped';
+  tvStatus: Record<string, 'running' | 'stopped'>;
   displays: number;
 }
 

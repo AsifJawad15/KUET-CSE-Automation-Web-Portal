@@ -16,7 +16,17 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export type TvAnnouncementType = 'notice' | 'class-test' | 'assignment' | 'lab-test' | 'quiz' | 'event' | 'other';
 export type TvAnnouncementPriority = 'low' | 'medium' | 'high';
-export type TvTarget = 'all' | 'TV1' | 'TV2';
+export type TvTarget = string; // dynamic: 'all' | 'TV1' | 'TV2' | 'TV3' | ...
+
+export interface CmsTvDevice {
+  id: string;
+  name: string;
+  label: string | null;
+  location: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
 export interface CmsTvAnnouncement {
   id: string;
@@ -159,4 +169,16 @@ export async function fetchAllTvDisplayData(): Promise<TvDisplayData> {
     events: (eventsRes.data as CmsTvEvent[]) || [],
     settings,
   };
+}
+
+/**
+ * Fetch all active TV devices from the database.
+ */
+export async function fetchActiveDevices(): Promise<CmsTvDevice[]> {
+  const { data } = await supabase
+    .from('cms_tv_devices')
+    .select('*')
+    .eq('is_active', true)
+    .order('name', { ascending: true });
+  return (data as CmsTvDevice[]) || [];
 }
