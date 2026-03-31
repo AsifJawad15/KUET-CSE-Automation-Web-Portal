@@ -16,10 +16,13 @@ import {
 import {
   supabase,
   fetchTvDisplayDataForTarget,
+  fetchDeviceByName,
+  fetchTodayRoutineSlots,
   type CmsTvAnnouncement,
   type CmsTvEvent,
   type CmsTvTicker,
   type TvTarget,
+  type RoutineSlotWithDetails,
 } from '../lib/supabase';
 
 // Color palette (matches the web TV display)
@@ -39,6 +42,36 @@ const C = {
 
 const POLL_MS = 30_000;
 
+// ── Routine helpers ──
+
+function timeToMins(t: string): number {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + (m || 0);
+}
+
+interface TimePeriod {
+  start_time: string;
+  end_time: string;
+  slots: RoutineSlotWithDetails[];
+}
+
+function buildPeriods(slots: RoutineSlotWithDetails[]): TimePeriod[] {
+  const sorted = [...slots].sort((a, b) => a.start_time.localeCompare(b.start_time));
+  const map = new Map<string, TimePeriod>();
+  for (const s of sorted) {
+    if (!map.has(s.start_time)) map.set(s.start_time, { start_time: s.start_time, end_time: s.end_time, slots: [] });
+    map.get(s.start_time)!.slots.push(s);
+  }
+  return Array.from(map.values()).sort((a, b) => a.start_time.localeCompare(b.start_time));
+}
+
+function formatTime12(time: string | null | undefined): string {
+  if (!time) return '-';
+  const [h, m] = time.split(':').map(Number);
+  const period = h >= 12 ? 'PM' : 'AM';
+  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${period}`;
+}
+
 export default function PlayerPage() {
   const [searchParams] = useSearchParams();
   const target = (searchParams.get('target') || 'TV1') as TvTarget;
@@ -48,6 +81,8 @@ export default function PlayerPage() {
   const [ticker, setTicker] = useState<CmsTvTicker[]>([]);
   const [events, setEvents] = useState<CmsTvEvent[]>([]);
   const [settings, setSettings] = useState<Record<string, string>>({});
+  const [routineSlots, setRoutineSlots] = useState<RoutineSlotWithDetails[]>([]);
+  const [showRoomSchedule, setShowRoomSchedule] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,6 +90,7 @@ export default function PlayerPage() {
   const [now, setNow] = useState(new Date());
   const [eventPage, setEventPage] = useState(0);
   const [tickerIndex, setTickerIndex] = useState(0);
+  const [upcomingIdx, setUpcomingIdx] = useState(0);
   const autoRotateRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const headlinePrefix = settings.headline_prefix || 'HEADLINES';
@@ -63,11 +99,17 @@ export default function PlayerPage() {
   // ── Fetch data ──
   const fetchData = useCallback(async () => {
     try {
-      const data = await fetchTvDisplayDataForTarget(target);
+      const [data, device, slots] = await Promise.all([
+        fetchTvDisplayDataForTarget(target),
+        fetchDeviceByName(target),
+        fetchTodayRoutineSlots().catch(() => [] as RoutineSlotWithDetails[]),
+      ]);
       setAnnouncements(data.announcements);
       setTicker(data.ticker);
       setEvents(data.events);
       setSettings(data.settings);
+      setShowRoomSchedule(device?.show_room_schedule ?? true);
+      setRoutineSlots(slots);
       setError(null);
     } catch (err) {
       console.error(`[${target}] Fetch error:`, err);
@@ -82,13 +124,14 @@ export default function PlayerPage() {
     fetchData();
     const pollInterval = setInterval(fetchData, POLL_MS);
 
-    // Subscribe to realtime changes on all 3 content tables
+    // Subscribe to realtime changes on all content tables + device settings
     const channel = supabase
       .channel(`tv-display-${target}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cms_tv_announcements' }, () => fetchData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cms_tv_ticker' }, () => fetchData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cms_tv_events' }, () => fetchData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cms_tv_settings' }, () => fetchData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cms_tv_devices' }, () => fetchData())
       .subscribe((status) => {
         console.log(`[${target}] Realtime subscription:`, status);
       });
@@ -128,6 +171,24 @@ export default function PlayerPage() {
     );
     return () => clearInterval(interval);
   }, [ticker.length]);
+
+  // Slide upcoming periods every 20s
+  useEffect(() => {
+    const t = setInterval(() => setUpcomingIdx(prev => (prev === 0 ? 1 : 0)), 20_000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Schedule data
+  const periods = useMemo(() => buildPeriods(routineSlots), [routineSlots]);
+  const nowMins = now.getHours() * 60 + now.getMinutes();
+  const currentPeriod = useMemo(
+    () => periods.find(p => nowMins >= timeToMins(p.start_time) && nowMins < timeToMins(p.end_time)) ?? null,
+    [periods, nowMins],
+  );
+  const upcomingPeriods = useMemo(
+    () => periods.filter(p => timeToMins(p.start_time) > nowMins).slice(0, 2),
+    [periods, nowMins],
+  );
 
   // Clock formatting
   const timeStr = now.toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit' });
@@ -215,7 +276,7 @@ export default function PlayerPage() {
       <main className="flex-1 min-h-0 flex overflow-hidden">
 
         {/* Events panel */}
-        <section className="flex-1 min-w-0 flex flex-col p-4 overflow-hidden">
+        <section className={`${showRoomSchedule ? 'flex-[80]' : 'flex-1'} min-w-0 flex flex-col p-4 ${showRoomSchedule ? 'pr-2' : ''} overflow-hidden`}>
           <div className="flex-shrink-0 flex items-center justify-between mb-2">
             <h2 className="text-sm font-black tracking-[0.2em] uppercase" style={{ color: C.gold }}>
               Department News &amp; Events
@@ -266,6 +327,130 @@ export default function PlayerPage() {
             </AnimatePresence>
           </div>
         </section>
+
+        {/* RIGHT: Room Schedule (conditional) */}
+        {showRoomSchedule && (
+        <section className="flex-[20] min-w-0 flex flex-col p-4 pl-2 overflow-hidden gap-2">
+          <h2 className="flex-shrink-0 text-xs font-black tracking-[0.18em] uppercase" style={{ color: C.gold }}>
+            Live Room Schedule
+          </h2>
+
+          {/* CURRENT PERIOD */}
+          <div className="flex-[55] min-h-0 rounded-xl overflow-hidden flex flex-col"
+            style={{
+              background: currentPeriod
+                ? 'linear-gradient(135deg, #004d40 0%, #00695c 60%, #00796b 100%)'
+                : `linear-gradient(135deg, ${C.navy} 0%, ${C.navyDark} 100%)`,
+              border: `1px solid ${currentPeriod ? 'rgba(0,200,150,0.3)' : C.border}`,
+            }}>
+            <div className="flex-shrink-0 px-3 py-2 flex items-center gap-2"
+              style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              {currentPeriod ? (
+                <>
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black tracking-widest uppercase"
+                    style={{ background: 'rgba(255,193,7,0.2)', color: C.gold, border: '1px solid rgba(255,193,7,0.4)' }}>
+                    <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: C.gold }} />
+                    NOW
+                  </span>
+                  <span className="text-xs font-mono font-bold" style={{ color: C.white }}>
+                    {formatTime12(currentPeriod.start_time)} - {formatTime12(currentPeriod.end_time)}
+                  </span>
+                </>
+              ) : (
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black tracking-widest uppercase"
+                  style={{ background: 'rgba(255,255,255,0.07)', color: C.textMuted, border: `1px solid ${C.border}` }}>
+                  <Clock className="w-3 h-3" />
+                  BETWEEN CLASSES
+                </span>
+              )}
+            </div>
+            <div className="flex-1 min-h-0 overflow-hidden flex flex-col p-2 gap-1.5">
+              {currentPeriod ? (
+                currentPeriod.slots.map(slot => (
+                  <div key={slot.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg"
+                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <span className="flex-shrink-0 px-2 py-0.5 rounded text-xs font-black tabular-nums"
+                      style={{ background: C.gold, color: C.navyDark, minWidth: '2.5rem', textAlign: 'center' }}>
+                      {slot.room_number}
+                    </span>
+                    <span className="font-bold text-white truncate text-sm">
+                      {slot.course_offerings?.courses?.code || '-'}
+                    </span>
+                    <span className="flex-shrink-0 text-[10px] ml-auto text-right truncate"
+                      style={{ color: 'rgba(255,255,255,0.7)', maxWidth: '6rem' }}>
+                      {slot.course_offerings?.teachers?.full_name || ''}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <div className="flex-1 flex items-center justify-center flex-col gap-2">
+                  <Clock className="w-8 h-8" style={{ color: C.textDim }} />
+                  <p className="text-xs" style={{ color: C.textDim }}>
+                    {upcomingPeriods.length === 0 ? 'No more classes today' : 'Rooms vacant'}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* UPCOMING */}
+          <div className="flex-[45] min-h-0 rounded-xl overflow-hidden flex flex-col"
+            style={{ background: C.navyLight, border: `1px solid rgba(0,121,107,0.25)` }}>
+            <div className="flex-shrink-0 px-3 py-2 flex items-center justify-between"
+              style={{ borderBottom: `1px solid ${C.border}` }}>
+              <span className="text-[10px] font-black tracking-[0.18em] uppercase" style={{ color: C.tealLight }}>
+                Upcoming
+              </span>
+              {upcomingPeriods.length > 1 && (
+                <div className="flex gap-1">
+                  {upcomingPeriods.map((_, i) => (
+                    <div key={i} className="w-1.5 h-1.5 rounded-full transition-all"
+                      style={{ background: i === (upcomingIdx % upcomingPeriods.length) ? C.tealLight : C.textDim }} />
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <AnimatePresence mode="wait">
+                {upcomingPeriods.length === 0 ? (
+                  <div key="empty" className="h-full flex items-center justify-center">
+                    <p className="text-xs" style={{ color: C.textDim }}>No upcoming classes</p>
+                  </div>
+                ) : (() => {
+                  const period = upcomingPeriods[upcomingIdx % upcomingPeriods.length];
+                  return (
+                    <motion.div key={`${upcomingIdx}-${period.start_time}`}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -12 }}
+                      transition={{ duration: 0.3 }}
+                      className="h-full flex flex-col p-2 gap-1.5">
+                      <div className="flex-shrink-0 flex items-center gap-2">
+                        <Clock className="w-3 h-3" style={{ color: C.tealLight }} />
+                        <span className="text-xs font-mono font-bold" style={{ color: C.white }}>
+                          {formatTime12(period.start_time)} - {formatTime12(period.end_time)}
+                        </span>
+                      </div>
+                      {period.slots.map(slot => (
+                        <div key={slot.id} className="flex items-center gap-2 px-2 py-1 rounded-lg"
+                          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                          <span className="flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-black"
+                            style={{ background: 'rgba(0,121,107,0.35)', color: C.tealLight, border: '1px solid rgba(0,121,107,0.5)', minWidth: '2.5rem', textAlign: 'center' }}>
+                            {slot.room_number}
+                          </span>
+                          <span className="text-xs font-bold text-white truncate">
+                            {slot.course_offerings?.courses?.code || '-'}
+                          </span>
+                        </div>
+                      ))}
+                    </motion.div>
+                  );
+                })()}
+              </AnimatePresence>
+            </div>
+          </div>
+        </section>
+        )}
       </main>
 
       {/* =========== TICKER BAR =========== */}

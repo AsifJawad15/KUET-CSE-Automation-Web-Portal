@@ -19,6 +19,7 @@ import {
     fetchTvSettings,
     toggleAnnouncement,
     toggleDevice,
+    toggleDeviceRoomSchedule,
     toggleEvent,
     toggleTicker,
     updateAnnouncement,
@@ -1487,6 +1488,29 @@ function DevicesTab({ devices, onReload }: { devices: CmsTvDevice[]; onReload: (
                   {device.location}
                 </div>
               )}
+
+              {/* Room Schedule Toggle */}
+              <div className="flex items-center justify-between mb-4 px-3 py-2.5 rounded-lg border border-[#DCC5B2] dark:border-[#3d4951] bg-[#FAF7F3]/50 dark:bg-[#0b090a]/50">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-[#8B7355] dark:text-[#b1a7a6]" />
+                  <span className="text-sm text-[#5D4E37] dark:text-[#d3d3d3]">Room Schedule</span>
+                </div>
+                <button
+                  onClick={async () => {
+                    await toggleDeviceRoomSchedule(device.id, !device.show_room_schedule);
+                    await onReload();
+                  }}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    device.show_room_schedule
+                      ? 'bg-emerald-500'
+                      : 'bg-gray-300 dark:bg-gray-600'
+                  }`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    device.show_room_schedule ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
+                </button>
+              </div>
 
               <div className="flex items-center gap-2 pt-3 border-t border-[#DCC5B2] dark:border-[#3d4951]">
                 <button

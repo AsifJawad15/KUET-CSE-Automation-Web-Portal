@@ -365,3 +365,15 @@ export async function toggleDevice(
   if (error) return { success: false, error: error.message };
   return { success: true };
 }
+
+export async function toggleDeviceRoomSchedule(
+  id: string,
+  show: boolean
+): Promise<{ success: boolean; error?: string }> {
+  const { error } = await cmsSupabase
+    .from('cms_tv_devices')
+    .update({ show_room_schedule: show })
+    .eq('id', id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}

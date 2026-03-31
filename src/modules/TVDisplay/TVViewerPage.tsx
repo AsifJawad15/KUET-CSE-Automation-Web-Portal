@@ -160,7 +160,7 @@ export default function TVViewerPage({ onMenuChange }: { onMenuChange?: (id: str
       {/* TV Preview area */}
       {selectedTarget ? (
         <div className="flex-1 min-h-0 rounded-2xl overflow-hidden border border-[#DCC5B2] dark:border-[#3d4951] shadow-xl">
-          <TVPreview target={selectedTarget} />
+          <TVPreview target={selectedTarget} showRoomSchedule={devices.find(d => d.name === selectedTarget)?.show_room_schedule ?? true} />
         </div>
       ) : (
         <div className="flex-1 flex items-center justify-center">
@@ -180,7 +180,7 @@ export default function TVViewerPage({ onMenuChange }: { onMenuChange?: (id: str
 // filtered by a specific target
 // ══════════════════════════════════════
 
-function TVPreview({ target }: { target: string }) {
+function TVPreview({ target, showRoomSchedule }: { target: string; showRoomSchedule: boolean }) {
   const [announcements, setAnnouncements] = useState<CmsTvAnnouncement[]>([]);
   const [ticker, setTicker] = useState<CmsTvTicker[]>([]);
   const [events, setEvents] = useState<CmsTvEvent[]>([]);
@@ -203,7 +203,9 @@ function TVPreview({ target }: { target: string }) {
       const todayStr = new Date().toISOString().split('T')[0];
       const [tvData, slots] = await Promise.all([
         fetchTvDisplayDataForTarget(target),
-        getRoutineSlots(undefined, undefined, undefined, todayStr).catch(() => [] as DBRoutineSlotWithDetails[]),
+        showRoomSchedule
+          ? getRoutineSlots(undefined, undefined, undefined, todayStr).catch(() => [] as DBRoutineSlotWithDetails[])
+          : Promise.resolve([] as DBRoutineSlotWithDetails[]),
       ]);
       setAnnouncements(tvData.announcements);
       setTicker(tvData.ticker);
@@ -331,7 +333,7 @@ function TVPreview({ target }: { target: string }) {
       {/* MAIN CONTENT */}
       <main className="flex-1 min-h-0 flex overflow-hidden">
         {/* LEFT: Events */}
-        <section className="flex-[80] min-w-0 flex flex-col p-3 pr-1.5 overflow-hidden">
+        <section className={`${showRoomSchedule ? 'flex-[80]' : 'flex-1'} min-w-0 flex flex-col p-3 ${showRoomSchedule ? 'pr-1.5' : ''} overflow-hidden`}>
           <div className="flex-shrink-0 flex items-center justify-between mb-1.5">
             <h2 className="text-xs font-black tracking-[0.2em] uppercase" style={{ color: C.gold }}>
               News &amp; Events
@@ -377,6 +379,7 @@ function TVPreview({ target }: { target: string }) {
         </section>
 
         {/* RIGHT: Schedule */}
+        {showRoomSchedule && (
         <section className="flex-[20] min-w-0 flex flex-col p-3 pl-1.5 overflow-hidden gap-1.5">
           <h2 className="flex-shrink-0 text-[10px] font-black tracking-[0.18em] uppercase" style={{ color: C.gold }}>
             Live Room Schedule
@@ -497,6 +500,7 @@ function TVPreview({ target }: { target: string }) {
             </div>
           </div>
         </section>
+        )}
       </main>
 
       {/* TICKER BAR */}
