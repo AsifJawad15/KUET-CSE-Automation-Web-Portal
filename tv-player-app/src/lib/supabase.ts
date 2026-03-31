@@ -1,16 +1,28 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Uses the same CMS Supabase project as the admin panel (reads from root .env.local)
+// CMS Supabase — TV content, announcements, events, devices
 const supabaseUrl = import.meta.env.NEXT_PUBLIC_CMS_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.NEXT_PUBLIC_CMS_SUPABASE_ANON_KEY || '';
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn(
-    '⚠️ Supabase not configured. Ensure NEXT_PUBLIC_CMS_SUPABASE_URL and NEXT_PUBLIC_CMS_SUPABASE_ANON_KEY are set in the root .env.local'
+    '⚠️ CMS Supabase not configured. Ensure NEXT_PUBLIC_CMS_SUPABASE_URL and NEXT_PUBLIC_CMS_SUPABASE_ANON_KEY are set in the root .env.local'
   );
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Main Supabase — routine_slots, rooms, courses, teachers (academic data)
+const mainSupabaseUrl = import.meta.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const mainSupabaseAnonKey = import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+if (!mainSupabaseUrl || !mainSupabaseAnonKey) {
+  console.warn(
+    '⚠️ Main Supabase not configured. Room schedule will not be available.'
+  );
+}
+
+export const mainSupabase = createClient(mainSupabaseUrl, mainSupabaseAnonKey);
 
 // ── CMS TV Display Types (matching the existing tables) ──
 
@@ -24,6 +36,7 @@ export interface CmsTvDevice {
   label: string | null;
   location: string | null;
   is_active: boolean;
+  show_room_schedule: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -181,4 +194,75 @@ export async function fetchActiveDevices(): Promise<CmsTvDevice[]> {
     .eq('is_active', true)
     .order('name', { ascending: true });
   return (data as CmsTvDevice[]) || [];
+}
+
+/**
+ * Fetch device settings for a specific TV target.
+ */
+export async function fetchDeviceByName(name: string): Promise<CmsTvDevice | null> {
+  const { data } = await supabase
+    .from('cms_tv_devices')
+    .select('*')
+    .eq('name', name)
+    .single();
+  return (data as CmsTvDevice) || null;
+}
+
+// ── Routine Slot Types (from main Supabase database) ──
+
+export interface RoutineSlotWithDetails {
+  id: string;
+  offering_id: string;
+  room_number: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  section: string | null;
+  valid_from: string | null;
+  valid_until: string | null;
+  created_at: string;
+  course_offerings: {
+    id: string;
+    term: string;
+    session: string;
+    batch: string | null;
+    courses: { code: string; title: string; credit: number; course_type: string };
+    teachers: { full_name: string; teacher_uid: string };
+  };
+  rooms: { room_number: string; room_type: string | null };
+}
+
+/**
+ * Fetch today's routine slots from the main database.
+ * Filters by day_of_week and valid_from/valid_until date range.
+ */
+export async function fetchTodayRoutineSlots(): Promise<RoutineSlotWithDetails[]> {
+  if (!mainSupabaseUrl || !mainSupabaseAnonKey) return [];
+
+  const now = new Date();
+  const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon, ...
+  const todayStr = now.toISOString().split('T')[0];
+
+  const { data, error } = await mainSupabase
+    .from('routine_slots')
+    .select(`
+      *,
+      course_offerings!inner (
+        id, term, session, batch,
+        courses ( code, title, credit, course_type ),
+        teachers ( full_name, teacher_uid )
+      ),
+      rooms ( room_number, room_type )
+    `)
+    .eq('day_of_week', dayOfWeek)
+    .or(`valid_from.is.null,valid_from.lte.${todayStr}`)
+    .or(`valid_until.is.null,valid_until.gte.${todayStr}`)
+    .order('start_time', { ascending: true });
+
+  if (error) {
+    console.error('Failed to fetch routine slots:', error);
+    return [];
+  }
+
+  return (data as RoutineSlotWithDetails[]) || [];
 }

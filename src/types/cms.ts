@@ -160,6 +160,7 @@ export interface CmsTvDevice {
   label: string | null;
   location: string | null;
   is_active: boolean;
+  show_room_schedule: boolean;
   created_at: string;
   updated_at: string;
 }
