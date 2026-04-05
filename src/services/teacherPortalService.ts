@@ -106,6 +106,8 @@ export interface GeoAttendanceRoom {
   teacher_user_id: string;
   room_number?: string;
   section?: string;
+  geo_room_location_id?: string;
+  range_meters: number;
   date: string;
   start_time: string;
   end_time: string;
@@ -120,6 +122,14 @@ export interface GeoAttendanceRoom {
       title: string;
       course_type: string;
     };
+  };
+  geo_room_locations?: {
+    id: string;
+    room_name: string;
+    latitude: number;
+    longitude: number;
+    plus_code?: string;
+    floor_number?: string;
   };
 }
 
@@ -145,6 +155,8 @@ export interface OpenGeoRoomInput {
   section?: string;
   start_time: string;
   end_time: string;
+  geo_room_location_id?: string;
+  range_meters?: number;
 }
 
 // ── API Methods ────────────────────────────────────────

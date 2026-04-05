@@ -16,14 +16,14 @@ import { CourseInfoPage } from '@/modules/CourseInfo';
 import { CRManagementPage } from '@/modules/CRManagement';
 import { DashboardOverview } from '@/modules/Dashboard';
 import { FacultyInfoPage } from '@/modules/FacultyInfo';
+import { GeoRoomManagementPage } from '@/modules/GeoRoomManagement';
 import { OptionalCourseAllocationPage } from '@/modules/OptionalCourseAllocation';
 import { ResultPage } from '@/modules/Result';
 import { RoomAllocationPage } from '@/modules/RoomAllocation';
 import { SchedulePage } from '@/modules/Schedule';
 import { AnnouncementTab, ChangePasswordTab, CourseStudentsTab, EditProfileTab, MyScheduleTab, RoomRequestTab, TakeAttendanceTab, TeacherPortalPage, UploadCSVTab } from '@/modules/TeacherPortal';
 import { TermUpgradePage } from '@/modules/TermUpgrade';
-import { TVDisplayPage } from '@/modules/TVDisplay';
-import { TVViewerPage } from '@/modules/TVDisplay';
+import { TVDisplayPage, TVViewerPage } from '@/modules/TVDisplay';
 import { WebsiteCMSPage } from '@/modules/WebsiteCMS';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
@@ -45,6 +45,7 @@ const PAGE_REGISTRY: Record<string, PageEntry> = {
   'tv-viewer':           { render: (onMenuChange) => <TVViewerPage onMenuChange={onMenuChange} /> },
   'faculty-info':       { render: () => <FacultyInfoPage /> },
   'room-allocation':    { render: () => <RoomAllocationPage /> },
+  'geo-room-management': { render: () => <GeoRoomManagementPage />, requiredRole: 'admin' },
   'course-info':        { render: () => <CourseInfoPage /> },
   'course-allocation':  { render: () => <CourseAllocationPage /> },
   'class-routine':      { render: () => <ClassRoutinePage /> },

@@ -4,10 +4,10 @@
 // Room limits: max 2 active rooms for theory, max 4 for lab
 // ==========================================
 
-import { NextRequest, NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { badRequest, guardSupabase, internalError } from '@/lib/apiResponse';
 import { notifyGeoAttendanceRoomOpened } from '@/lib/geoAttendanceNotifications';
+import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { NextRequest, NextResponse } from 'next/server';
 
 function extractError(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { offering_id, teacher_user_id, room_number, section, start_time, end_time } = body;
+    const { offering_id, teacher_user_id, room_number, section, start_time, end_time, geo_room_location_id, range_meters } = body;
 
     if (!offering_id || !teacher_user_id || !start_time || !end_time) {
       return badRequest('Missing required fields: offering_id, teacher_user_id, start_time, end_time');
@@ -114,6 +114,8 @@ export async function POST(request: NextRequest) {
         teacher_user_id,
         room_number: room_number || null,
         section: section || null,
+        geo_room_location_id: geo_room_location_id || null,
+        range_meters: typeof range_meters === 'number' ? range_meters : 30,
         date: new Date().toISOString().split('T')[0],
         start_time,
         end_time,
@@ -198,6 +200,8 @@ export async function GET(request: NextRequest) {
         course_offerings!inner (
           id, term,
           courses!inner ( code, title, course_type )
+        ),
+        geo_room_locations ( id, room_name, latitude, longitude, plus_code, floor_number )
         )
       `)
       .order('created_at', { ascending: false });

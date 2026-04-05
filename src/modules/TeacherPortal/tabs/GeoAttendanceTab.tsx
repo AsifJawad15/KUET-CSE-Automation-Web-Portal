@@ -1,29 +1,33 @@
 "use client";
 
 import { useAuth } from '@/contexts/AuthContext';
-import { useState, useEffect, useCallback } from 'react';
 import {
-  getMyCourses,
-  openGeoAttendanceRoom,
-  getGeoAttendanceRooms,
-  closeGeoAttendanceRoom,
-  getGeoRoomLogs,
-  type TeacherCourse,
-  type GeoAttendanceRoom,
-  type GeoAttendanceLog,
+    getAllGeoRoomLocations,
+    type GeoRoomLocation,
+} from '@/services/geoRoomLocationService';
+import {
+    closeGeoAttendanceRoom,
+    getGeoAttendanceRooms,
+    getGeoRoomLogs,
+    getMyCourses,
+    openGeoAttendanceRoom,
+    type GeoAttendanceLog,
+    type GeoAttendanceRoom,
+    type TeacherCourse,
 } from '@/services/teacherPortalService';
 import {
-  MapPin,
-  Loader2,
-  AlertCircle,
-  Radio,
-  XCircle,
-  Clock,
-  Users,
-  CheckCircle2,
-  DoorOpen,
-  Eye,
+    AlertCircle,
+    CheckCircle2,
+    Clock,
+    DoorOpen,
+    Eye,
+    Loader2,
+    MapPin,
+    Radio,
+    Users,
+    XCircle,
 } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 
 // Room limits
 const MAX_THEORY_ROOMS = 2;
@@ -44,6 +48,9 @@ export default function GeoAttendanceTab() {
   const [durationMinutes, setDurationMinutes] = useState(50);
   const [roomNumber, setRoomNumber] = useState('');
   const [sectionGroup, setSectionGroup] = useState('');
+  const [geoRoomLocations, setGeoRoomLocations] = useState<GeoRoomLocation[]>([]);
+  const [selectedGeoRoomId, setSelectedGeoRoomId] = useState('');
+  const [rangeMeters, setRangeMeters] = useState(30);
 
   // Logs modal state
   const [viewingLogsRoomId, setViewingLogsRoomId] = useState<string | null>(null);
@@ -74,6 +81,11 @@ export default function GeoAttendanceTab() {
       .then(setCourses)
       .finally(() => setLoadingCourses(false));
   }, [teacherId]);
+
+  // Load geo room locations
+  useEffect(() => {
+    getAllGeoRoomLocations().then(setGeoRoomLocations);
+  }, []);
 
   // Load geo-attendance rooms
   const loadRooms = useCallback(async () => {
@@ -131,17 +143,21 @@ export default function GeoAttendanceTab() {
       const result = await openGeoAttendanceRoom({
         offering_id: selectedCourse.offering_id,
         teacher_user_id: teacherId,
-        room_number: roomNumber || undefined,
+        room_number: roomNumber || (geoRoomLocations.find(r => r.id === selectedGeoRoomId)?.room_name) || undefined,
         section: sectionGroup,
         start_time: now.toISOString(),
         end_time: endTime.toISOString(),
+        geo_room_location_id: selectedGeoRoomId || undefined,
+        range_meters: rangeMeters,
       });
 
       if (result.success) {
-        setMessage({ type: 'success', text: `Room opened for ${selectedCourse.course_code} (${sectionGroup})! Students within 200m can now submit attendance.` });
+        setMessage({ type: 'success', text: `Room opened for ${selectedCourse.course_code} (${sectionGroup})! Students within ${rangeMeters}m can now submit attendance.` });
         setSelectedCourse(null);
         setRoomNumber('');
         setSectionGroup('');
+        setSelectedGeoRoomId('');
+        setRangeMeters(30);
         await loadRooms();
       } else {
         setMessage({ type: 'error', text: result.error || 'Failed to open room' });
@@ -390,7 +406,7 @@ export default function GeoAttendanceTab() {
           )}
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {/* Course Selection */}
           <div>
             <label className="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">
@@ -430,6 +446,49 @@ export default function GeoAttendanceTab() {
                 <option key={gi} value={g.label}>{g.label}</option>
               ))}
             </select>
+          </div>
+
+          {/* Geo Room Location */}
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">
+              Room Location <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={selectedGeoRoomId}
+              onChange={(e) => {
+                setSelectedGeoRoomId(e.target.value);
+                const loc = geoRoomLocations.find(l => l.id === e.target.value);
+                if (loc) setRoomNumber(loc.room_name);
+              }}
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            >
+              <option value="">Select room location...</option>
+              {geoRoomLocations.map(loc => (
+                <option key={loc.id} value={loc.id}>
+                  {loc.room_name}{loc.building_name ? ` — ${loc.building_name}` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Range */}
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">
+              Range: {rangeMeters}m
+            </label>
+            <input
+              type="range"
+              min={10}
+              max={200}
+              step={10}
+              value={rangeMeters}
+              onChange={(e) => setRangeMeters(Number(e.target.value))}
+              className="w-full accent-teal-600 mt-2"
+            />
+            <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
+              <span>10m</span>
+              <span>200m</span>
+            </div>
           </div>
 
           {/* Room Number */}
@@ -488,7 +547,7 @@ export default function GeoAttendanceTab() {
 
         <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
           <MapPin className="inline h-3 w-3 mr-1" />
-          Students must be within 200 meters of the CSE Building (KUET) to submit attendance.
+          Students must be within <strong>{rangeMeters}m</strong> of the selected room location to submit attendance.
           The room will auto-close after the specified duration.
           {!canOpenMore && (
             <span className="text-red-500 font-medium ml-1">
