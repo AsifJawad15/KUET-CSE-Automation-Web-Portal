@@ -9,6 +9,7 @@ import {
     getAllGeoRoomLocations,
     updateGeoRoomLocation,
 } from '@/services/geoRoomLocationService';
+import { decodePlusCode } from '@/lib/plusCode';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Edit, Loader2, MapPin, Navigation, Plus, Trash2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -61,8 +62,12 @@ export default function GeoRoomManagementPage() {
       setError('Room name is required');
       return;
     }
-    if (!formData.latitude || !formData.longitude) {
-      setError('Latitude and longitude are required');
+    if (!Number.isFinite(formData.latitude) || !Number.isFinite(formData.longitude)) {
+      setError('Valid latitude and longitude are required');
+      return;
+    }
+    if (formData.latitude === 0 && formData.longitude === 0) {
+      setError('Latitude and longitude cannot both be 0 — use Decode or enter coordinates manually');
       return;
     }
 
@@ -123,139 +128,170 @@ export default function GeoRoomManagementPage() {
         </button>
       </div>
 
-      {/* Form */}
+      {/* Form Modal Overlay */}
       <AnimatePresence>
         {showForm && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={(e) => { if (e.target === e.currentTarget) resetForm(); }}
           >
-            <SpotlightCard className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-foreground">
-                  {editingRoom ? 'Edit Room' : 'Add New Room'}
-                </h2>
-                <button onClick={resetForm} className="text-muted-foreground hover:text-foreground">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {error && (
-                <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm">
-                  {error}
-                </div>
-              )}
-
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Room Name */}
-                  <div>
-                    <label className="block text-sm font-medium text-muted-foreground mb-1">
-                      Room Name *
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.room_name}
-                      onChange={(e) => setFormData({ ...formData, room_name: e.target.value })}
-                      placeholder="e.g. CSE-104, 202, 502"
-                      className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-foreground"
-                      required
-                    />
-                  </div>
-
-                  {/* Plus Code */}
-                  <div>
-                    <label className="block text-sm font-medium text-muted-foreground mb-1">
-                      Plus Code (optional)
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.plus_code}
-                      onChange={(e) => setFormData({ ...formData, plus_code: e.target.value })}
-                      placeholder="e.g. VGX2+QJQ Khulna"
-                      className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-foreground"
-                    />
-                  </div>
-
-                  {/* Latitude */}
-                  <div>
-                    <label className="block text-sm font-medium text-muted-foreground mb-1">
-                      Latitude *
-                    </label>
-                    <input
-                      type="number"
-                      step="0.000001"
-                      value={formData.latitude || ''}
-                      onChange={(e) => setFormData({ ...formData, latitude: parseFloat(e.target.value) || 0 })}
-                      placeholder="e.g. 22.899484"
-                      className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-foreground"
-                      required
-                    />
-                  </div>
-
-                  {/* Longitude */}
-                  <div>
-                    <label className="block text-sm font-medium text-muted-foreground mb-1">
-                      Longitude *
-                    </label>
-                    <input
-                      type="number"
-                      step="0.000001"
-                      value={formData.longitude || ''}
-                      onChange={(e) => setFormData({ ...formData, longitude: parseFloat(e.target.value) || 0 })}
-                      placeholder="e.g. 89.501513"
-                      className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-foreground"
-                      required
-                    />
-                  </div>
-
-                  {/* Building Name */}
-                  <div>
-                    <label className="block text-sm font-medium text-muted-foreground mb-1">
-                      Building
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.building_name}
-                      onChange={(e) => setFormData({ ...formData, building_name: e.target.value })}
-                      placeholder="CSE Building"
-                      className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-foreground"
-                    />
-                  </div>
-
-                  {/* Floor */}
-                  <div>
-                    <label className="block text-sm font-medium text-muted-foreground mb-1">
-                      Floor
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.floor_number}
-                      onChange={(e) => setFormData({ ...formData, floor_number: e.target.value })}
-                      placeholder="e.g. 1st, 2nd, 5th"
-                      className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-foreground"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex gap-3 pt-2">
-                  <button
-                    type="submit"
-                    className="px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors font-medium"
-                  >
-                    {editingRoom ? 'Update Room' : 'Add Room'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={resetForm}
-                    className="px-6 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-lg transition-colors"
-                  >
-                    Cancel
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+            >
+              <SpotlightCard className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-foreground">
+                    {editingRoom ? 'Edit Room' : 'Add New Room'}
+                  </h2>
+                  <button onClick={resetForm} className="text-muted-foreground hover:text-foreground">
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
-              </form>
-            </SpotlightCard>
+
+                {error && (
+                  <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Room Name */}
+                    <div>
+                      <label className="block text-sm font-medium text-muted-foreground mb-1">
+                        Room Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.room_name}
+                        onChange={(e) => setFormData({ ...formData, room_name: e.target.value })}
+                        placeholder="e.g. CSE-104, 202, 502"
+                        className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-foreground"
+                        required
+                      />
+                    </div>
+
+                    {/* Plus Code */}
+                    <div>
+                      <label className="block text-sm font-medium text-muted-foreground mb-1">
+                        Plus Code (optional — auto-fills coordinates)
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={formData.plus_code}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            const coords = decodePlusCode(val);
+                            setFormData({
+                              ...formData,
+                              plus_code: val,
+                              ...(coords ? { latitude: coords.lat, longitude: coords.lng } : {}),
+                            });
+                          }}
+                          placeholder="e.g. VGX2+QJQ Khulna"
+                          className="flex-1 px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-foreground"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const coords = decodePlusCode(formData.plus_code ?? '');
+                            if (coords) setFormData({ ...formData, latitude: coords.lat, longitude: coords.lng });
+                            else setError('Could not decode Plus Code. Use format: VGX2+QJQ Khulna');
+                          }}
+                          className="px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm rounded-lg transition-colors whitespace-nowrap"
+                        >
+                          Decode
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Latitude */}
+                    <div>
+                      <label className="block text-sm font-medium text-muted-foreground mb-1">
+                        Latitude *
+                      </label>
+                      <input
+                        type="number"
+                        step="0.000001"
+                        value={formData.latitude || ''}
+                        onChange={(e) => setFormData({ ...formData, latitude: parseFloat(e.target.value) })}
+                        placeholder="e.g. 22.899484"
+                        className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-foreground"
+                        required
+                      />
+                    </div>
+
+                    {/* Longitude */}
+                    <div>
+                      <label className="block text-sm font-medium text-muted-foreground mb-1">
+                        Longitude *
+                      </label>
+                      <input
+                        type="number"
+                        step="0.000001"
+                        value={formData.longitude || ''}
+                        onChange={(e) => setFormData({ ...formData, longitude: parseFloat(e.target.value) })}
+                        placeholder="e.g. 89.501513"
+                        className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-foreground"
+                        required
+                      />
+                    </div>
+
+                    {/* Building Name */}
+                    <div>
+                      <label className="block text-sm font-medium text-muted-foreground mb-1">
+                        Building
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.building_name}
+                        onChange={(e) => setFormData({ ...formData, building_name: e.target.value })}
+                        placeholder="CSE Building"
+                        className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-foreground"
+                      />
+                    </div>
+
+                    {/* Floor */}
+                    <div>
+                      <label className="block text-sm font-medium text-muted-foreground mb-1">
+                        Floor
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.floor_number}
+                        onChange={(e) => setFormData({ ...formData, floor_number: e.target.value })}
+                        placeholder="e.g. 1st, 2nd, 5th"
+                        className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-foreground"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="submit"
+                      className="px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors font-medium"
+                    >
+                      {editingRoom ? 'Update Room' : 'Add Room'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={resetForm}
+                      className="px-6 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-lg transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </SpotlightCard>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

@@ -111,6 +111,8 @@ export interface DBRoom {
   is_active: boolean;
   plus_code: string | null;
   floor_number: string | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 // ── Routine Slot ───────────────────────────────────────

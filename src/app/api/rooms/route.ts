@@ -6,6 +6,7 @@
 
 import { badRequest, conflict, guardSupabase, internalError, noContent, ok } from '@/lib/apiResponse';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { decodePlusCode } from '@/lib/plusCode';
 import { requireField } from '@/lib/validators';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -42,9 +43,18 @@ export async function POST(request: NextRequest) {
     const validation = requireField(room_number, 'room_number');
     if (!validation.valid) return badRequest(validation.error!);
 
+    // Auto-decode Plus Code → lat/lng when provided
+    let latitude: number | undefined;
+    let longitude: number | undefined;
+    const rawPlusCode = typeof plus_code === 'string' ? plus_code.trim() : null;
+    if (rawPlusCode) {
+      const coords = decodePlusCode(rawPlusCode);
+      if (coords) { latitude = coords.lat; longitude = coords.lng; }
+    }
+
     const { data, error } = await supabase
       .from('rooms')
-      .insert({ room_number, building_name, capacity, room_type, facilities, is_active: true, plus_code, floor_number })
+      .insert({ room_number, building_name, capacity, room_type, facilities, is_active: true, plus_code: rawPlusCode || null, floor_number, latitude, longitude })
       .select()
       .single();
 
@@ -74,6 +84,21 @@ export async function PATCH(request: NextRequest) {
 
     const validation = requireField(room_number, 'room_number');
     if (!validation.valid) return badRequest(validation.error!);
+
+    // Auto-decode Plus Code → lat/lng when the update includes a plus_code
+    const rawPlusCode = updates.plus_code !== undefined
+      ? (typeof updates.plus_code === 'string' ? updates.plus_code.trim() : null)
+      : undefined;
+    if (rawPlusCode !== undefined) {
+      updates.plus_code = rawPlusCode || null;
+      if (rawPlusCode) {
+        const coords = decodePlusCode(rawPlusCode);
+        if (coords) {
+          (updates as Record<string, unknown>).latitude = coords.lat;
+          (updates as Record<string, unknown>).longitude = coords.lng;
+        }
+      }
+    }
 
     const { data, error } = await supabase
       .from('rooms')
