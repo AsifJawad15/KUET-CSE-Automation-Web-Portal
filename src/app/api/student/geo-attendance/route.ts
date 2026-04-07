@@ -7,10 +7,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { badRequest, guardSupabase, internalError } from '@/lib/apiResponse';
 
-// KUET CSE Building coordinates
+// KUET CSE Building coordinates (fallback when room has no stored coordinates)
 const BUILDING_LAT = 22.8993;
 const BUILDING_LNG = 89.5023;
-const MAX_DISTANCE_METERS = 200;
+/** Max distance when a room has its own GPS coordinates. */
+const ROOM_MAX_DISTANCE = 30;
+/** Fallback max distance when a room has no stored GPS coordinates. */
+const BUILDING_MAX_DISTANCE = 100;
 
 function extractError(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
@@ -142,13 +145,32 @@ export async function POST(request: NextRequest) {
       return badRequest('Could not verify enrollment');
     }
 
-    // 3. Check distance from building
-    const distance = haversineDistance(latitude, longitude, BUILDING_LAT, BUILDING_LNG);
+    // 3. Determine target coordinates and max distance
+    //    Use room-specific GPS coords (30 m) if stored; else building center (100 m)
+    let targetLat = BUILDING_LAT;
+    let targetLng = BUILDING_LNG;
+    let maxDistance = BUILDING_MAX_DISTANCE;
 
-    if (distance > MAX_DISTANCE_METERS) {
+    if (room.room_number) {
+      const { data: roomRow } = await supabase
+        .from('rooms')
+        .select('latitude, longitude')
+        .eq('room_number', room.room_number)
+        .maybeSingle();
+      if (roomRow?.latitude != null && roomRow?.longitude != null) {
+        targetLat = roomRow.latitude as number;
+        targetLng = roomRow.longitude as number;
+        maxDistance = ROOM_MAX_DISTANCE;
+      }
+    }
+
+    const distance = haversineDistance(latitude, longitude, targetLat, targetLng);
+
+    if (distance > maxDistance) {
+      const label = maxDistance === ROOM_MAX_DISTANCE ? 'room' : 'building';
       return NextResponse.json({
         success: false,
-        error: `You are ${Math.round(distance)}m from the building. Must be within ${MAX_DISTANCE_METERS}m.`,
+        error: `You are ${Math.round(distance)}m from the ${label}. Must be within ${maxDistance}m.`,
         distance: Math.round(distance),
       }, { status: 403 });
     }
@@ -190,7 +212,7 @@ export async function POST(request: NextRequest) {
         enrollment_id: enrollmentId,
         status: 'PRESENT',
         marked_by_teacher_user_id: room.teacher_user_id,
-        remarks: `Geo-attendance: ${Math.round(distance)}m from building`,
+        remarks: `Geo-attendance: ${Math.round(distance)}m`,
       }, { onConflict: 'session_id,enrollment_id' });
 
     if (attendError) {

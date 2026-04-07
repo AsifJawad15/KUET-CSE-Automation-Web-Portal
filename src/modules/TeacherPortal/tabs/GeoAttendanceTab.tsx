@@ -1,10 +1,8 @@
 "use client";
 
 import { useAuth } from '@/contexts/AuthContext';
-import {
-    getAllGeoRoomLocations,
-    type GeoRoomLocation,
-} from '@/services/geoRoomLocationService';
+import { getAllRooms } from '@/services/roomService';
+import type { DBRoom } from '@/types/database';
 import {
     closeGeoAttendanceRoom,
     getGeoAttendanceRooms,
@@ -48,8 +46,7 @@ export default function GeoAttendanceTab() {
   const [durationMinutes, setDurationMinutes] = useState(50);
   const [roomNumber, setRoomNumber] = useState('');
   const [sectionGroup, setSectionGroup] = useState('');
-  const [geoRoomLocations, setGeoRoomLocations] = useState<GeoRoomLocation[]>([]);
-  const [selectedGeoRoomId, setSelectedGeoRoomId] = useState('');
+  const [availableRooms, setAvailableRooms] = useState<DBRoom[]>([]);
   const [rangeMeters, setRangeMeters] = useState(30);
 
   // Logs modal state
@@ -82,9 +79,9 @@ export default function GeoAttendanceTab() {
       .finally(() => setLoadingCourses(false));
   }, [teacherId]);
 
-  // Load geo room locations
+  // Load rooms that have GPS coordinates set (for the room picker)
   useEffect(() => {
-    getAllGeoRoomLocations().then(setGeoRoomLocations);
+    getAllRooms().then(rooms => setAvailableRooms(rooms.filter(r => r.is_active)));
   }, []);
 
   // Load geo-attendance rooms
@@ -143,11 +140,10 @@ export default function GeoAttendanceTab() {
       const result = await openGeoAttendanceRoom({
         offering_id: selectedCourse.offering_id,
         teacher_user_id: teacherId,
-        room_number: roomNumber || (geoRoomLocations.find(r => r.id === selectedGeoRoomId)?.room_name) || undefined,
+        room_number: roomNumber || undefined,
         section: sectionGroup,
         start_time: now.toISOString(),
         end_time: endTime.toISOString(),
-        geo_room_location_id: selectedGeoRoomId || undefined,
         range_meters: rangeMeters,
       });
 
@@ -156,7 +152,6 @@ export default function GeoAttendanceTab() {
         setSelectedCourse(null);
         setRoomNumber('');
         setSectionGroup('');
-        setSelectedGeoRoomId('');
         setRangeMeters(30);
         await loadRooms();
       } else {
@@ -448,27 +443,24 @@ export default function GeoAttendanceTab() {
             </select>
           </div>
 
-          {/* Geo Room Location */}
+          {/* Room Selection */}
           <div>
             <label className="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">
-              Room Location <span className="text-red-500">*</span>
+              Room
             </label>
             <select
-              value={selectedGeoRoomId}
-              onChange={(e) => {
-                setSelectedGeoRoomId(e.target.value);
-                const loc = geoRoomLocations.find(l => l.id === e.target.value);
-                if (loc) setRoomNumber(loc.room_name);
-              }}
+              value={roomNumber}
+              onChange={(e) => setRoomNumber(e.target.value)}
               className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
             >
-              <option value="">Select room location...</option>
-              {geoRoomLocations.map(loc => (
-                <option key={loc.id} value={loc.id}>
-                  {loc.room_name}{loc.building_name ? ` — ${loc.building_name}` : ''}
+              <option value="">Select room (optional)...</option>
+              {availableRooms.map(r => (
+                <option key={r.room_number} value={r.room_number}>
+                  {r.room_number}{r.building_name ? ` — ${r.building_name}` : ''}{r.latitude ? ' \uD83D\uDCCD' : ''}
                 </option>
               ))}
             </select>
+            <p className="mt-1 text-[10px] text-gray-400">📍 = GPS configured (30m range); others use building fallback (100m)</p>
           </div>
 
           {/* Range */}
@@ -489,20 +481,6 @@ export default function GeoAttendanceTab() {
               <span>10m</span>
               <span>200m</span>
             </div>
-          </div>
-
-          {/* Room Number */}
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">
-              Room Number (optional)
-            </label>
-            <input
-              type="text"
-              value={roomNumber}
-              onChange={(e) => setRoomNumber(e.target.value)}
-              placeholder="e.g. 301"
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-            />
           </div>
 
           {/* Duration */}
