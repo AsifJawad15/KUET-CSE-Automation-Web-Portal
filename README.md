@@ -1,477 +1,772 @@
 <div align="center">
 
-# 🎓 KUET CSE Automation Web Portal
+<img src="https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js"/>
+<img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript"/>
+<img src="https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase"/>
+<img src="https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS"/>
+<img src="https://img.shields.io/badge/Deployed_on-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Vercel"/>
 
-### A Comprehensive Academic Management System
+<br/><br/>
 
-[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat&logo=next.js)](https://nextjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat&logo=typescript)](https://www.typescriptlang.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Ready-blue?style=flat&logo=postgresql)](https://www.postgresql.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=flat&logo=tailwind-css)](https://tailwindcss.com/)
+# 🎓 KUET CSE Automation
 
-[Features](#-features) • [Installation](#-installation) • [Usage](#-usage) • [Documentation](#-documentation) • [Contributing](#-contributing)
+### Web Portal
+
+**A full-featured academic management system for the CSE Department**  
+**of Khulna University of Engineering & Technology**
+
+<br/>
+
+[![GitHub Stars](https://img.shields.io/github/stars/abdullahshahporan/KUET-CSE-Automation-Web-Portal?style=social)](https://github.com/abdullahshahporan/KUET-CSE-Automation-Web-Portal)
+[![GitHub Forks](https://img.shields.io/github/forks/abdullahshahporan/KUET-CSE-Automation-Web-Portal?style=social)](https://github.com/abdullahshahporan/KUET-CSE-Automation-Web-Portal/fork)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+<br/>
+
+[Features](#-features) • [Tech Stack](#-tech-stack) • [Getting Started](#-getting-started) • [Architecture](#-architecture) • [API Reference](#-api-reference) • [Contributing](#-contributing)
 
 </div>
 
 ---
 
-## 📖 About
+## 📖 Overview
 
-The **KUET CSE Automation Web Portal** is a modern, full-featured academic management system designed specifically for the Computer Science and Engineering (CSE) department at Khulna University of Engineering & Technology (KUET). This platform streamlines administrative tasks, enhances communication between faculty and students, and provides a centralized hub for all academic activities.
+The **KUET CSE Automation Web Portal** is the administrative backbone of the KUET CSE department's digital ecosystem. Built with **Next.js 15 App Router** and **Supabase**, it provides three distinct role-based interfaces — **Admin**, **Teacher**, and **Student** — on a single, unified platform.
 
-### 🎯 Purpose
+The portal connects directly to the same PostgreSQL database as the companion Flutter mobile app, ensuring data consistency across every touchpoint: from room booking and schedule management to geo-attendance, exam results, term upgrades, and push notifications.
 
-This portal aims to:
-- Digitize and automate academic administrative processes
-- Provide real-time access to academic information
-- Facilitate efficient communication between stakeholders
-- Reduce manual workload for faculty and administration
-- Enhance the overall academic experience for students
+> The portal also ships with a **TV Display mode** — a real-time, full-screen room schedule displayed on department monitors — and a standalone **Electron-based TV Player app** for dedicated display hardware.
 
 ---
 
 ## ✨ Features
 
-### 👨‍🎓 Student Management
-- ✅ Student registration and profile management
-- ✅ Enrollment tracking and management
-- ✅ CGPA calculation and academic records
-- ✅ Batch, session, and section organization
+### 🖥 Public Website
 
-### 👨‍🏫 Faculty Management
-- ✅ Teacher profiles with designation tracking
-- ✅ Leave management system
-- ✅ Office room allocation
-- ✅ Department-wise organization
-
-### 📚 Course Management
-- ✅ Course creation and curriculum management
-- ✅ Course offerings by term and session
-- ✅ Credit management and course types
-- ✅ Syllabus tracking
-
-### 🗓️ Class Scheduling
-- ✅ Dynamic class routine generation
-- ✅ Room allocation and availability tracking
-- ✅ Conflict detection and resolution
-- ✅ TV display mode for public schedules
-
-### 📝 Attendance System
-- ✅ Session-wise attendance tracking
-- ✅ Teacher-marked attendance records
-- ✅ Status tracking (Present, Absent, Late)
-- ✅ Attendance reports and analytics
-
-### 📊 Examination & Results
-- ✅ Exam scheduling and management
-- ✅ Multiple exam types (Midterm, Final, Quiz)
-- ✅ Score entry and management
-- ✅ Result publication system
-
-### 📢 Notice Board
-- ✅ Priority-based notice system
-- ✅ Targeted announcements (term, batch, session)
-- ✅ Expiration management
-- ✅ Publication control
-
-### 🏢 Resource Management
-- ✅ Room database with capacity tracking
-- ✅ Facility management
-- ✅ Building-wise organization
-- ✅ Active/inactive status tracking
-
-### 🔐 Authentication & Authorization
-- ✅ Role-based access control (Admin, Teacher, Student)
-- ✅ Secure password hashing with bcrypt
-- ✅ Email validation
-- ✅ Session management
+| Module | Highlights |
+|---|---|
+| Home / Landing | Hero section with department introduction and CMS-driven content |
+| About | Department history, vision, and mission |
+| Faculty Directory | Browse all faculty with profile cards |
+| Programs | Offered degree programs with details |
+| Research | Research groups and publications |
+| Gallery | Department photo gallery |
+| News & Notices | Latest news and public announcements |
+| Contact | Department contact information |
 
 ---
 
-## 🛠️ Tech Stack
+### 🔐 Authentication & Access Control
+
+- Email and password sign-in with **bcrypt** password hashing  
+- Role-based dashboards: **Admin**, **Teacher**, **Student**  
+- Protected routes with server-side session validation  
+- Secure sign-up with email uniqueness checks  
+
+---
+
+### 👨‍💼 Admin Portal
+
+<details>
+<summary><strong>👨‍🎓 Student Management</strong></summary>
+
+- Add individual students or bulk-import via CSV  
+- View and edit student profiles (roll number, batch, year, term, section)  
+- Manage CR (Class Representative) designations  
+- Track CGPA and academic standing  
+
+</details>
+
+<details>
+<summary><strong>👨‍🏫 Faculty Management</strong></summary>
+
+- Add teachers with designation, employee ID, and office room  
+- View and edit teacher profiles  
+- Department-wise faculty listing  
+- Leave management records  
+
+</details>
+
+<details>
+<summary><strong>📚 Course & Curriculum Management</strong></summary>
+
+- Create and manage the course catalog (code, title, credits, type)  
+- Build 4-year curriculum by year and term  
+- Manage course offerings: assign courses to teachers per term/session  
+- Optional course allocation with student selection workflow  
+
+</details>
+
+<details>
+<summary><strong>🗓 Class Routine</strong></summary>
+
+- Build the weekly class routine using a visual period grid  
+- Assign rooms, teachers, and sections per slot  
+- Automatic conflict detection: no double-booking of rooms or teachers  
+- Combined lab-slot support (multiple teachers, merged view)  
+- Export routine as PDF  
+
+</details>
+
+<details>
+<summary><strong>🏢 Room Allocation & Management</strong></summary>
+
+- CRUD operations on the full room inventory  
+- Room attributes: building, capacity, type (theory / lab / seminar), facilities  
+- GPS coordinate entry per room (for geo-attendance radius calculation)  
+- Active / inactive room toggle  
+- Teacher ad-hoc room booking review  
+- CR student room request processing  
+
+</details>
+
+<details>
+<summary><strong>📝 Examination Management</strong></summary>
+
+- Schedule exams: type (Midterm / Final / Quiz), course, date, time, room  
+- Manage exam results: enter and publish marks  
+- Multi-question / multi-component score breakdown  
+
+</details>
+
+<details>
+<summary><strong>📢 Notice Board</strong></summary>
+
+- Create targeted department-wide notices  
+- Priority levels: Normal, Important, Urgent  
+- Term / batch / session targeting  
+- Expiration date management  
+- Publish / unpublish control  
+
+</details>
+
+<details>
+<summary><strong>🔄 Term Upgrade</strong></summary>
+
+- Review student term-upgrade requests  
+- Batch approve or reject with remarks  
+- Automated rollover to next term upon approval  
+
+</details>
+
+<details>
+<summary><strong>🌐 Website CMS</strong></summary>
+
+- Manage all public-facing content through an admin CMS  
+- Gallery uploads, news posts, faculty feature sections  
+- OCR-powered image-to-text for scanned document uploads  
+
+</details>
+
+---
+
+### 👨‍🏫 Teacher Portal
+
+<details>
+<summary><strong>📍 Geo-Attendance Management</strong></summary>
+
+- Open a live geo-attendance room with one click  
+- Auto-closes previous active sessions for the same course offering  
+- Real-time list of students who have submitted attendance  
+- Close sessions manually or leave them to auto-expire  
+
+</details>
+
+<details>
+<summary><strong>📅 Schedule View</strong></summary>
+
+- Personal weekly timetable pulled from routine slots  
+- Today's classes highlighted  
+- Room and time details per slot  
+
+</details>
+
+<details>
+<summary><strong>📊 Attendance Records</strong></summary>
+
+- View course-wise and date-wise attendance summaries  
+- Per-student attendance breakdown  
+
+</details>
+
+<details>
+<summary><strong>📢 Announcements</strong></summary>
+
+- Create course-specific or department-wide announcements  
+- Push notification delivery to enrolled students via server-side FCM  
+
+</details>
+
+---
+
+### 👨‍🎓 Student Portal
+
+<details>
+<summary><strong>📍 Geo-Attendance Submission</strong></summary>
+
+- View currently open attendance sessions filtered by term and section  
+- Submit GPS-verified attendance (Haversine distance ≤ 30 m threshold)  
+- Duplicate-submission prevention with real-time status  
+
+</details>
+
+<details>
+<summary><strong>📅 Personal Schedule</strong></summary>
+
+- Course-wise class timetable  
+- Upcoming exam schedule with countdown  
+
+</details>
+
+<details>
+<summary><strong>📚 Curriculum & Results</strong></summary>
+
+- Browse the complete 4-year curriculum  
+- View published exam results and grade breakdown  
+
+</details>
+
+<details>
+<summary><strong>🏫 CR Room Requests</strong></summary>
+
+- Class Representatives submit room booking requests  
+- FCFS auto-approval with live conflict checking  
+- Period-based and custom break-period support  
+
+</details>
+
+---
+
+### 📺 TV Display Mode
+
+- Real-time full-screen room schedule for department monitors  
+- Displays today's approved bookings, routine slots, and CR allocations  
+- Auto-refreshes on schedule changes via Supabase Realtime  
+- Available as a standalone **Electron desktop app** (`tv-player-app/`)  
+
+---
+
+### 🔔 Notification Pipeline
+
+| Channel | Mechanism |
+|---|---|
+| In-app inbox | `notifications` table with Supabase Realtime |
+| Push (closed app) | FCM HTTP v1 via `notification_push_outbox` |
+| Background dispatch | Immediate server dispatch with Supabase Edge Function fallback |
+| Target types | COURSE, YEAR_TERM, SECTION, TEACHER, USER |
+
+---
+
+## 🛠 Tech Stack
 
 ### Frontend
-- **[Next.js 15](https://nextjs.org/)** - React framework with App Router
-- **[React 18](https://react.dev/)** - UI library
-- **[TypeScript 5](https://www.typescriptlang.org/)** - Type-safe JavaScript
-- **[Tailwind CSS 3.4](https://tailwindcss.com/)** - Utility-first CSS framework
-- **[Framer Motion](https://www.framer.com/motion/)** - Animation library
-- **[GSAP](https://greensock.com/gsap/)** - Professional animation library
-- **[Lucide React](https://lucide.dev/)** - Beautiful icon library
 
-### Backend & Database
-- **[Node.js](https://nodejs.org/)** - JavaScript runtime
-- **[PostgreSQL](https://www.postgresql.org/)** - Relational database
-- **[Supabase](https://supabase.com/)** - Backend as a Service
-- **[bcryptjs](https://github.com/dcodeIO/bcrypt.js)** - Password hashing
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 15 (App Router) |
+| Language | TypeScript 5 |
+| Styling | Tailwind CSS 3.4 |
+| Animations | Framer Motion 12 + GSAP 3 |
+| Icons | Lucide React |
+| 3D / WebGL | OGL |
 
-### Development Tools
-- **[ESLint](https://eslint.org/)** - Code linting
-- **[PostCSS](https://postcss.org/)** - CSS processing
-- **[Autoprefixer](https://github.com/postcss/autoprefixer)** - CSS vendor prefixing
+### Backend & Data
+
+| Layer | Technology |
+|---|---|
+| Runtime | Node.js (Next.js API Routes) |
+| Database | PostgreSQL via Supabase |
+| ORM / Client | `@supabase/supabase-js` |
+| Auth | bcryptjs |
+| File parsing | PapaParse (CSV), Mammoth (DOCX), Tesseract OCR |
+
+### Infrastructure & Tooling
+
+| Layer | Technology |
+|---|---|
+| Deployment | Vercel (serverless) |
+| Analytics | Vercel Analytics |
+| PDF Generation | jsPDF + jsPDF-AutoTable |
+| Image Processing | Sharp |
+| Linting | ESLint + TypeScript ESLint |
+| CSS Processing | PostCSS + Autoprefixer |
 
 ---
 
-## 📋 Prerequisites
+## 🚀 Getting Started
 
-Before you begin, ensure you have the following installed:
+### Prerequisites
 
-- **Node.js** (v18 or higher) - [Download](https://nodejs.org/)
-- **npm** (v9 or higher) or **yarn** (v1.22 or higher)
-- **PostgreSQL** (v14 or higher) - [Download](https://www.postgresql.org/download/)
-- **Git** - [Download](https://git-scm.com/)
+| Requirement | Version |
+|---|---|
+| Node.js | 18 or higher |
+| npm | 9 or higher |
+| Git | Latest |
+| Supabase account | [supabase.com](https://supabase.com) |
 
----
-
-## 🚀 Installation
-
-### 1. Clone the Repository
+### 1 — Clone the Repository
 
 ```bash
 git clone https://github.com/abdullahshahporan/KUET-CSE-Automation-Web-Portal.git
 cd KUET-CSE-Automation-Web-Portal
 ```
 
-### 2. Install Dependencies
+### 2 — Install Dependencies
 
 ```bash
 npm install
-# or
-yarn install
 ```
 
-### 3. Environment Configuration
+### 3 — Configure Environment Variables
 
-Create a `.env.local` file in the root directory:
+Create a `.env.local` file in the project root:
 
 ```env
-# Supabase Configuration
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+# ── Supabase ──────────────────────────────────────────────────────
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
-# Database Configuration
-DATABASE_URL=postgresql://user:password@localhost:5432/kuet_cse_portal
-
-# Application Configuration
+# ── Application ───────────────────────────────────────────────────
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+AUTH_SESSION_SECRET=generate_a_long_random_secret
 NODE_ENV=development
+
+# ── Push Notifications (FCM HTTP v1) ──────────────────────────────
+FCM_PROJECT_ID=your_firebase_project_id
+FCM_CLIENT_EMAIL=your_firebase_service_account_email
+FCM_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+NOTIFICATION_DISPATCH_KEY=optional_shared_secret
 ```
 
-### 4. Database Setup
+> ⚠️ **The `SUPABASE_SERVICE_ROLE_KEY` has elevated privileges. Never expose it in client-side code.**
 
-Initialize the database using the provided schema:
+### 4 — Set Up the Database
+
+In your Supabase SQL Editor, run the schema files **in this order**:
 
 ```bash
-# Connect to your PostgreSQL database
-psql -U your_username -d your_database
+# 1. Main schema
+database/main_db.sql
 
-# Import the schema
-\\i database_schema.sql
+# 2. CMS table
+database/cms_table.sql
+
+# 3. Incremental migrations
+supabase_migration_20260313_teacher_room_allocation.sql
+supabase_migration_20260316_room_booking_web_notification.sql
+supabase_migration_20260327_exam_notification_trigger.sql
+supabase_migration_20260327_exam_type_to_text.sql
+supabase_migration_20260407_rooms_coordinates.sql
+supabase_migration_20260417_fcm_notifications_roles.sql
 ```
 
-Alternatively, if using Supabase, you can execute the SQL schema through the Supabase SQL Editor.
+You can also review `database_schema.sql` for the complete consolidated reference.
 
-### 5. Run Development Server
+If you need to create the first web admin account after migrating, update and run:
+
+```bash
+supabase_bootstrap_first_admin.sql
+```
+
+### 5 — Deploy the Push Edge Function
+
+Deploy the Supabase Edge Function after setting the project secrets:
+
+```bash
+supabase login
+supabase link --project-ref your_project_ref
+supabase functions deploy send-push-notification
+```
+
+Required function secrets:
+
+```bash
+SUPABASE_URL
+SUPABASE_SERVICE_ROLE_KEY
+FCM_PROJECT_ID
+FCM_CLIENT_EMAIL
+FCM_PRIVATE_KEY
+```
+
+> If mobile clients will invoke dispatch directly, leave `NOTIFICATION_DISPATCH_KEY` unset until you move that call behind a trusted backend.
+
+### 6 — Start the Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
----
-
-## 💻 Usage
-
-### Development
+### Available Scripts
 
 ```bash
-# Start development server
-npm run dev
-
-# Run linter
-npm run lint
-
-# Build for production
-npm run build
-
-# Start production server
-npm start
+npm run dev      # Start development server (Next.js fast refresh)
+npm run build    # Production build
+npm run start    # Serve production build
+npm run lint     # Run ESLint
 ```
-
-### Accessing the Portal
-
-1. **Landing Page**: Visit `http://localhost:3000` to access the homepage
-2. **Sign In**: Navigate to `/Auth/SignIn` for authentication
-3. **Sign Up**: Navigate to `/Auth/SignUp` for new user registration
-4. **Dashboard**: After login, access role-specific dashboards
-
-### Default User Roles
-
-- **Admin**: Full system access with user management privileges
-- **Teacher**: Access to course management, attendance, and grading
-- **Student**: Access to enrollment, schedules, and academic records
 
 ---
 
 ## 📁 Project Structure
 
 ```
-KUET-CSE-Automation-Web-Portal/
-├── .github/                      # GitHub configuration
-│   └── copilot-instructions.md   # AI copilot instructions
-├── public/                       # Static assets
-│   └── grid.svg                  # UI graphics
+kuet-cse-automation-web/
+│
+├── database/
+│   ├── main_db.sql                  ← Full PostgreSQL schema
+│   └── cms_table.sql                ← CMS content tables
+│
+├── public/                          ← Static assets
+│
 ├── src/
-│   ├── app/                      # Next.js App Router
-│   │   ├── layout.tsx            # Root layout
-│   │   ├── page.tsx              # Home page
-│   │   └── globals.css           # Global styles
-│   ├── Auth/                     # Authentication components
+│   ├── app/                         ← Next.js App Router
+│   │   ├── layout.tsx               ← Root layout (fonts, providers)
+│   │   ├── page.tsx                 ← Public landing page
+│   │   ├── globals.css
+│   │   ├── about/ │ contact/ │ faculty/ │ gallery/
+│   │   ├── news/ │ notices/ │ programs/ │ research/
+│   │   ├── auth/                    ← Sign In / Sign Up pages
+│   │   ├── dashboard/               ← Role-based dashboard shell
+│   │   ├── tv-display/              ← Public TV schedule page
+│   │   └── api/                     ← API route handlers
+│   │       ├── auth/
+│   │       ├── courses/
+│   │       ├── course-offerings/
+│   │       ├── cr-room-requests/
+│   │       ├── exams/
+│   │       ├── geo-room-locations/
+│   │       ├── notifications/
+│   │       ├── optional-course-assignments/
+│   │       ├── rooms/
+│   │       ├── routine-slots/
+│   │       ├── student/             ← Student-facing endpoints
+│   │       ├── students/
+│   │       ├── teacher-portal/      ← Teacher-facing endpoints
+│   │       ├── teachers/
+│   │       ├── term-upgrades/
+│   │       └── upload/
+│   │
+│   ├── Auth/                        ← Auth UI components
 │   │   ├── AuthCard.tsx
 │   │   ├── SignIn.tsx
 │   │   └── SignUp.tsx
-│   ├── components/               # Reusable UI components
-│   │   ├── ui/                   # UI primitives
+│   │
+│   ├── components/                  ← Reusable UI components
+│   │   ├── ui/                      ← Primitives (Button, Card, Modal…)
 │   │   ├── HeroLanding.tsx
-│   │   ├── HomePage.tsx
 │   │   ├── Sidebar.tsx
 │   │   └── ThemeToggle.tsx
-│   ├── contexts/                 # React Context providers
-│   ├── data/                     # Static data and constants
-│   ├── Home/                     # Home module
-│   │   └── dashboard.tsx
-│   ├── modules/                  # Feature modules
-│   │   ├── AddFaculty/           # Faculty addition
-│   │   ├── AddStudent/           # Student addition
-│   │   ├── ClassRoutine/         # Class scheduling
-│   │   ├── CourseAllocation/     # Course assignment
-│   │   ├── CourseInfo/           # Course information
-│   │   ├── Dashboard/            # Dashboard views
-│   │   ├── FacultyInfo/          # Faculty information
-│   │   ├── Result/               # Result management
-│   │   ├── RoomAllocation/       # Room management
-│   │   ├── Schedule/             # Schedule management
-│   │   ├── StudentInfo/          # Student information
-│   │   ├── TVDisplay/            # Public display mode
-│   │   └── TermUpgrade/          # Term progression
-│   ├── services/                 # API service layers
-│   │   ├── cmsService.ts         # Content management
+│   │
+│   ├── contexts/                    ← React context providers
+│   │
+│   ├── modules/                     ← Feature modules
+│   │   ├── AddFaculty/
+│   │   ├── AddStudent/
+│   │   ├── ClassRoutine/            ← Routine builder + conflict checker
+│   │   ├── CourseAllocation/
+│   │   ├── CourseInfo/
+│   │   ├── CRManagement/            ← CR designation management
+│   │   ├── Dashboard/
+│   │   ├── ExamSchedule/
+│   │   ├── FacultyInfo/
+│   │   ├── GeoRoomManagement/       ← Geo-attendance admin view
+│   │   ├── OptionalCourseAllocation/
+│   │   ├── Result/
+│   │   ├── RoomAllocation/
+│   │   ├── Schedule/
+│   │   ├── Settings/
+│   │   ├── StudentInfo/
+│   │   ├── TeacherPortal/           ← Geo-attendance teacher UI
+│   │   ├── TermUpgrade/
+│   │   ├── TVDisplay/               ← Real-time TV schedule view
+│   │   └── WebsiteCMS/              ← CMS content manager
+│   │
+│   ├── services/                    ← Client-side service wrappers
+│   │   ├── cmsService.ts
 │   │   ├── roomService.ts
 │   │   ├── routineService.ts
 │   │   ├── studentService.ts
 │   │   ├── teacherService.ts
 │   │   └── termUpgradeService.ts
-│   ├── styles/                   # Additional styles
-│   └── types/                    # TypeScript type definitions
+│   │
+│   ├── lib/
+│   │   ├── supabase.ts              ← Supabase client (anon + service)
+│   │   ├── notifications.ts         ← Notification helpers
+│   │   └── pushDispatch.ts          ← FCM push dispatcher
+│   │
+│   ├── styles/                      ← Additional global styles
+│   │
+│   └── types/                       ← TypeScript type definitions
 │       ├── index.ts
 │       └── cms.ts
-├── database_schema.sql           # PostgreSQL database schema
-├── .eslintrc.json                # ESLint configuration
-├── .gitignore                    # Git ignore rules
-├── next.config.ts                # Next.js configuration
-├── package.json                  # Project dependencies
-├── postcss.config.mjs            # PostCSS configuration
-├── tailwind.config.ts            # Tailwind CSS configuration
-└── tsconfig.json                 # TypeScript configuration
+│
+├── tv-player-app/                   ← Standalone Electron TV player
+│   ├── electron/
+│   ├── src/
+│   └── package.json
+│
+├── next.config.ts
+├── tailwind.config.ts
+├── tsconfig.json
+├── supabase_bootstrap_first_admin.sql
+└── package.json
 ```
 
 ---
 
-## 🗄️ Database Schema
+## 🔌 API Reference
 
-The application uses a comprehensive PostgreSQL database with the following main tables:
+All API routes live under `/src/app/api/`. Each folder maps to a Next.js Route Handler.
 
-### Core Tables
-- **profiles**: User authentication and role management
-- **students**: Student-specific information
-- **teachers**: Faculty information and designation
-- **admins**: Administrative user details
+### Authentication
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/auth/signin` | Verify credentials, return user profile |
+| `POST` | `/api/auth/signup` | Register new user |
+
+### Scheduling
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/routine-slots` | Fetch weekly routine (by teacher / course / date) |
+| `POST` | `/api/routine-slots` | Create slot with conflict check |
+| `PATCH` | `/api/routine-slots` | Update slot |
+| `DELETE` | `/api/routine-slots` | Remove slot |
+| `GET / POST / DELETE` | `/api/rooms` | Room CRUD |
+| `GET / POST` | `/api/cr-room-requests` | CR room request submission & listing |
+| `PATCH` | `/api/cr-room-requests` | Approve / reject CR request |
+
+### Geo-Attendance
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/teacher-portal/geo-attendance` | Open attendance room (creates class session) |
+| `GET` | `/api/teacher-portal/geo-attendance` | List active rooms for teacher |
+| `PATCH` | `/api/teacher-portal/geo-attendance` | Close a geo-room |
+| `POST` | `/api/student/geo-attendance` | Student submits GPS-verified attendance |
+| `GET` | `/api/student/geo-attendance` | List open rooms for student's term |
+
+### Courses & Enrollments
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET / POST / PATCH / DELETE` | `/api/courses` | Course catalog CRUD |
+| `GET / POST` | `/api/course-offerings` | Course offering management |
+| `GET / POST` | `/api/optional-course-assignments` | Optional course allocation |
+
+### Students & Teachers
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET / POST / PATCH / DELETE` | `/api/students` | Student management |
+| `GET / POST / PATCH / DELETE` | `/api/teachers` | Teacher management |
+| `POST` | `/api/term-upgrades` | Submit / process term upgrade |
+
+### Notifications
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/notifications/push-dispatch` | Authenticated FCM push dispatch |
+
+---
+
+## 🗄 Database Schema
+
+### User & Profile Tables
+
+| Table | Key Columns |
+|---|---|
+| `profiles` | `id`, `email`, `password_hash`, `role` (admin/teacher/student) |
+| `students` | `user_id`, `roll_number`, `year`, `term`, `section`, `is_cr` |
+| `teachers` | `user_id`, `employee_id`, `designation`, `office_room` |
+| `admins` | `user_id`, `permissions` |
 
 ### Academic Tables
-- **courses**: Course catalog
-- **curriculum**: Course-term mapping
-- **course_offerings**: Active course instances
-- **enrollments**: Student course registrations
 
-### Scheduling Tables
-- **rooms**: Classroom information
-- **routine_slots**: Class schedule slots
-- **class_sessions**: Individual class records
+| Table | Key Columns |
+|---|---|
+| `courses` | `id`, `code`, `title`, `credits`, `course_type` |
+| `curriculum` | Maps course → year/term |
+| `course_offerings` | `id`, `course_id`, `teacher_user_id`, `term`, `session` |
+| `enrollments` | `student_user_id`, `offering_id` |
 
-### Assessment Tables
-- **exams**: Examination details
-- **exam_scores**: Student exam results
-- **attendance_records**: Class attendance
+### Scheduling & Rooms
 
-### Communication
-- **notices**: Announcements and notifications
+| Table | Key Columns |
+|---|---|
+| `rooms` | `room_number`, `building`, `capacity`, `room_type`, `latitude`, `longitude` |
+| `routine_slots` | `offering_id`, `room_number`, `day_of_week` (0–4), `start_time`, `end_time` |
+| `room_booking_requests` | `teacher_user_id`, `room_number`, `start_period`, `end_period`, `status` |
+| `cr_room_requests` | `student_user_id`, `room_number`, `day_of_week`, `start_time`, `end_time`, `status` |
 
-> 📄 For detailed schema information, see [database_schema.sql](./database_schema.sql)
+### Attendance
+
+| Table | Key Columns |
+|---|---|
+| `geo_attendance_rooms` | `offering_id`, `is_active`, `start_time`, `end_time`, `section` |
+| `geo_attendance_logs` | `geo_room_id`, `student_user_id`, `latitude`, `longitude`, `distance_meters`, `status` |
+| `attendance_records` | `enrollment_id`, `session_id`, `status` |
+| `class_sessions` | `offering_id`, `room_number`, `starts_at`, `ends_at` |
+
+### Assessment & Communication
+
+| Table | Key Columns |
+|---|---|
+| `exams` | `course_id`, `exam_type`, `date`, `room_number` |
+| `exam_scores` | `student_user_id`, `exam_id`, `score` |
+| `notices` | `title`, `body`, `priority`, `target_term`, `expires_at` |
+| `notifications` | `recipient_user_id`, `type`, `payload`, `is_read` |
+| `notification_push_outbox` | `notification_id`, `dispatched_at` |
 
 ---
 
-## 🎨 UI/UX Features
+## 🎨 UI / UX Highlights
 
-- **Responsive Design**: Fully responsive across all device sizes
-- **Dark Mode**: Integrated theme switching
-- **Smooth Animations**: GSAP and Framer Motion powered animations
-- **Modern UI**: Clean, professional interface with Tailwind CSS
-- **Accessible**: WCAG compliant components
-- **Performance Optimized**: Next.js 15 with App Router for optimal performance
+- **Fully Responsive** — desktop, tablet, and mobile layouts  
+- **Dark Mode** — integrated theme toggle persisted via context  
+- **Smooth Animations** — Framer Motion page transitions + GSAP scroll effects  
+- **Real-time Updates** — Supabase Realtime subscriptions in TV Display and notification inbox  
+- **PDF Export** — Class routine and result sheets exportable as PDF  
+- **CSV Import** — Bulk student addition via CSV upload (PapaParse)  
+- **OCR Support** — Scanned document text extraction (Tesseract via `eng.traineddata`)  
 
 ---
 
-## 🔐 Security Features
+## 🔐 Security
 
-- ✅ Password hashing with bcrypt
-- ✅ Email validation and sanitization
-- ✅ Role-based access control (RBAC)
-- ✅ Secure session management
-- ✅ SQL injection prevention
-- ✅ XSS protection
-- ✅ CSRF protection (Next.js built-in)
+| Measure | Implementation |
+|---|---|
+| Password hashing | bcryptjs (server-side) |
+| Service role isolation | `SUPABASE_SERVICE_ROLE_KEY` used only in server routes |
+| Row-Level Security | Supabase RLS policies on all sensitive tables |
+| Input validation | Schema-level constraints + API-layer checks |
+| XSS protection | React's built-in escaping + Content Security Policy headers |
+| CSRF protection | Next.js built-in SameSite cookie handling |
+| Secret management | All keys in `.env.local` (gitignored) |
 
 ---
 
 ## 🧪 Testing
 
 ```bash
-# Run tests (when implemented)
-npm test
+# Lint check
+npm run lint
 
-# Run tests in watch mode
-npm test -- --watch
+# Production build (catches TypeScript errors)
+npm run build
+```
 
-# Generate coverage report
-npm test -- --coverage
+> Full unit and integration test suites are planned for a future release.
+
+---
+
+## 🖥 TV Player App
+
+A standalone **Electron** application that wraps the `/tv-display` route for dedicated department monitors.
+
+```
+tv-player-app/
+├── electron/               ← Main process (Electron)
+├── src/                    ← Renderer (React + Vite)
+├── vite.config.ts
+└── package.json
+```
+
+```bash
+cd tv-player-app
+npm install
+npm run dev         # Development mode
+npm run build       # Build distributable
 ```
 
 ---
 
-## 📚 Documentation
+## 🚢 Deployment
 
-- **API Documentation**: Coming soon
-- **User Guide**: Coming soon
-- **Admin Guide**: Coming soon
-- **Development Guide**: See contribution guidelines below
+### Vercel (Recommended)
+
+1. Push the repository to GitHub.  
+2. Import the project in [Vercel](https://vercel.com).  
+3. Add all environment variables from `.env.local` in the Vercel dashboard.  
+4. Deploy — Vercel auto-detects Next.js and configures edge functions.  
 
 ---
 
 ## 🤝 Contributing
 
-We welcome contributions from the community! Please follow these steps:
+We welcome contributions! Please follow these steps:
 
-1. **Fork the repository**
-2. **Create a feature branch**
+1. **Fork** the repository  
+2. **Create a feature branch**  
    ```bash
-   git checkout -b feature/AmazingFeature
+   git checkout -b feature/your-feature-name
    ```
-3. **Commit your changes**
+3. **Commit your changes**  
    ```bash
-   git commit -m 'Add some AmazingFeature'
+   git commit -m "feat: add your feature description"
    ```
-4. **Push to the branch**
+4. **Push to your fork**  
    ```bash
-   git push origin feature/AmazingFeature
+   git push origin feature/your-feature-name
    ```
-5. **Open a Pull Request**
+5. **Open a Pull Request** against `master`
 
 ### Coding Standards
 
-- Follow TypeScript best practices
-- Use ESLint configuration provided
-- Write meaningful commit messages
-- Add comments for complex logic
-- Update documentation as needed
+- Use TypeScript strict mode — avoid `any`  
+- Follow the existing module structure (`modules/` for features, `services/` for data-fetching)  
+- Use Tailwind utility classes; avoid inline `style` props  
+- All API routes must use the **service role client** for write operations  
+- Use `await` for all notification calls — never fire-and-forget in serverless handlers  
 
 ---
 
-## 🐛 Bug Reports & Feature Requests
+## 🐛 Bug Reports
 
-Please use [GitHub Issues](https://github.com/abdullahshahporan/KUET-CSE-Automation-Web-Portal/issues) to report bugs or request features.
+Found a bug? Please [open an issue](https://github.com/abdullahshahporan/KUET-CSE-Automation-Web-Portal/issues) with:
 
-### Bug Report Template
-
-```
-**Describe the bug**
-A clear description of what the bug is.
-
-**To Reproduce**
-Steps to reproduce the behavior.
-
-**Expected behavior**
-What you expected to happen.
-
-**Screenshots**
-If applicable, add screenshots.
-
-**Environment**
-- OS: [e.g., Windows, macOS, Linux]
-- Browser: [e.g., Chrome, Firefox]
-- Version: [e.g., 22]
-```
+- Browser and OS version  
+- Node.js and npm versions  
+- Steps to reproduce  
+- Expected vs. actual behaviour  
+- Console errors or screenshots  
 
 ---
 
-## 📜 License
+## 📄 Documentation
 
-This project is currently under development. License information will be added soon.
-
----
-
-## 👥 Authors & Contributors
-
-- **Abdullah Shah Poran** - *Initial work* - [@abdullahshahporan](https://github.com/abdullahshahporan)
-
-See also the list of [contributors](https://github.com/abdullahshahporan/KUET-CSE-Automation-Web-Portal/contributors) who participated in this project.
-
----
-
-## 🙏 Acknowledgments
-
-- KUET CSE Department for project requirements and support
-- Next.js team for the amazing framework
-- Supabase for backend infrastructure
-- All contributors who help improve this project
+| Document | Description |
+|---|---|
+| [AUTHENTICATION-IMPLEMENTATION.md](./AUTHENTICATION-IMPLEMENTATION.md) | Auth flow deep-dive |
+| [SETUP-SUPABASE.md](./SETUP-SUPABASE.md) | Supabase project setup guide |
+| [REALTIME-NOTIFICATION-RUNBOOK.md](./REALTIME-NOTIFICATION-RUNBOOK.md) | Notification pipeline runbook |
+| [FIX-RLS-ERROR.md](./FIX-RLS-ERROR.md) | Common RLS error fixes |
+| [FIX-USER-NOT-ALLOWED.md](./FIX-USER-NOT-ALLOWED.md) | Auth permission fixes |
+| [SUPABASE-DATE-BASED-MIGRATION.md](./SUPABASE-DATE-BASED-MIGRATION.md) | Migration guide |
 
 ---
 
-## 📞 Contact & Support
+## 📄 License
 
-- **Project Lead**: Abdullah Shah Poran
-- **GitHub**: [@abdullahshahporan](https://github.com/abdullahshahporan)
-- **Issue Tracker**: [GitHub Issues](https://github.com/abdullahshahporan/KUET-CSE-Automation-Web-Portal/issues)
+Distributed under the **MIT License**. See [`LICENSE`](./LICENSE) for details.
 
 ---
 
-## 🗺️ Roadmap
+## 👥 Authors
 
-- [ ] Complete authentication system integration
-- [ ] Implement real-time notifications
-- [ ] Add email notification system
-- [ ] Mobile application development
-- [ ] Advanced analytics dashboard
-- [ ] API documentation with Swagger
-- [ ] Comprehensive test coverage
-- [ ] Performance optimization
-- [ ] Internationalization (i18n)
-- [ ] Export functionality (PDF, Excel)
+**Abdullah Shah Poran** — _Lead Developer_  
+CSE Department, Khulna University of Engineering & Technology
 
----
-
-## 📊 Project Status
-
-🚧 **Active Development** - This project is under active development. Features are being added regularly.
+> Built with ❤️ for KUET CSE — bridging administration and academics through modern technology.
 
 ---
 
 <div align="center">
 
-### ⭐ Star this repository if you find it helpful!
-
-Made with ❤️ by the KUET CSE Community
+**[⬆ Back to Top](#-kuet-cse-automation)**
 
 </div>
