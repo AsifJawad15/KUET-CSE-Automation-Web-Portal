@@ -10,6 +10,7 @@ import AccessRestricted from '@/components/AccessRestricted';
 import Sidebar from '@/components/Sidebar';
 import { useAuth, UserRole } from '@/contexts/AuthContext';
 import { AddStudentPage } from '@/modules/AddStudent';
+import { AddFacultyPage } from '@/modules/AddFaculty';
 import { ClassRoutinePage } from '@/modules/ClassRoutine';
 import { CourseAllocationPage } from '@/modules/CourseAllocation';
 import { CourseInfoPage } from '@/modules/CourseInfo';
@@ -21,6 +22,7 @@ import { ResultPage } from '@/modules/Result';
 import { RoomAllocationPage } from '@/modules/RoomAllocation';
 import { SchedulePage } from '@/modules/Schedule';
 import { SettingsPage } from '@/modules/Settings';
+import { StaffManagementPage } from '@/modules/StaffManagement';
 import { AnnouncementTab, ChangePasswordTab, CourseStudentsTab, EditProfileTab, MyScheduleTab, RoomRequestTab, TakeAttendanceTab, TeacherPortalPage, UploadCSVTab } from '@/modules/TeacherPortal';
 import { TermUpgradePage } from '@/modules/TermUpgrade';
 import { TVDisplayPage, TVViewerPage } from '@/modules/TVDisplay';
@@ -49,7 +51,9 @@ const PAGE_REGISTRY: Record<string, PageEntry> = {
   'course-allocation':  { render: () => <CourseAllocationPage /> },
   'class-routine':      { render: () => <ClassRoutinePage /> },
   'schedule':           { render: () => <SchedulePage /> },
+  'add-faculty':        { render: () => <AddFacultyPage />,       requiredRole: 'admin' },
   'add-student':        { render: () => <AddStudentPage />,       requiredRole: 'admin' },
+  'staff-management':   { render: () => <StaffManagementPage />,  requiredRole: 'admin' },
   'cr-management':      { render: () => <CRManagementPage />,     requiredRole: 'admin' },
   'optional-courses':   { render: () => <OptionalCourseAllocationPage />, requiredRole: 'admin' },
   'term-upgrade':       { render: () => <TermUpgradePage /> },
@@ -98,7 +102,8 @@ export default function Dashboard() {
     localStorage.setItem(STORAGE_KEY, activeMenu);
   }, [activeMenu]);
 
-  // Redirect teachers to teacher pages if on admin page
+  // Redirect normal teachers to teacher pages if on admin page.
+  // Department heads keep full administrative access.
   useEffect(() => {
     if (!isLoading && user?.role === 'teacher' && !activeMenu.startsWith('tp-')) {
       setActiveMenu(TEACHER_DEFAULT_PAGE);
@@ -120,7 +125,7 @@ export default function Dashboard() {
     const entry = PAGE_REGISTRY[activeMenu] ?? PAGE_REGISTRY[DEFAULT_PAGE];
 
     // Role guard
-    if (entry.requiredRole && user?.role !== entry.requiredRole) {
+    if (entry.requiredRole && user?.role !== 'head' && user?.role !== entry.requiredRole) {
       return <AccessRestricted />;
     }
 

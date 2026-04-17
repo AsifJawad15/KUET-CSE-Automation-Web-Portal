@@ -5,9 +5,10 @@
 // ==========================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { badRequest, conflict, guardSupabase, internalError, noContent, ok } from '@/lib/apiResponse';
+import { badRequest, conflict, internalError, ok } from '@/lib/apiResponse';
 import { requireField, requireFields, runValidations, validateUppercase, validatePositiveNumber } from '@/lib/validators';
+import { getSupabaseAdmin, isSupabaseAdminConfigured } from '@/lib/supabaseAdmin';
+import { requireServerSession } from '@/lib/serverAuth';
 
 // ── Helpers ────────────────────────────────────────────
 
@@ -19,14 +20,23 @@ function extractErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
 
+function serviceGuard() {
+  if (!isSupabaseAdminConfigured()) {
+    return internalError('Secure Supabase service role is not configured.');
+  }
+  return null;
+}
+
 // ── GET /api/courses ───────────────────────────────────
 
-export async function GET() {
-  const guard = guardSupabase(isSupabaseConfigured());
+export async function GET(request: NextRequest) {
+  const auth = requireServerSession(request);
+  if (auth.response) return auth.response;
+  const guard = serviceGuard();
   if (guard) return guard;
 
   try {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabaseAdmin()
       .from('courses')
       .select('*')
       .order('code', { ascending: true });
@@ -41,7 +51,9 @@ export async function GET() {
 // ── POST /api/courses ──────────────────────────────────
 
 export async function POST(request: NextRequest) {
-  const guard = guardSupabase(isSupabaseConfigured());
+  const auth = requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
+  const guard = serviceGuard();
   if (guard) return guard;
 
   try {
@@ -55,7 +67,7 @@ export async function POST(request: NextRequest) {
     );
     if (validationError) return badRequest(validationError);
 
-    const { data, error } = await supabase
+    const { data, error } = await getSupabaseAdmin()
       .from('courses')
       .insert({
         code: code.trim(),
@@ -81,7 +93,9 @@ export async function POST(request: NextRequest) {
 // ── PATCH /api/courses ─────────────────────────────────
 
 export async function PATCH(request: NextRequest) {
-  const guard = guardSupabase(isSupabaseConfigured());
+  const auth = requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
+  const guard = serviceGuard();
   if (guard) return guard;
 
   try {
@@ -110,7 +124,7 @@ export async function PATCH(request: NextRequest) {
 
     if (Object.keys(updates).length === 0) return badRequest('No fields to update');
 
-    const { data, error } = await supabase
+    const { data, error } = await getSupabaseAdmin()
       .from('courses')
       .update(updates)
       .eq('id', id)
@@ -131,7 +145,9 @@ export async function PATCH(request: NextRequest) {
 // ── DELETE /api/courses ────────────────────────────────
 
 export async function DELETE(request: NextRequest) {
-  const guard = guardSupabase(isSupabaseConfigured());
+  const auth = requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
+  const guard = serviceGuard();
   if (guard) return guard;
 
   try {
@@ -141,7 +157,8 @@ export async function DELETE(request: NextRequest) {
     if (!id) return badRequest('Course ID is required');
 
     // Check for dependent course_offerings first
-    const { data: offerings } = await supabase
+    const db = getSupabaseAdmin();
+    const { data: offerings } = await db
       .from('course_offerings')
       .select('id')
       .eq('course_id', id)
@@ -153,7 +170,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const { error } = await supabase
+    const { error } = await db
       .from('courses')
       .delete()
       .eq('id', id);

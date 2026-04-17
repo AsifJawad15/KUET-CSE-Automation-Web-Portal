@@ -21,6 +21,7 @@ import {
     Megaphone,
     Monitor,
     Settings,
+    ShieldCheck,
     Sparkles,
     TrendingUp,
     Upload,
@@ -46,7 +47,7 @@ interface SidebarProps {
 export default function Sidebar({ activeItem, onMenuChange, isCollapsed, onToggleCollapse }: SidebarProps) {
   const router = useRouter();
   const { user, logout } = useAuth();
-  const isAdmin = user?.role === 'admin';
+  const isAdminLike = user?.role === 'admin' || user?.role === 'head';
 
   const adminMenuItems: MenuItem[] = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -57,7 +58,9 @@ export default function Sidebar({ activeItem, onMenuChange, isCollapsed, onToggl
     { id: 'course-allocation', label: 'Course Allocation', icon: BookOpen },
     { id: 'class-routine', label: 'Class Routine', icon: Clock },
     { id: 'schedule', label: 'Schedule', icon: Calendar },
+    { id: 'add-faculty', label: 'Add Faculty', icon: UserCog },
     { id: 'add-student', label: 'Add Student', icon: UserPlus },
+    { id: 'staff-management', label: 'Staff Admins', icon: ShieldCheck },
     { id: 'cr-management', label: 'CR Management', icon: Crown },
     { id: 'optional-courses', label: 'Optional Courses', icon: Sparkles },
     { id: 'term-upgrade', label: 'Term Upgrade', icon: TrendingUp },
@@ -77,7 +80,7 @@ export default function Sidebar({ activeItem, onMenuChange, isCollapsed, onToggl
   ];
 
   const isTeacher = user?.role === 'teacher';
-  const filteredMenuItems = isTeacher ? teacherMenuItems : adminMenuItems;
+  const filteredMenuItems = isTeacher && !isAdminLike ? teacherMenuItems : adminMenuItems;
 
   const handleLogout = () => {
     logout();

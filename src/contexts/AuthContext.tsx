@@ -11,7 +11,7 @@ import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, 
 
 // ── Types ──────────────────────────────────────────────
 
-export type UserRole = 'admin' | 'teacher' | null;
+export type UserRole = 'admin' | 'teacher' | 'head' | null;
 
 export interface User {
   id: string;
@@ -122,6 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     setUser(null);
     clearPersistedUser();
+    void fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
   }, []);
 
   const value = useMemo<AuthContextType>(() => ({

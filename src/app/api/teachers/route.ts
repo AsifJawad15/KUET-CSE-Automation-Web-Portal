@@ -5,11 +5,12 @@
 // ==========================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { hashPassword, generateTeacherPassword } from '@/lib/passwordUtils';
-import { badRequest, guardSupabase, internalError, conflict, noContent, ok } from '@/lib/apiResponse';
+import { badRequest, internalError, conflict, noContent, ok } from '@/lib/apiResponse';
 import { requireField, requireFields, runValidations, validateEmail } from '@/lib/validators';
 import { WITH_PROFILE } from '@/lib/queryConstants';
+import { getSupabaseAdmin, isSupabaseAdminConfigured } from '@/lib/supabaseAdmin';
+import { requireServerSession } from '@/lib/serverAuth';
 
 // ── Helpers ────────────────────────────────────────────
 
@@ -21,13 +22,23 @@ function isDuplicateError(error: { message: string }): boolean {
   return error.message.includes('unique') || error.message.includes('duplicate');
 }
 
+function serviceGuard() {
+  if (!isSupabaseAdminConfigured()) {
+    return internalError('Secure Supabase service role is not configured.');
+  }
+  return null;
+}
+
 // ── POST /api/teachers ─────────────────────────────────
 
 export async function POST(request: NextRequest) {
-  const guard = guardSupabase(isSupabaseConfigured());
+  const auth = requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
+  const guard = serviceGuard();
   if (guard) return guard;
 
   try {
+    const db = getSupabaseAdmin();
     const body = await request.json();
     const { full_name, email, phone, designation, password } = body;
 
@@ -43,7 +54,7 @@ export async function POST(request: NextRequest) {
     const passwordHash = await hashPassword(plainPassword);
 
     // 1. Create profile (auth only)
-    const { error: profileError } = await supabase
+    const { error: profileError } = await db
       .from('profiles')
       .insert({
         user_id: tempUserId,
@@ -59,14 +70,14 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Create teacher record
-    const { error: teacherError } = await supabase
+    const { error: teacherError } = await db
       .from('teachers')
       .insert({ user_id: tempUserId, full_name, phone, designation });
 
     if (teacherError) throw teacherError;
 
     // 3. Fetch complete teacher data
-    const { data: teacherData, error: fetchError } = await supabase
+    const { data: teacherData, error: fetchError } = await db
       .from('teachers')
       .select(WITH_PROFILE)
       .eq('user_id', tempUserId)
@@ -82,12 +93,14 @@ export async function POST(request: NextRequest) {
 
 // ── GET /api/teachers ──────────────────────────────────
 
-export async function GET() {
-  const guard = guardSupabase(isSupabaseConfigured());
+export async function GET(request: NextRequest) {
+  const auth = requireServerSession(request);
+  if (auth.response) return auth.response;
+  const guard = serviceGuard();
   if (guard) return guard;
 
   try {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabaseAdmin()
       .from('teachers')
       .select(WITH_PROFILE)
       .order('created_at', { ascending: false });
@@ -102,7 +115,9 @@ export async function GET() {
 // ── DELETE /api/teachers ───────────────────────────────
 
 export async function DELETE(request: NextRequest) {
-  const guard = guardSupabase(isSupabaseConfigured());
+  const auth = requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
+  const guard = serviceGuard();
   if (guard) return guard;
 
   try {
@@ -111,7 +126,7 @@ export async function DELETE(request: NextRequest) {
 
     if (!userId) return badRequest('User ID required');
 
-    const { error } = await supabase
+    const { error } = await getSupabaseAdmin()
       .from('profiles')
       .update({ is_active: false })
       .eq('user_id', userId);
@@ -126,10 +141,13 @@ export async function DELETE(request: NextRequest) {
 // ── PATCH /api/teachers ────────────────────────────────
 
 export async function PATCH(request: NextRequest) {
-  const guard = guardSupabase(isSupabaseConfigured());
+  const auth = requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
+  const guard = serviceGuard();
   if (guard) return guard;
 
   try {
+    const db = getSupabaseAdmin();
     const body = await request.json();
     const { userId, action, full_name, phone, designation } = body;
 
@@ -141,7 +159,7 @@ export async function PATCH(request: NextRequest) {
       const newPassword = generateTeacherPassword();
       const passwordHash = await hashPassword(newPassword);
 
-      const { error } = await supabase
+      const { error } = await db
         .from('profiles')
         .update({ password_hash: passwordHash })
         .eq('user_id', userId);
@@ -154,7 +172,7 @@ export async function PATCH(request: NextRequest) {
     if (action === 'toggle_leave') {
       const { is_on_leave, leave_reason } = body;
 
-      const { error } = await supabase
+      const { error } = await db
         .from('teachers')
         .update({
           is_on_leave: !!is_on_leave,
@@ -174,13 +192,59 @@ export async function PATCH(request: NextRequest) {
       if (designation) teacherUpdates.designation = designation;
 
       if (Object.keys(teacherUpdates).length > 0) {
-        const { error } = await supabase
+        const { error } = await db
           .from('teachers')
           .update(teacherUpdates)
           .eq('user_id', userId);
 
         if (error) throw error;
       }
+
+      return noContent();
+    }
+
+    // ── Promote/demote Department Head ──
+    if (action === 'set_head') {
+      const makeHead = !!body.is_head;
+
+      if (makeHead) {
+        const { data: existingHeads, error: existingError } = await db
+          .from('teachers')
+          .select('user_id')
+          .eq('is_head', true)
+          .neq('user_id', userId);
+
+        if (existingError) throw existingError;
+
+        const previousHeadIds = (existingHeads || [])
+          .map((row: { user_id: string }) => row.user_id)
+          .filter(Boolean);
+
+        if (previousHeadIds.length > 0) {
+          await db
+            .from('teachers')
+            .update({ is_head: false })
+            .in('user_id', previousHeadIds);
+          await db
+            .from('profiles')
+            .update({ role: 'TEACHER' })
+            .in('user_id', previousHeadIds);
+        }
+      }
+
+      const { error: teacherError } = await db
+        .from('teachers')
+        .update({ is_head: makeHead })
+        .eq('user_id', userId);
+
+      if (teacherError) throw teacherError;
+
+      const { error: profileError } = await db
+        .from('profiles')
+        .update({ role: makeHead ? 'HEAD' : 'TEACHER' })
+        .eq('user_id', userId);
+
+      if (profileError) throw profileError;
 
       return noContent();
     }

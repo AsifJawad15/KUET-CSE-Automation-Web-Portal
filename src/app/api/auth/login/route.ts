@@ -1,15 +1,15 @@
 // ==========================================
 // API: /api/auth/login
-// Admin: credentials from env vars
-// Teacher: authenticates via Supabase profiles table
+// Admin/Head/Teacher: authenticates via Supabase profiles table
 // Rate-limited: max 5 attempts per IP per minute
 // ==========================================
 
 import { NextRequest } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { badRequest, guardSupabase, internalError, ok, unauthorized } from '@/lib/apiResponse';
+import { badRequest, internalError, ok, serviceUnavailable, unauthorized } from '@/lib/apiResponse';
 import { requireFields, runValidations, validateEmail } from '@/lib/validators';
 import { comparePassword } from '@/lib/passwordUtils';
+import { getSupabaseAdmin, isSupabaseAdminConfigured } from '@/lib/supabaseAdmin';
+import { createSessionToken, ServerUserRole, setSessionCookie } from '@/lib/serverAuth';
 
 function extractError(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
@@ -32,11 +32,6 @@ function isRateLimited(ip: string): boolean {
   return entry.count > MAX_ATTEMPTS;
 }
 
-// ── Admin credentials from environment variables ───────
-
-const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').toLowerCase().trim();
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
-
 // ── Designation display mapping ────────────────────────
 
 const DESIGNATION_LABELS: Record<string, string> = {
@@ -45,6 +40,12 @@ const DESIGNATION_LABELS: Record<string, string> = {
   ASSISTANT_PROFESSOR: 'Assistant Professor',
   LECTURER: 'Lecturer',
 };
+
+const WEB_ALLOWED_ROLES = new Set(['ADMIN', 'TEACHER', 'HEAD']);
+
+function normalizeRole(role: string): ServerUserRole {
+  return role.toLowerCase() as ServerUserRole;
+}
 
 // ── POST /api/auth/login ───────────────────────────────
 
@@ -70,29 +71,14 @@ export async function POST(request: NextRequest) {
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // ── Admin: credentials from env vars ───────────────
-    if (ADMIN_EMAIL && normalizedEmail === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-      return ok({
-        id: 'admin-001',
-        email: ADMIN_EMAIL,
-        name: 'System Administrator',
-        role: 'admin',
-        department: 'Computer Science & Engineering',
-        designation: 'System Admin',
-      });
+    if (!isSupabaseAdminConfigured()) {
+      return serviceUnavailable('Secure database client is not configured.');
     }
 
-    // If someone tries admin email with wrong password
-    if (normalizedEmail === ADMIN_EMAIL) {
-      return unauthorized('Invalid email or password');
-    }
-
-    // ── Teacher/Other: authenticate via Supabase profiles table ────
-    const guard = guardSupabase(isSupabaseConfigured());
-    if (guard) return guard;
+    const db = getSupabaseAdmin();
 
     // 1. Fetch profile with password hash
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await db
       .from('profiles')
       .select('user_id, role, email, password_hash, is_active')
       .eq('email', normalizedEmail)
@@ -106,6 +92,10 @@ export async function POST(request: NextRequest) {
       return unauthorized('Account is deactivated. Contact administrator.');
     }
 
+    if (!WEB_ALLOWED_ROLES.has(profile.role)) {
+      return unauthorized('This account is not allowed to access the web portal.');
+    }
+
     // 2. Compare password
     const isValid = await comparePassword(password, profile.password_hash);
     if (!isValid) {
@@ -117,37 +107,57 @@ export async function POST(request: NextRequest) {
     let department = 'Computer Science & Engineering';
     let designation: string | undefined;
 
-    if (profile.role === 'TEACHER') {
-      const { data: teacher } = await supabase
+    if (profile.role === 'TEACHER' || profile.role === 'HEAD') {
+      const { data: teacher } = await db
         .from('teachers')
-        .select('full_name, designation, department, office_room')
+        .select('full_name, designation, department, office_room, is_head')
         .eq('user_id', profile.user_id)
-        .single();
+        .maybeSingle();
 
       if (teacher) {
         name = teacher.full_name;
         department = teacher.department || department;
-        designation = DESIGNATION_LABELS[teacher.designation] || teacher.designation;
+        designation = profile.role === 'HEAD'
+          ? 'Head of Department'
+          : DESIGNATION_LABELS[teacher.designation] || teacher.designation;
       }
     } else if (profile.role === 'ADMIN') {
-      name = 'System Administrator';
-      designation = 'System Admin';
+      const [{ data: staff }, { data: admin }] = await Promise.all([
+        db
+          .from('staffs')
+          .select('full_name, designation, department')
+          .eq('user_id', profile.user_id)
+          .maybeSingle(),
+        db
+          .from('admins')
+          .select('full_name')
+          .eq('user_id', profile.user_id)
+          .maybeSingle(),
+      ]);
+
+      name = staff?.full_name || admin?.full_name || 'Administrator';
+      department = staff?.department || department;
+      designation = staff?.designation || 'Administrator';
     }
 
     // 4. Update last_login
-    await supabase
+    await db
       .from('profiles')
       .update({ last_login: new Date().toISOString() })
       .eq('user_id', profile.user_id);
 
-    return ok({
+    const user = {
       id: profile.user_id,
       email: profile.email,
       name,
-      role: profile.role.toLowerCase(),
+      role: normalizeRole(profile.role),
       department,
       designation,
-    });
+    };
+
+    const response = ok(user);
+    setSessionCookie(response, createSessionToken(user));
+    return response;
   } catch (error: unknown) {
     return internalError(extractError(error, 'Login failed'));
   }
