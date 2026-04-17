@@ -178,7 +178,7 @@ CREATE TABLE public.device_push_tokens (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL,
   platform text NOT NULL CHECK (platform = ANY (ARRAY['android'::text, 'ios'::text, 'web'::text])),
-  provider text NOT NULL DEFAULT 'onesignal'::text,
+  provider text NOT NULL DEFAULT 'fcm'::text,
   token text NOT NULL,
   app_version text,
   device_info jsonb NOT NULL DEFAULT '{}'::jsonb,

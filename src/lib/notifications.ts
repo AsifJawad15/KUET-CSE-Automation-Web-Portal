@@ -112,7 +112,7 @@ export function buildStudentAudience(context: {
   };
 }
 
-export async function createNotification(input: CreateNotificationInput): Promise<void> {
+export async function createNotification(input: CreateNotificationInput): Promise<string | null> {
   try {
     const targetType = input.target_type ?? input.targetType;
     const targetValue = cleanText(input.target_value ?? input.targetValue);
@@ -127,7 +127,7 @@ export async function createNotification(input: CreateNotificationInput): Promis
 
     if (!targetType) {
       console.error('[NotificationHelper] Missing target type for notification:', input.type);
-      return;
+      return null;
     }
 
     if (dedupeKey) {
@@ -141,11 +141,11 @@ export async function createNotification(input: CreateNotificationInput): Promis
 
       if (lookupError) {
         console.error('[NotificationHelper] Failed to check duplicate notification:', lookupError.message);
-        return;
+        return null;
       }
 
       if (existing) {
-        return;
+        return existing.id;
       }
     }
 
@@ -168,7 +168,7 @@ export async function createNotification(input: CreateNotificationInput): Promis
 
     if (error) {
       console.error('[NotificationHelper] Failed to create notification:', error.message);
-      return;
+      return null;
     }
 
     if (inserted?.id) {
@@ -185,8 +185,11 @@ export async function createNotification(input: CreateNotificationInput): Promis
         console.error('[NotificationHelper] Immediate push dispatch failed:', dispatchErr);
       }
     }
+
+    return inserted?.id ?? null;
   } catch (err) {
     console.error('[NotificationHelper] Unexpected error:', err);
+    return null;
   }
 }
 
@@ -256,7 +259,7 @@ export function notifyCRRoomAllocated(opts: {
   endTime: string;
   term: string;
   section?: string | null;
-}): Promise<void> {
+}): Promise<string | null> {
   const normalizedTerm = opts.term.trim();
   const normalizedSection = opts.section?.trim();
   const hasSection = !!normalizedSection;
@@ -288,7 +291,7 @@ export function notifyTeacherRoomApproved(opts: {
   dayName: string;
   remarks?: string | null;
   requestId?: string | null;
-}): Promise<void> {
+}): Promise<string | null> {
   const remarks = cleanText(opts.remarks);
   return createNotification({
     type: 'room_request_approved',
@@ -318,7 +321,7 @@ export function notifyTeacherRoomRejected(opts: {
   dayName: string;
   reason: string;
   requestId?: string | null;
-}): Promise<void> {
+}): Promise<string | null> {
   const reason = cleanText(opts.reason) ?? 'No remarks provided.';
   return createNotification({
     type: 'room_request_rejected',
@@ -353,7 +356,7 @@ export function notifyCRRoomRequestSubmitted(opts: {
   studentRoll?: string | null;
   createdBy?: string | null;
   requestId?: string | null;
-}): Promise<void> {
+}): Promise<string | null> {
   const studentLabel = cleanText(opts.studentName)
     || (cleanText(opts.studentRoll) ? `Roll ${cleanText(opts.studentRoll)}` : 'A class representative');
   const sectionLabel = cleanText(opts.section);
@@ -391,7 +394,7 @@ export function notifyAttendanceMarkingReminder(opts: {
   roomNumber?: string | null;
   section?: string | null;
   offeringId?: string | null;
-}): Promise<void> {
+}): Promise<string | null> {
   const sectionLabel = cleanText(opts.section);
   const roomLabel = cleanText(opts.roomNumber);
 
@@ -423,7 +426,7 @@ export function notifyCourseAnomalyAlert(opts: {
   body: string;
   dedupeKey: string;
   metadata?: Record<string, unknown>;
-}): Promise<void> {
+}): Promise<string | null> {
   return createNotification({
     type: 'course_anomaly_alert',
     title: opts.title,
@@ -449,7 +452,7 @@ export function notifyNoticePosted(opts: {
   targetValue?: string;
   targetYearTerm?: string;
   courseCode?: string;
-}): Promise<void> {
+}): Promise<string | null> {
   return createNotification({
     type: 'notice_posted',
     title: opts.title,
@@ -472,7 +475,7 @@ export function notifyExamScheduled(opts: {
   venue: string;
   term: string;
   section?: string;
-}): Promise<void> {
+}): Promise<string | null> {
   const targetType: NotificationTargetType = opts.section ? 'SECTION' : 'YEAR_TERM';
   return createNotification({
     type: 'exam_scheduled',
@@ -521,7 +524,7 @@ export function notifyExamReminder(opts: {
   term: string;
   section?: string | null;
   minutesRemaining: number;
-}): Promise<void> {
+}): Promise<string | null> {
   const audience = resolveExamAudience({
     term: opts.term,
     section: opts.section,
@@ -572,7 +575,7 @@ export function notifyAnnouncement(opts: {
   term?: string;
   section?: string;
   courseCode?: string;
-}): Promise<void> {
+}): Promise<string | null> {
   let targetType: NotificationTargetType = 'ALL';
   let targetValue: string | undefined;
   let targetYearTerm: string | undefined;
@@ -610,7 +613,7 @@ export function notifyTermUpgrade(opts: {
   approved: boolean;
   newTerm?: string;
   remarks?: string;
-}): Promise<void> {
+}): Promise<string | null> {
   return createNotification({
     type: 'term_upgrade',
     title: opts.approved ? 'Term Upgrade Approved' : 'Term Upgrade Request Update',
@@ -630,7 +633,7 @@ export function notifyOptionalCourseAssigned(opts: {
   courseCode: string;
   courseTitle: string;
   assignedBy?: string | null;
-}): Promise<void> {
+}): Promise<string | null> {
   return createNotification({
     type: 'optional_course',
     title: `Optional Course Assigned — ${opts.courseCode}`,
@@ -650,7 +653,7 @@ export function notifyTeacherCourseAssigned(opts: {
   term: string;
   section?: string | null;
   assignedBy?: string | null;
-}): Promise<void> {
+}): Promise<string | null> {
   const sectionLabel = opts.section?.trim() ? ` (Section ${opts.section.trim()})` : '';
   return createNotification({
     type: 'announcement',
@@ -681,7 +684,7 @@ export function notifyTeacherScheduleChanged(opts: {
   endTime?: string;
   room?: string;
   scheduleDate?: string;
-}): Promise<void> {
+}): Promise<string | null> {
   const loc = opts.room ? `, Room ${opts.room}` : '';
   const time = opts.startTime ? `, ${opts.startTime}–${opts.endTime}` : '';
   const when = opts.scheduleDate
@@ -739,7 +742,7 @@ export function notifyStudentCourseAssigned(opts: {
   term: string;
   section?: string | null;
   assignedBy?: string | null;
-}): Promise<void> {
+}): Promise<string | null> {
   const audience = buildStudentAudience({
     courseCode: opts.courseCode,
     term: opts.term,
@@ -775,7 +778,7 @@ export function notifyAdminRoomRequestPending(opts: {
   endTime: string;
   purpose: string;
   requestId: string;
-}): Promise<void> {
+}): Promise<string | null> {
   const dayName = (() => {
     const parsed = new Date(`${opts.date}T12:00:00`);
     return Number.isNaN(parsed.getTime())

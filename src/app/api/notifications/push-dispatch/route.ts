@@ -1,20 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { dispatchPendingPushNotifications } from '@/lib/pushDispatch';
+import { getSessionFromRequest, isAdminLike } from '@/lib/serverAuth';
 
 function isAuthorized(request: NextRequest): boolean {
-  const key = process.env.NOTIFICATION_CRON_KEY || process.env.CRON_SECRET;
+  const session = getSessionFromRequest(request);
+  if (session && isAdminLike(session.role)) return true;
+
+  const key = process.env.NOTIFICATION_DISPATCH_KEY || process.env.NOTIFICATION_CRON_KEY || process.env.CRON_SECRET;
   if (!key) return false;
 
   const authorization = request.headers.get('authorization');
   const bearerToken = authorization?.startsWith('Bearer ') ? authorization.slice(7).trim() : null;
-  const provided = request.headers.get('x-notification-cron-key') || bearerToken || new URL(request.url).searchParams.get('key');
+  const provided =
+    request.headers.get('x-notification-dispatch-key') ||
+    request.headers.get('x-notification-cron-key') ||
+    bearerToken ||
+    new URL(request.url).searchParams.get('key');
   return provided === key;
 }
 
 async function handleDispatch(request: NextRequest) {
   if (!isAuthorized(request)) {
-    return NextResponse.json({ success: false, error: 'Invalid cron key' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Unauthorized push dispatch request' }, { status: 401 });
   }
 
   try {
