@@ -24,6 +24,7 @@ import {
   type TvTarget,
   type RoutineSlotWithDetails,
 } from '../lib/supabase';
+import { cacheTvDisplayData, getCachedTvDisplayData } from '../lib/tvDisplayCache';
 
 // Color palette (matches the web TV display)
 const C = {
@@ -85,6 +86,8 @@ export default function PlayerPage() {
   const [showRoomSchedule, setShowRoomSchedule] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [wasOffline, setWasOffline] = useState(false);
 
   // UI state
   const [now, setNow] = useState(new Date());
@@ -116,9 +119,30 @@ export default function PlayerPage() {
       setEvents(data.events);
       setSettings(data.settings);
       setError(null);
+      
+      // Cache the fetched data
+      cacheTvDisplayData(target, data);
+      
+      // If we were offline, mark that we're online now
+      if (wasOffline) {
+        setWasOffline(false);
+      }
     } catch (err) {
       console.error(`[${target}] Content fetch error:`, err);
-      setError(err instanceof Error ? err.message : String(err));
+      
+      // Try to load from cache on error
+      const cachedData = getCachedTvDisplayData(target);
+      if (cachedData) {
+        console.log(`[${target}] Loading from cache due to fetch error`);
+        setAnnouncements(cachedData.announcements);
+        setTicker(cachedData.ticker);
+        setEvents(cachedData.events);
+        setSettings(cachedData.settings);
+        setWasOffline(true);
+        setError(null);
+      } else {
+        setError(err instanceof Error ? err.message : String(err));
+      }
     }
 
     // Fetch device settings independently — failure should not hide events
@@ -127,6 +151,7 @@ export default function PlayerPage() {
       setShowRoomSchedule(device?.show_room_schedule ?? true);
     } catch (err) {
       console.error(`[${target}] Device fetch error:`, err);
+      // Preserve previous device visibility state while offline.
     }
 
     // Fetch routine slots independently — failure should not hide events
@@ -135,11 +160,11 @@ export default function PlayerPage() {
       setRoutineSlots(slots);
     } catch (err) {
       console.error(`[${target}] Routine slots fetch error:`, err);
-      setRoutineSlots([]);
+      // Preserve previously fetched routine data while offline.
     }
 
     setLoading(false);
-  }, [target]);
+  }, [target, wasOffline]);
 
   // Initial fetch + polling + realtime
   useEffect(() => {
@@ -163,6 +188,30 @@ export default function PlayerPage() {
       supabase.removeChannel(channel);
     };
   }, [target, fetchData]);
+
+  // Handle online/offline transitions
+  useEffect(() => {
+    const handleOnline = () => {
+      console.log('Internet connection restored');
+      setIsOnline(true);
+      setWasOffline(false);
+      fetchData();
+    };
+
+    const handleOffline = () => {
+      console.log('Internet connection lost');
+      setIsOnline(false);
+      setWasOffline(true);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [fetchData]);
 
   // Clock tick
   useEffect(() => {
@@ -221,6 +270,33 @@ export default function PlayerPage() {
   const currentEvent = events[eventPage] ?? null;
   const prevEvents = () => setEventPage((p) => (p <= 0 ? maxPage : p - 1));
   const nextEvents = () => setEventPage((p) => (p >= maxPage ? 0 : p + 1));
+
+  // Breaking News (check device-specific first, then 'all', then offline status)
+  const breakingNewsActive = (() => {
+    // If offline (immediately detected via isOnline), show offline breaking news
+    if (!isOnline) return true;
+    
+    const deviceExpires = settings[`breaking_news_expires_at_${target}`];
+    if (deviceExpires && new Date(deviceExpires).getTime() > Date.now()) return true;
+    const allExpires = settings.breaking_news_expires_at_all;
+    if (allExpires && new Date(allExpires).getTime() > Date.now()) return true;
+    return false;
+  })();
+  
+  const breakingNewsText = (() => {
+    // If offline (immediately detected via isOnline), show offline message
+    if (!isOnline) {
+      return 'Internet Connection Has been Lost. Please Connect To the Internet.';
+    }
+    
+    const deviceExpires = settings[`breaking_news_expires_at_${target}`];
+    if (deviceExpires && new Date(deviceExpires).getTime() > Date.now()) {
+      return settings[`breaking_news_text_${target}`] || '';
+    }
+    return settings.breaking_news_text_all || '';
+  })();
+
+  const showBreakingBar = breakingNewsActive;
 
   // ── Loading ──
   if (loading) {
@@ -480,8 +556,30 @@ export default function PlayerPage() {
         )}
       </main>
 
-      {/* =========== TICKER BAR =========== */}
-      {showTickerBar && ticker.length > 0 && (
+      {/* =========== BREAKING NEWS or TICKER BAR =========== */}
+      {showBreakingBar ? (
+        <div className="flex-shrink-0 flex items-stretch overflow-hidden" style={{ height: '36px' }}>
+          <div className="flex-shrink-0 px-4 flex items-center gap-2" style={{ background: 'linear-gradient(135deg, #b71c1c 0%, #d32f2f 100%)' }}>
+            <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+            <span className="text-white font-black text-[11px] tracking-[0.25em] uppercase whitespace-nowrap">
+              BREAKING
+            </span>
+          </div>
+          <div className="flex-1 flex items-center overflow-hidden px-4" style={{ background: 'linear-gradient(135deg, #c62828 0%, #e53935 100%)' }}>
+            <div className="flex h-full items-center animate-marquee whitespace-nowrap">
+              {[breakingNewsText, breakingNewsText].map((text, i) => (
+                <span key={i} className="mx-8 inline-flex items-center gap-3 text-sm font-bold text-white">
+                  <span className="w-1.5 h-1.5 rounded-full bg-white/70 flex-shrink-0" />
+                  {text}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* =========== TICKER BAR =========== */}
+          {showTickerBar && ticker.length > 0 && (
         <div className="flex-shrink-0 flex items-stretch overflow-hidden" style={{ height: '36px' }}>
           <div className="flex-shrink-0 px-4 flex items-center gap-2" style={{ background: `linear-gradient(135deg, ${C.teal}, ${C.tealDark})` }}>
             <Zap className="w-3.5 h-3.5 text-white" />
@@ -522,10 +620,12 @@ export default function PlayerPage() {
             </div>
           </div>
         </div>
+          )}
+        </>
       )}
 
       {/* =========== HEADLINES MARQUEE =========== */}
-      {showHeadlinesBar && announcements.length > 0 && (
+      {!showBreakingBar && showHeadlinesBar && announcements.length > 0 && (
         <div className="flex-shrink-0 flex items-stretch overflow-hidden" style={{ height: '34px' }}>
           <div className="flex-shrink-0 px-4 flex items-center gap-2" style={{ background: C.gold }}>
             <Radio className="w-3 h-3 animate-pulse" style={{ color: C.navyDark }} />

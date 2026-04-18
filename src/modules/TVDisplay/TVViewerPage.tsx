@@ -13,6 +13,7 @@ import {
   fetchActiveDevices,
   fetchTvDisplayDataForTarget,
 } from '@/services/tvDisplayService';
+import { cacheTvDisplayData, getCachedTvDisplayData, useNetworkStatus } from '@/lib/tvDisplayCache';
 import type { CmsTvAnnouncement, CmsTvDevice, CmsTvEvent, CmsTvTicker } from '@/types/cms';
 import type { DBRoutineSlotWithDetails } from '@/types/database';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -28,6 +29,8 @@ import {
   Radio,
   Tv,
   User,
+  Wifi,
+  WifiOff,
   Zap,
 } from 'lucide-react';
 import Image from 'next/image';
@@ -187,6 +190,8 @@ function TVPreview({ target, showRoomSchedule }: { target: string; showRoomSched
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [routineSlots, setRoutineSlots] = useState<DBRoutineSlotWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isOnline] = useNetworkStatus();
+  const [wasOffline, setWasOffline] = useState(false);
 
   const [now, setNow] = useState(new Date());
   const [eventPage, setEventPage] = useState(0);
@@ -203,19 +208,39 @@ function TVPreview({ target, showRoomSchedule }: { target: string; showRoomSched
       const todayStr = new Date().toISOString().split('T')[0];
       const [tvData, slots] = await Promise.all([
         fetchTvDisplayDataForTarget(target),
-        getRoutineSlots(undefined, undefined, undefined, todayStr).catch(() => [] as DBRoutineSlotWithDetails[]),
+        getRoutineSlots(undefined, undefined, undefined, todayStr),
       ]);
       setAnnouncements(tvData.announcements);
       setTicker(tvData.ticker);
       setEvents(tvData.events);
       setSettings(tvData.settings);
       setRoutineSlots(slots);
+      
+      // Cache the fetched data
+      cacheTvDisplayData(target, tvData);
+      
+      // If we were offline, mark that we're online now
+      if (wasOffline) {
+        setWasOffline(false);
+      }
     } catch (err) {
       console.error('TV Viewer fetch error:', err);
+      
+      // Try to load from cache on error
+      const cachedData = getCachedTvDisplayData(target);
+      if (cachedData) {
+        console.log('Loading from cache due to fetch error');
+        setAnnouncements(cachedData.announcements);
+        setTicker(cachedData.ticker);
+        setEvents(cachedData.events);
+        setSettings(cachedData.settings);
+        setWasOffline(true);
+      }
+      // Keep the previous routine slot state while offline.
     } finally {
       setLoading(false);
     }
-  }, [target]);
+  }, [target, wasOffline]);
 
   // Initial fetch + polling
   useEffect(() => {
@@ -226,6 +251,18 @@ function TVPreview({ target, showRoomSchedule }: { target: string; showRoomSched
     const interval = setInterval(fetchData, POLL_MS);
     return () => clearInterval(interval);
   }, [fetchData]);
+
+  // Handle online/offline transitions
+  useEffect(() => {
+    if (isOnline && wasOffline) {
+      console.log('Internet connection restored, attempting fresh fetch...');
+      setWasOffline(false);
+      fetchData();
+    } else if (!isOnline && !wasOffline) {
+      console.log('Internet connection lost');
+      setWasOffline(true);
+    }
+  }, [isOnline, wasOffline, fetchData]);
 
   // Realtime subscription for content tables
   useEffect(() => {
@@ -290,15 +327,24 @@ function TVPreview({ target, showRoomSchedule }: { target: string; showRoomSched
   const prevEvents = () => setEventPage(p => (p <= 0 ? maxPage : p - 1));
   const nextEvents = () => setEventPage(p => (p >= maxPage ? 0 : p + 1));
 
-  // Breaking News (check device-specific first, then 'all')
+  // Breaking News (check device-specific first, then 'all', then offline status)
   const breakingNewsActive = (() => {
+    // If offline (immediately detected via isOnline), show offline breaking news
+    if (!isOnline) return true;
+    
     const deviceExpires = settings[`breaking_news_expires_at_${target}`];
     if (deviceExpires && new Date(deviceExpires).getTime() > Date.now()) return true;
     const allExpires = settings.breaking_news_expires_at_all;
     if (allExpires && new Date(allExpires).getTime() > Date.now()) return true;
     return false;
   })();
+  
   const breakingNewsText = (() => {
+    // If offline (immediately detected via isOnline), show offline message
+    if (!isOnline) {
+      return 'Internet Connection Has been Lost. Please Connect To the Internet.';
+    }
+    
     const deviceExpires = settings[`breaking_news_expires_at_${target}`];
     if (deviceExpires && new Date(deviceExpires).getTime() > Date.now()) {
       return settings[`breaking_news_text_${target}`] || '';
