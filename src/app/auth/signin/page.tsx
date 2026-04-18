@@ -25,6 +25,7 @@ export default function SignInPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [accountInfo, setAccountInfo] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,6 +162,19 @@ export default function SignInPage() {
                 )}
               </AnimatePresence>
 
+              <AnimatePresence>
+                {accountInfo && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm text-center"
+                  >
+                    {accountInfo}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               {/* Forgot Password */}
               <div className="text-right">
                 <Link 
@@ -197,12 +211,15 @@ export default function SignInPage() {
             {/* Sign Up Link */}
             <p className="text-center text-[#795548] dark:text-[#D7CCC8] text-sm mt-6">
               Don&apos;t have an account?{' '}
-              <Link 
-                href="/auth/signup" 
+              <button
+                type="button"
+                onClick={() =>
+                  setAccountInfo('For account creation, visit the office or contact the system administrator.')
+                }
                 className="text-[#5D4037] dark:text-[#BCAAA4] hover:text-[#3E2723] dark:hover:text-white font-medium transition-colors"
               >
                 Sign Up
-              </Link>
+              </button>
             </p>
           </SpotlightCard>
         </motion.div>

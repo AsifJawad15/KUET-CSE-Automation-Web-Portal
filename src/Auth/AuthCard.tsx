@@ -1,13 +1,9 @@
 "use client";
 
 import { ShieldCheck } from 'lucide-react';
-import { useState } from 'react';
 import SignIn from './SignIn';
-import SignUp from './SignUp';
 
 export default function AuthCard() {
-  const [isSignUp, setIsSignUp] = useState(false);
-
   return (
     <div className="flex items-center justify-center min-h-screen p-4 bg-[#f6f7fb]">
       <div className="w-full max-w-4xl">
@@ -15,11 +11,7 @@ export default function AuthCard() {
         <div className="hidden lg:flex bg-white rounded-lg shadow-xl shadow-gray-200/60 overflow-hidden min-h-[540px] border border-gray-200">
           {/* Form Side */}
           <div className="flex-1 flex items-center justify-center p-10">
-            {isSignUp ? (
-              <SignUp onToggleForm={() => setIsSignUp(false)} />
-            ) : (
-              <SignIn onToggleForm={() => setIsSignUp(true)} />
-            )}
+            <SignIn />
           </div>
 
           <div className="flex-1 bg-gray-950 flex items-center justify-center p-10">
@@ -58,11 +50,7 @@ export default function AuthCard() {
           </div>
           
           <div className="p-6">
-            {isSignUp ? (
-              <SignUp onToggleForm={() => setIsSignUp(false)} />
-            ) : (
-              <SignIn onToggleForm={() => setIsSignUp(true)} />
-            )}
+            <SignIn />
           </div>
         </div>
       </div>

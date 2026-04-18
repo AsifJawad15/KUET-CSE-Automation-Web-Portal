@@ -12,15 +12,12 @@ import {
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-interface SignInProps {
-  onToggleForm: () => void;
-}
-
-export default function SignIn({ onToggleForm }: SignInProps) {
+export default function SignIn() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [infoBanner, setInfoBanner] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { login } = useAuth();
@@ -55,6 +52,13 @@ export default function SignIn({ onToggleForm }: SignInProps) {
         <div className="p-3 rounded-lg bg-red-50 border border-red-200 flex items-center gap-3">
           <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
           <p className="text-sm text-red-700">{error}</p>
+        </div>
+      )}
+
+      {infoBanner && (
+        <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 flex items-center gap-3">
+          <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+          <p className="text-sm text-amber-800">{infoBanner}</p>
         </div>
       )}
 
@@ -127,10 +131,13 @@ export default function SignIn({ onToggleForm }: SignInProps) {
       <p className="text-center text-sm text-gray-500">
         Don&apos;t have an account?{' '}
         <button
-          onClick={onToggleForm}
+          type="button"
+          onClick={() =>
+            setInfoBanner('For account creation, visit the office or contact the system administrator.')
+          }
           className="font-semibold text-gray-900 underline"
         >
-          Contact Admin
+          Sign Up
         </button>
       </p>
     </div>
