@@ -1,6 +1,10 @@
 "use client";
 
 import { useAuth } from '@/contexts/AuthContext';
+import {
+  GEO_ATTENDANCE_DEFAULTS,
+  GEO_ATTENDANCE_LIMITS,
+} from '@/lib/geoAttendanceConfig';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   getMyCourses,
@@ -17,6 +21,8 @@ import {
   type GeoAttendanceRoom,
   type GeoAttendanceLog,
 } from '@/services/teacherPortalService';
+import { getAllRooms } from '@/services/roomService';
+import type { DBRoom } from '@/types/database';
 import { CheckCircle2, Loader2, AlertCircle, ClipboardCheck, ArrowLeft, GraduationCap, Eye, MapPin, Radio, XCircle, Clock, DoorOpen, Users, Download } from 'lucide-react';
 import { downloadAttendancePDF } from '@/lib/pdfGenerator';
 
@@ -31,6 +37,24 @@ const statusBadge: Record<string, string> = {
   absent: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
   late: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
 };
+
+function isWholeNumberInRange(
+  value: number,
+  bounds: { min: number; max: number },
+): boolean {
+  return Number.isInteger(value) && value >= bounds.min && value <= bounds.max;
+}
+
+function geoStatusClass(status?: string): string {
+  switch ((status || '').toUpperCase()) {
+    case 'ABSENT':
+      return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+    case 'LATE':
+      return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
+    default:
+      return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400';
+  }
+}
 
 // Extract last digits of a roll number (e.g., "2107056" → 56)
 function rollSuffix(roll: string): number {
@@ -84,9 +108,18 @@ export default function TakeAttendanceTab() {
   const [recentRooms, setRecentRooms] = useState<GeoAttendanceRoom[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(false);
   const [openingRoom, setOpeningRoom] = useState(false);
-  const [durationMinutes, setDurationMinutes] = useState(50);
+  const [durationMinutes, setDurationMinutes] = useState<number>(
+    GEO_ATTENDANCE_DEFAULTS.durationMinutes,
+  );
   const [geoRoomNumber, setGeoRoomNumber] = useState('');
   const [geoSectionGroup, setGeoSectionGroup] = useState('');
+  const [geoRangeMeters, setGeoRangeMeters] = useState<number>(
+    GEO_ATTENDANCE_DEFAULTS.rangeMeters,
+  );
+  const [geoAbsenceGraceMinutes, setGeoAbsenceGraceMinutes] = useState<number>(
+    GEO_ATTENDANCE_DEFAULTS.absenceGraceMinutes,
+  );
+  const [geoAvailableRooms, setGeoAvailableRooms] = useState<DBRoom[]>([]);
 
   // Geo logs state
   const [geoViewingRoomId, setGeoViewingRoomId] = useState<string | null>(null);
@@ -103,6 +136,14 @@ export default function TakeAttendanceTab() {
   }, [user?.id]);
 
   useEffect(() => { loadCourses(); }, [loadCourses]);
+
+  useEffect(() => {
+    getAllRooms()
+      .then((rooms) => setGeoAvailableRooms(
+        rooms.filter((room) => room.is_active && room.latitude != null && room.longitude != null),
+      ))
+      .catch(() => setGeoAvailableRooms([]));
+  }, []);
 
   // Determine groups based on course type
   const isLab = selectedCourse?.course_type?.toLowerCase() !== 'theory';
@@ -256,25 +297,81 @@ export default function TakeAttendanceTab() {
   // Room limits for geo mode
   const geoMaxRooms = isLab ? MAX_LAB_ROOMS : MAX_THEORY_ROOMS;
   const geoCanOpenMore = activeRooms.length < geoMaxRooms;
+  const geoRangeValid = isWholeNumberInRange(
+    geoRangeMeters,
+    GEO_ATTENDANCE_LIMITS.rangeMeters,
+  );
+  const geoDurationValid = isWholeNumberInRange(
+    durationMinutes,
+    GEO_ATTENDANCE_LIMITS.durationMinutes,
+  );
+  const geoAbsenceGraceValid = isWholeNumberInRange(geoAbsenceGraceMinutes, {
+    min: GEO_ATTENDANCE_LIMITS.absenceGraceMinutes.min,
+    max: Math.min(
+      GEO_ATTENDANCE_LIMITS.absenceGraceMinutes.max,
+      Math.max(durationMinutes, GEO_ATTENDANCE_LIMITS.absenceGraceMinutes.min),
+    ),
+  });
 
   const handleOpenGeoRoom = async () => {
-    if (!selectedCourse || !user?.id || !geoSectionGroup) return;
+    if (!selectedCourse || !user?.id || !geoSectionGroup || !geoRoomNumber) {
+      setMessage({
+        type: 'error',
+        text: 'Please choose a section/group and a GPS-enabled room.',
+      });
+      return;
+    }
+
+    if (!geoRangeValid) {
+      setMessage({
+        type: 'error',
+        text: `Radius must be between ${GEO_ATTENDANCE_LIMITS.rangeMeters.min} and ${GEO_ATTENDANCE_LIMITS.rangeMeters.max} meters.`,
+      });
+      return;
+    }
+
+    if (!geoDurationValid) {
+      setMessage({
+        type: 'error',
+        text: `Open time must be between ${GEO_ATTENDANCE_LIMITS.durationMinutes.min} and ${GEO_ATTENDANCE_LIMITS.durationMinutes.max} minutes.`,
+      });
+      return;
+    }
+
+    if (!geoAbsenceGraceValid) {
+      setMessage({
+        type: 'error',
+        text: `Absent-after time must be between ${GEO_ATTENDANCE_LIMITS.absenceGraceMinutes.min} and ${durationMinutes} minutes.`,
+      });
+      return;
+    }
+
     setOpeningRoom(true);
     setMessage(null);
     try {
       const now = new Date();
-      const endTime = new Date(now.getTime() + durationMinutes * 60000);
       const result = await openGeoAttendanceRoom({
         offering_id: selectedCourse.offering_id,
         teacher_user_id: user.id,
-        room_number: geoRoomNumber || undefined,
+        room_number: geoRoomNumber,
         section: geoSectionGroup,
         start_time: now.toISOString(),
-        end_time: endTime.toISOString(),
+        range_meters: geoRangeMeters,
+        duration_minutes: durationMinutes,
+        absence_grace_minutes: geoAbsenceGraceMinutes,
       });
       if (result.success) {
-        setMessage({ type: 'success', text: `Geo room opened for ${selectedCourse.course_code} (${geoSectionGroup})! Students within 200m can submit attendance.` });
+        setMessage({
+          type: 'success',
+          text:
+            `Geo room opened for ${selectedCourse.course_code} (${geoSectionGroup}). ` +
+            `Students must stay within ${geoRangeMeters}m, the room stays open for ${durationMinutes} min, ` +
+            `and leaving the area for ${geoAbsenceGraceMinutes} min marks them absent.`,
+        });
         setGeoRoomNumber('');
+        setGeoRangeMeters(GEO_ATTENDANCE_DEFAULTS.rangeMeters);
+        setDurationMinutes(GEO_ATTENDANCE_DEFAULTS.durationMinutes);
+        setGeoAbsenceGraceMinutes(GEO_ATTENDANCE_DEFAULTS.absenceGraceMinutes);
         await loadGeoRooms();
       } else {
         setMessage({ type: 'error', text: result.error || 'Failed to open room' });
@@ -625,6 +722,15 @@ export default function TakeAttendanceTab() {
                           <span className="rounded-full bg-green-100 dark:bg-green-900/40 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-300">
                             {geoTimeRemaining(room.end_time)}
                           </span>
+                          <span className="rounded-full bg-teal-100 dark:bg-teal-900/40 px-2.5 py-0.5 text-xs font-medium text-teal-700 dark:text-teal-300">
+                            {room.range_meters}m radius
+                          </span>
+                          <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-xs font-medium text-slate-700 dark:text-slate-200">
+                            {room.duration_minutes}m open
+                          </span>
+                          <span className="rounded-full bg-amber-100 dark:bg-amber-900/40 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                            {room.absence_grace_minutes}m absent
+                          </span>
                           <span className="flex items-center gap-1 rounded-full bg-purple-100 dark:bg-purple-900/40 px-2.5 py-0.5 text-xs font-medium text-purple-700 dark:text-purple-300">
                             <Users className="h-3 w-3" />
                             {room.submission_count ?? 0} submitted
@@ -695,7 +801,7 @@ export default function TakeAttendanceTab() {
                           <td className="px-4 py-3 text-gray-500 dark:text-[#b1a7a6]">{log.distance_meters}m</td>
                           <td className="px-4 py-3 text-gray-500 dark:text-[#b1a7a6]">{formatGeoTime(log.submitted_at)}</td>
                           <td className="px-4 py-3">
-                            <span className="rounded-full bg-emerald-100 dark:bg-emerald-900/30 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">{log.status}</span>
+                            <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${geoStatusClass(log.attendance_status ?? log.status)}`}>{log.attendance_status ?? log.status}</span>
                           </td>
                         </tr>
                       ))}
@@ -730,7 +836,7 @@ export default function TakeAttendanceTab() {
               </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
               {/* Section / Group */}
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-gray-500 dark:text-[#b1a7a6]">
@@ -751,40 +857,98 @@ export default function TakeAttendanceTab() {
               {/* Room Number */}
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-gray-500 dark:text-[#b1a7a6]">
-                  Room Number (optional)
+                  Room <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
+                <select
                   value={geoRoomNumber}
                   onChange={(e) => setGeoRoomNumber(e.target.value)}
-                  placeholder="e.g. 301"
+                  className="w-full rounded-lg border border-gray-200 dark:border-[#3d4951] bg-white dark:bg-[#0b090a] px-3 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-teal-500"
+                >
+                  <option value="">Select GPS-enabled room...</option>
+                  {geoAvailableRooms.map((room) => (
+                    <option key={room.room_number} value={room.room_number}>
+                      {room.room_number}{room.building_name ? ` — ${room.building_name}` : ''}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-[10px] text-gray-400 dark:text-[#b1a7a6]">
+                  Only rooms with saved GPS coordinates are shown here.
+                </p>
+              </div>
+
+              {/* Radius */}
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-gray-500 dark:text-[#b1a7a6]">
+                  Radius (meters)
+                </label>
+                <input
+                  type="number"
+                  min={GEO_ATTENDANCE_LIMITS.rangeMeters.min}
+                  max={GEO_ATTENDANCE_LIMITS.rangeMeters.max}
+                  step={1}
+                  value={geoRangeMeters}
+                  onChange={(e) => setGeoRangeMeters(Number(e.target.value))}
                   className="w-full rounded-lg border border-gray-200 dark:border-[#3d4951] bg-white dark:bg-[#0b090a] px-3 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-teal-500"
                 />
+                <p className={`mt-1 text-[10px] ${geoRangeValid ? 'text-gray-400 dark:text-[#b1a7a6]' : 'text-red-500'}`}>
+                  Allowed: {GEO_ATTENDANCE_LIMITS.rangeMeters.min}-{GEO_ATTENDANCE_LIMITS.rangeMeters.max} meters.
+                </p>
               </div>
 
               {/* Duration */}
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-gray-500 dark:text-[#b1a7a6]">
-                  Duration
+                  Open Time (minutes)
                 </label>
-                <select
+                <input
+                  type="number"
+                  min={GEO_ATTENDANCE_LIMITS.durationMinutes.min}
+                  max={GEO_ATTENDANCE_LIMITS.durationMinutes.max}
+                  step={1}
                   value={durationMinutes}
                   onChange={(e) => setDurationMinutes(Number(e.target.value))}
                   className="w-full rounded-lg border border-gray-200 dark:border-[#3d4951] bg-white dark:bg-[#0b090a] px-3 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-teal-500"
-                >
-                  <option value={30}>30 min</option>
-                  <option value={50}>50 min (1 period)</option>
-                  <option value={80}>80 min</option>
-                  <option value={100}>100 min (2 periods)</option>
-                  <option value={150}>150 min (3 periods)</option>
-                </select>
+                />
+                <p className={`mt-1 text-[10px] ${geoDurationValid ? 'text-gray-400 dark:text-[#b1a7a6]' : 'text-red-500'}`}>
+                  Allowed: {GEO_ATTENDANCE_LIMITS.durationMinutes.min}-{GEO_ATTENDANCE_LIMITS.durationMinutes.max} minutes.
+                </p>
+              </div>
+
+              {/* Absent Grace */}
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-gray-500 dark:text-[#b1a7a6]">
+                  Make Absent After (minutes)
+                </label>
+                <input
+                  type="number"
+                  min={GEO_ATTENDANCE_LIMITS.absenceGraceMinutes.min}
+                  max={Math.max(
+                    GEO_ATTENDANCE_LIMITS.absenceGraceMinutes.min,
+                    durationMinutes,
+                  )}
+                  step={1}
+                  value={geoAbsenceGraceMinutes}
+                  onChange={(e) => setGeoAbsenceGraceMinutes(Number(e.target.value))}
+                  className="w-full rounded-lg border border-gray-200 dark:border-[#3d4951] bg-white dark:bg-[#0b090a] px-3 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-teal-500"
+                />
+                <p className={`mt-1 text-[10px] ${geoAbsenceGraceValid ? 'text-gray-400 dark:text-[#b1a7a6]' : 'text-red-500'}`}>
+                  Student is marked absent after staying outside the radius for this long.
+                </p>
               </div>
 
               {/* Open Button */}
               <div className="flex items-end">
                 <button
                   onClick={handleOpenGeoRoom}
-                  disabled={openingRoom || !geoSectionGroup || !geoCanOpenMore}
+                  disabled={
+                    openingRoom ||
+                    !geoSectionGroup ||
+                    !geoRoomNumber ||
+                    !geoCanOpenMore ||
+                    !geoRangeValid ||
+                    !geoDurationValid ||
+                    !geoAbsenceGraceValid
+                  }
                   className="flex w-full items-center justify-center gap-2 rounded-lg bg-teal-600 dark:bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-700 dark:hover:bg-teal-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {openingRoom ? (
@@ -804,7 +968,7 @@ export default function TakeAttendanceTab() {
 
             <p className="mt-3 text-xs text-gray-400 dark:text-[#b1a7a6]">
               <MapPin className="inline h-3 w-3 mr-1" />
-              Students must be within 200m of CSE Building (KUET) to submit. Room auto-closes after the set duration.
+              Students must submit within <strong>{geoRangeMeters}m</strong> of the selected room, the room stays open for <strong>{durationMinutes} min</strong>, and leaving the area for <strong>{geoAbsenceGraceMinutes} min</strong> marks them absent.
               {!geoCanOpenMore && (
                 <span className="text-red-500 font-medium ml-1">Room limit reached — close an existing room first.</span>
               )}
@@ -830,6 +994,7 @@ export default function TakeAttendanceTab() {
                       <th className="px-4 py-3 font-medium text-gray-400 dark:text-[#b1a7a6]">Section</th>
                       <th className="px-4 py-3 font-medium text-gray-400 dark:text-[#b1a7a6]">Time Slot</th>
                       <th className="px-4 py-3 font-medium text-gray-400 dark:text-[#b1a7a6]">Room</th>
+                      <th className="px-4 py-3 font-medium text-gray-400 dark:text-[#b1a7a6]">Rules</th>
                       <th className="px-4 py-3 font-medium text-gray-400 dark:text-[#b1a7a6]">Submissions</th>
                       <th className="px-4 py-3 font-medium text-gray-400 dark:text-[#b1a7a6]">Actions</th>
                     </tr>
@@ -849,6 +1014,9 @@ export default function TakeAttendanceTab() {
                           {formatGeoTime(room.start_time)} – {formatGeoTime(room.end_time)}
                         </td>
                         <td className="px-4 py-3 text-gray-500 dark:text-[#b1a7a6]">{room.room_number || '—'}</td>
+                        <td className="px-4 py-3 text-xs text-gray-500 dark:text-[#b1a7a6]">
+                          {room.range_meters}m radius • {room.duration_minutes}m open • {room.absence_grace_minutes}m absent
+                        </td>
                         <td className="px-4 py-3">
                           <span className="flex items-center gap-1 text-purple-600 dark:text-purple-400 font-medium text-xs">
                             <Users className="h-3 w-3" />
