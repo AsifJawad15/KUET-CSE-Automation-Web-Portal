@@ -70,6 +70,7 @@ export default function Sidebar({ activeItem, onMenuChange, isCollapsed, onToggl
   ];
 
   const teacherMenuItems: MenuItem[] = [
+    { id: 'tv-display', label: 'TV Display Portal', icon: Monitor },
     { id: 'tp-upload-csv', label: 'Upload CSV', icon: Upload },
     { id: 'tp-take-attendance', label: 'Take Attendance', icon: ClipboardCheck },
     { id: 'tp-announcements', label: 'Announcements', icon: Megaphone },

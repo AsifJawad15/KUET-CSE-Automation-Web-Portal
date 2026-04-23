@@ -78,6 +78,7 @@ const PAGE_REGISTRY: Record<string, PageEntry> = {
 const STORAGE_KEY = 'dashboard_activeMenu';
 const DEFAULT_PAGE = 'dashboard';
 const TEACHER_DEFAULT_PAGE = 'tp-upload-csv';
+const TEACHER_ALLOWED_NON_TP_MENUS = new Set(['tv-display']);
 
 const PAGE_VARIANTS = {
   initial: { opacity: 0, x: 20 },
@@ -106,7 +107,8 @@ export default function Dashboard() {
   // Redirect normal teachers to teacher pages if on admin page.
   // Department heads keep full administrative access.
   useEffect(() => {
-    if (!isLoading && user?.role === 'teacher' && !activeMenu.startsWith('tp-')) {
+    const isTeacherMenu = activeMenu.startsWith('tp-') || TEACHER_ALLOWED_NON_TP_MENUS.has(activeMenu);
+    if (!isLoading && user?.role === 'teacher' && !isTeacherMenu) {
       setActiveMenu(TEACHER_DEFAULT_PAGE);
     }
   }, [isLoading, user?.role, activeMenu]);
@@ -141,7 +143,7 @@ export default function Dashboard() {
     }
 
     return entry.render(setActiveMenu);
-  }, [activeMenu, user?.role]);
+  }, [activeMenu, user]);
 
   // ── Loading state ──
   if (isLoading) {
