@@ -107,6 +107,8 @@ export interface GeoAttendanceRoom {
   room_number?: string;
   section?: string;
   range_meters: number;
+  duration_minutes: number;
+  absence_grace_minutes: number;
   date: string;
   start_time: string;
   end_time: string;
@@ -132,6 +134,8 @@ export interface GeoAttendanceLog {
   longitude: number;
   distance_meters: number;
   status: string;
+  attendance_status?: string;
+  attendance_record_id?: string;
   submitted_at: string;
   students?: {
     roll_no: string;
@@ -142,11 +146,12 @@ export interface GeoAttendanceLog {
 export interface OpenGeoRoomInput {
   offering_id: string;
   teacher_user_id: string;
-  room_number?: string;
+  room_number: string;
   section?: string;
-  start_time: string;
-  end_time: string;
+  start_time?: string;
   range_meters?: number;
+  duration_minutes?: number;
+  absence_grace_minutes?: number;
 }
 
 // ── API Methods ────────────────────────────────────────
