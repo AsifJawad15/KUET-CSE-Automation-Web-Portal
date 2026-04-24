@@ -44,6 +44,8 @@ export type {
   DBRoutineSlot,
   DBRoutineSlotWithDetails,
   Profile,
+  Staff,
+  StaffWithAuth,
   Student,
   StudentWithAuth,
   Teacher,

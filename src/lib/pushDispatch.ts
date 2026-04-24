@@ -1,4 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdmin } from './supabaseAdmin';
+import { sendFcmMessages } from './fcm';
 
 type TargetType = 'ALL' | 'ROLE' | 'YEAR_TERM' | 'SECTION' | 'COURSE' | 'USER';
 
@@ -20,16 +21,18 @@ type OutboxRow = {
   notifications: NotificationRow | NotificationRow[] | null;
 };
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+type DeviceTokenRow = {
+  id: string;
+  user_id: string;
+  token: string;
+};
 
-if (!supabaseUrl || !serviceRoleKey) {
-  throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
-}
-
-const db = createClient(supabaseUrl, serviceRoleKey, {
-  auth: { persistSession: false, autoRefreshToken: false },
-});
+type CourseOfferingRecipientRow = {
+  id?: string | null;
+  term?: string | null;
+  section?: string | null;
+  teacher_user_id?: string | null;
+};
 
 function normalizeNotification(row: OutboxRow): NotificationRow | null {
   const value = row.notifications;
@@ -38,16 +41,26 @@ function normalizeNotification(row: OutboxRow): NotificationRow | null {
 }
 
 function uniq(items: string[]): string[] {
-  return [...new Set(items.filter(Boolean))];
+  return [...new Set(items.map((item) => item.trim()).filter(Boolean))];
+}
+
+function expandRole(role: string): string[] {
+  const normalized = role.trim().toUpperCase();
+  if (normalized === 'ADMIN') return ['ADMIN', 'HEAD'];
+  if (normalized === 'TEACHER') return ['TEACHER', 'HEAD'];
+  return [normalized];
 }
 
 async function resolveRecipients(target: NotificationRow): Promise<string[]> {
+  const db = getSupabaseAdmin();
+
   switch (target.target_type) {
     case 'ALL': {
       const { data, error } = await db
         .from('profiles')
         .select('user_id')
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .in('role', ['STUDENT', 'TEACHER', 'ADMIN', 'HEAD']);
       if (error) throw error;
       return uniq((data ?? []).map((row: { user_id: string }) => row.user_id));
     }
@@ -56,7 +69,7 @@ async function resolveRecipients(target: NotificationRow): Promise<string[]> {
       const { data, error } = await db
         .from('profiles')
         .select('user_id')
-        .eq('role', target.target_value)
+        .in('role', expandRole(target.target_value))
         .eq('is_active', true);
       if (error) throw error;
       return uniq((data ?? []).map((row: { user_id: string }) => row.user_id));
@@ -85,7 +98,7 @@ async function resolveRecipients(target: NotificationRow): Promise<string[]> {
 
       let offeringQuery = db
         .from('course_offerings')
-        .select('term, section, teacher_user_id, courses!inner(code)')
+        .select('id, term, section, teacher_user_id, courses!inner(code)')
         .eq('courses.code', target.target_value)
         .eq('is_active', true);
 
@@ -96,29 +109,48 @@ async function resolveRecipients(target: NotificationRow): Promise<string[]> {
       const { data: offerings, error: offeringError } = await offeringQuery;
       if (offeringError) throw offeringError;
 
-      // Collect teacher user IDs from course offerings
       const teacherIds = (offerings ?? [])
         .map((row: { teacher_user_id?: string | null }) => row.teacher_user_id?.trim())
         .filter((id): id is string => !!id);
+      const recipients = new Set<string>(teacherIds);
+
+      const offeringIds = uniq((offerings ?? [])
+        .map((row: CourseOfferingRecipientRow) => row.id?.trim() || ''));
+      if (offeringIds.length > 0) {
+        const { data: enrollments, error: enrollmentError } = await db
+          .from('enrollments')
+          .select('student_user_id')
+          .in('offering_id', offeringIds);
+        if (enrollmentError) throw enrollmentError;
+
+        for (const row of enrollments ?? []) {
+          const userId = row.student_user_id?.trim();
+          if (userId) recipients.add(userId);
+        }
+      }
 
       const pairs = uniq((offerings ?? []).map((row: { term?: string | null; section?: string | null }) => {
         const term = row.term?.trim() || '';
         const section = row.section?.trim() || '';
-        return term && section ? `${term}::${section}` : '';
+        return term ? `${term}::${section}` : '';
       }));
 
-      const recipients: string[] = [...teacherIds];
       for (const pair of pairs) {
         const [term, section] = pair.split('::');
-        const { data: students, error: studentError } = await db
+        let studentQuery = db
           .from('students')
           .select('user_id')
-          .eq('term', term)
-          .eq('section', section);
+          .eq('term', term);
+        if (section) {
+          studentQuery = studentQuery.eq('section', section);
+        }
+        const { data: students, error: studentError } = await studentQuery;
         if (studentError) throw studentError;
-        recipients.push(...(students ?? []).map((row: { user_id: string }) => row.user_id));
+        for (const row of students ?? []) {
+          if (row.user_id?.trim()) recipients.add(row.user_id);
+        }
       }
-      return uniq(recipients);
+      return [...recipients];
     }
     case 'USER': {
       return target.target_value ? [target.target_value] : [];
@@ -128,50 +160,43 @@ async function resolveRecipients(target: NotificationRow): Promise<string[]> {
   }
 }
 
-async function sendOneSignalPush(opts: {
-  userIds: string[];
-  title: string;
-  body: string;
-  data: Record<string, unknown>;
-}): Promise<void> {
-  const appId = process.env.ONESIGNAL_APP_ID;
-  const apiKey = process.env.ONESIGNAL_REST_API_KEY;
+async function loadActiveFcmTokens(userIds: string[]): Promise<DeviceTokenRow[]> {
+  if (userIds.length === 0) return [];
 
-  if (!appId || !apiKey) {
-    throw new Error('Missing ONESIGNAL_APP_ID or ONESIGNAL_REST_API_KEY');
+  const db = getSupabaseAdmin();
+  const rows: DeviceTokenRow[] = [];
+  const chunkSize = 500;
+
+  for (let index = 0; index < userIds.length; index += chunkSize) {
+    const chunk = userIds.slice(index, index + chunkSize);
+    const { data, error } = await db
+      .from('device_push_tokens')
+      .select('id, user_id, token')
+      .in('user_id', chunk)
+      .eq('provider', 'fcm')
+      .eq('is_active', true);
+
+    if (error) throw error;
+    rows.push(...((data ?? []) as DeviceTokenRow[]));
   }
 
-  const chunkSize = 2000;
-  for (let i = 0; i < opts.userIds.length; i += chunkSize) {
-    const chunk = opts.userIds.slice(i, i + chunkSize);
+  return rows;
+}
 
-    const response = await fetch('https://api.onesignal.com/notifications', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Key ${apiKey}`,
-      },
-      body: JSON.stringify({
-        app_id: appId,
-        target_channel: 'push',
-        include_aliases: {
-          external_id: chunk,
-        },
-        headings: { en: opts.title },
-        contents: { en: opts.body },
-        data: opts.data,
-      }),
-    });
+async function deactivateTokens(tokenIds: string[]) {
+  if (tokenIds.length === 0) return;
 
-    if (!response.ok) {
-      const responseText = await response.text();
-      throw new Error(`OneSignal push failed: ${response.status} ${responseText}`);
-    }
-  }
+  await getSupabaseAdmin()
+    .from('device_push_tokens')
+    .update({
+      is_active: false,
+      updated_at: new Date().toISOString(),
+    })
+    .in('id', tokenIds);
 }
 
 async function markOutboxSent(outboxId: string) {
-  await db
+  await getSupabaseAdmin()
     .from('notification_push_outbox')
     .update({
       status: 'sent',
@@ -186,7 +211,7 @@ async function markOutboxFailed(outboxId: string, attempts: number, message: str
   const nextDelayMinutes = Math.min(60, Math.pow(2, Math.max(0, attempts - 1)));
   const nextAttemptAt = new Date(Date.now() + nextDelayMinutes * 60_000).toISOString();
 
-  await db
+  await getSupabaseAdmin()
     .from('notification_push_outbox')
     .update({
       status: attempts >= 8 ? 'failed' : 'pending',
@@ -198,10 +223,12 @@ async function markOutboxFailed(outboxId: string, attempts: number, message: str
     .eq('id', outboxId);
 }
 
-export async function dispatchPendingPushNotifications(batchSize = 40): Promise<{ processed: number; sent: number; failed: number }> {
+export async function dispatchPendingPushNotifications(
+  batchSize = 40,
+): Promise<{ processed: number; sent: number; failed: number; tokens: number }> {
+  const db = getSupabaseAdmin();
   const nowIso = new Date().toISOString();
 
-  // Reset rows stuck in 'processing' for more than 5 minutes (server crash recovery)
   const staleThreshold = new Date(Date.now() - 5 * 60 * 1000).toISOString();
   await db
     .from('notification_push_outbox')
@@ -236,6 +263,7 @@ export async function dispatchPendingPushNotifications(batchSize = 40): Promise<
   let processed = 0;
   let sent = 0;
   let failed = 0;
+  let tokens = 0;
 
   for (const outboxRow of (data ?? []) as OutboxRow[]) {
     processed += 1;
@@ -259,14 +287,20 @@ export async function dispatchPendingPushNotifications(batchSize = 40): Promise<
       }
 
       const recipients = await resolveRecipients(notification);
-      if (recipients.length === 0) {
+      const tokenRows = await loadActiveFcmTokens(recipients);
+      const uniqueTokenRows = new Map<string, DeviceTokenRow>();
+      for (const row of tokenRows) {
+        uniqueTokenRows.set(row.token, row);
+      }
+
+      if (uniqueTokenRows.size === 0) {
         await markOutboxSent(outboxRow.id);
         sent += 1;
         continue;
       }
 
-      await sendOneSignalPush({
-        userIds: recipients,
+      const results = await sendFcmMessages({
+        tokens: [...uniqueTokenRows.keys()],
         title: notification.title,
         body: notification.body,
         data: {
@@ -276,8 +310,22 @@ export async function dispatchPendingPushNotifications(batchSize = 40): Promise<
         },
       });
 
-      await markOutboxSent(outboxRow.id);
-      sent += 1;
+      tokens += results.length;
+
+      const invalidTokenIds = results
+        .filter((result) => !result.success && result.permanentFailure)
+        .map((result) => uniqueTokenRows.get(result.token)?.id)
+        .filter((id): id is string => !!id);
+      await deactivateTokens(invalidTokenIds);
+
+      const successCount = results.filter((result) => result.success).length;
+      if (successCount > 0 || results.every((result) => result.permanentFailure)) {
+        await markOutboxSent(outboxRow.id);
+        sent += 1;
+      } else {
+        const firstError = results.find((result) => !result.success)?.error || 'FCM dispatch failed';
+        throw new Error(firstError);
+      }
     } catch (err) {
       failed += 1;
       const attempts = (outboxRow.attempts || 0) + 1;
@@ -286,5 +334,5 @@ export async function dispatchPendingPushNotifications(batchSize = 40): Promise<
     }
   }
 
-  return { processed, sent, failed };
+  return { processed, sent, failed, tokens };
 }

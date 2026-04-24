@@ -1,5 +1,6 @@
 // Main page exports
 export { AddFacultyPage } from './AddFaculty';
+export { StaffManagementPage } from './StaffManagement';
 export { AddStudentPage } from './AddStudent';
 export { ClassRoutinePage } from './ClassRoutine';
 export { CourseAllocationPage } from './CourseAllocation';

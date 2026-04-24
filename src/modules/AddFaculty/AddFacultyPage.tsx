@@ -2,10 +2,10 @@
 
 import SpotlightCard from '@/components/ui/SpotlightCard';
 import { TeacherDesignation, TeacherWithAuth } from '@/lib/supabase';
-import { addTeacher, getAllTeachers, deleteTeacher } from '@/services/teacherService';
+import { addTeacher, deleteTeacher, getAllTeachers, setTeacherHead } from '@/services/teacherService';
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, Crown } from 'lucide-react';
 
 export default function AddFacultyPage() {
   const [teachers, setTeachers] = useState<TeacherWithAuth[]>([]);
@@ -92,6 +92,30 @@ export default function AddFacultyPage() {
       setTimeout(() => setSuccess(null), 3000);
     } else {
       setError(result.error || 'Failed to deactivate teacher');
+    }
+
+    setLoading(false);
+  };
+
+  const handleHeadToggle = async (teacher: TeacherWithAuth) => {
+    const isCurrentlyHead = teacher.is_head || teacher.profile.role === 'HEAD';
+    const next = !isCurrentlyHead;
+    const message = next
+      ? `Make ${teacher.full_name} the Head of Department? This will replace any current head.`
+      : `Remove Head access from ${teacher.full_name}?`;
+    if (!confirm(message)) return;
+
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    const result = await setTeacherHead(teacher.user_id, next);
+    if (result.success) {
+      setSuccess(next ? 'Teacher promoted to Head successfully!' : 'Head access removed.');
+      await loadTeachers();
+      setTimeout(() => setSuccess(null), 3000);
+    } else {
+      setError(result.error || 'Failed to update Head access');
     }
 
     setLoading(false);
@@ -300,6 +324,7 @@ export default function AddFacultyPage() {
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-[#b1a7a6] uppercase">Email</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-[#b1a7a6] uppercase">Phone</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-[#b1a7a6] uppercase">Designation</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-[#b1a7a6] uppercase">Access</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-[#b1a7a6] uppercase">Teacher ID</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-[#b1a7a6] uppercase">Status</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-[#b1a7a6] uppercase">Actions</th>
@@ -329,6 +354,18 @@ export default function AddFacultyPage() {
                           {getDesignationLabel(teacher.designation)}
                         </span>
                       </td>
+                      <td className="px-6 py-4">
+                        {teacher.is_head || teacher.profile.role === 'HEAD' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-500/20 text-amber-500 border border-amber-500/30">
+                            <Crown className="w-3 h-3" />
+                            Head
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200 dark:bg-white/10 dark:text-white/50 dark:border-white/10">
+                            Faculty
+                          </span>
+                        )}
+                      </td>
                       <td className="px-6 py-4 text-gray-400 dark:text-[#b1a7a6] font-mono text-sm">{teacher.teacher_uid}</td>
                       <td className="px-6 py-4">
                         {teacher.profile.is_active ? (
@@ -343,6 +380,18 @@ export default function AddFacultyPage() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleHeadToggle(teacher)}
+                            className={`p-2 rounded-lg transition-colors ${
+                              teacher.is_head || teacher.profile.role === 'HEAD'
+                                ? 'text-amber-500 hover:bg-amber-500/10'
+                                : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10'
+                            }`}
+                            disabled={loading || !teacher.profile.is_active}
+                            title={teacher.is_head || teacher.profile.role === 'HEAD' ? 'Remove Head access' : 'Make Head'}
+                          >
+                            <Crown className="w-4 h-4" />
+                          </button>
                           <button className="p-2 text-indigo-500 dark:text-[#d3d3d3] hover:bg-indigo-100/10 dark:hover:bg-[#d3d3d3]/10 rounded-lg transition-colors">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />

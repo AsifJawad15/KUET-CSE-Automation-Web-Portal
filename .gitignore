@@ -45,3 +45,7 @@ next-env.d.ts
 !CONTRIBUTING.md
 !LICENSE.md
 !CODE_OF_CONDUCT.md
+
+# tv-player build artifacts
+tv-player-app/release/
+tv-player-app/release.zip

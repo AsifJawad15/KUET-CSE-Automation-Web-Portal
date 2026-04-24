@@ -24,6 +24,7 @@ import {
   type TvTarget,
   type RoutineSlotWithDetails,
 } from '../lib/supabase';
+import { cacheTvDisplayData, getCachedTvDisplayData } from '../lib/tvDisplayCache';
 
 // Color palette (matches the web TV display)
 const C = {
@@ -85,6 +86,8 @@ export default function PlayerPage() {
   const [showRoomSchedule, setShowRoomSchedule] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [wasOffline, setWasOffline] = useState(false);
 
   // UI state
   const [now, setNow] = useState(new Date());
@@ -96,21 +99,15 @@ export default function PlayerPage() {
   const headlinePrefix = settings.headline_prefix || 'HEADLINES';
   const eventRotationSec = parseInt(settings.event_rotation_sec || '8', 10);
 
-  // Breaking News (check device-specific first, then 'all')
-  const breakingNewsActive = (() => {
-    const deviceExpires = settings[`breaking_news_expires_at_${target}`];
-    if (deviceExpires && new Date(deviceExpires).getTime() > Date.now()) return true;
-    const allExpires = settings.breaking_news_expires_at_all;
-    if (allExpires && new Date(allExpires).getTime() > Date.now()) return true;
-    return false;
-  })();
-  const breakingNewsText = (() => {
-    const deviceExpires = settings[`breaking_news_expires_at_${target}`];
-    if (deviceExpires && new Date(deviceExpires).getTime() > Date.now()) {
-      return settings[`breaking_news_text_${target}`] || '';
-    }
-    return settings.breaking_news_text_all || '';
-  })();
+  const isTargetSectionEnabled = (section: 'events' | 'ticker' | 'headlines') => {
+    const value = settings[`tv_show_${section}_${target}`];
+    if (!value) return true;
+    return value !== 'false' && value !== '0';
+  };
+
+  const showEventsPanel = isTargetSectionEnabled('events');
+  const showTickerBar = isTargetSectionEnabled('ticker');
+  const showHeadlinesBar = isTargetSectionEnabled('headlines');
 
   // ── Fetch data ──
   const fetchData = useCallback(async () => {
@@ -122,9 +119,30 @@ export default function PlayerPage() {
       setEvents(data.events);
       setSettings(data.settings);
       setError(null);
+
+      // Cache the fetched data
+      cacheTvDisplayData(target, data);
+
+      // If we were offline, mark that we're online now
+      if (wasOffline) {
+        setWasOffline(false);
+      }
     } catch (err) {
       console.error(`[${target}] Content fetch error:`, err);
-      setError(err instanceof Error ? err.message : String(err));
+
+      // Try to load from cache on error
+      const cachedData = getCachedTvDisplayData(target);
+      if (cachedData) {
+        console.log(`[${target}] Loading from cache due to fetch error`);
+        setAnnouncements(cachedData.announcements);
+        setTicker(cachedData.ticker);
+        setEvents(cachedData.events);
+        setSettings(cachedData.settings);
+        setWasOffline(true);
+        setError(null);
+      } else {
+        setError(err instanceof Error ? err.message : String(err));
+      }
     }
 
     // Fetch device settings independently — failure should not hide events
@@ -133,6 +151,7 @@ export default function PlayerPage() {
       setShowRoomSchedule(device?.show_room_schedule ?? true);
     } catch (err) {
       console.error(`[${target}] Device fetch error:`, err);
+      // Preserve previous device visibility state while offline.
     }
 
     // Fetch routine slots independently — failure should not hide events
@@ -141,11 +160,11 @@ export default function PlayerPage() {
       setRoutineSlots(slots);
     } catch (err) {
       console.error(`[${target}] Routine slots fetch error:`, err);
-      setRoutineSlots([]);
+      // Preserve previously fetched routine data while offline.
     }
 
     setLoading(false);
-  }, [target]);
+  }, [target, wasOffline]);
 
   // Initial fetch + polling + realtime
   useEffect(() => {
@@ -169,6 +188,30 @@ export default function PlayerPage() {
       supabase.removeChannel(channel);
     };
   }, [target, fetchData]);
+
+  // Handle online/offline transitions
+  useEffect(() => {
+    const handleOnline = () => {
+      console.log('Internet connection restored');
+      setIsOnline(true);
+      setWasOffline(false);
+      fetchData();
+    };
+
+    const handleOffline = () => {
+      console.log('Internet connection lost');
+      setIsOnline(false);
+      setWasOffline(true);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [fetchData]);
 
   // Clock tick
   useEffect(() => {
@@ -228,6 +271,33 @@ export default function PlayerPage() {
   const prevEvents = () => setEventPage((p) => (p <= 0 ? maxPage : p - 1));
   const nextEvents = () => setEventPage((p) => (p >= maxPage ? 0 : p + 1));
 
+  // Breaking News (check device-specific first, then 'all', then offline status)
+  const breakingNewsActive = (() => {
+    // If offline (immediately detected via isOnline), show offline breaking news
+    if (!isOnline) return true;
+
+    const deviceExpires = settings[`breaking_news_expires_at_${target}`];
+    if (deviceExpires && new Date(deviceExpires).getTime() > Date.now()) return true;
+    const allExpires = settings.breaking_news_expires_at_all;
+    if (allExpires && new Date(allExpires).getTime() > Date.now()) return true;
+    return false;
+  })();
+
+  const breakingNewsText = (() => {
+    // If offline (immediately detected via isOnline), show offline message
+    if (!isOnline) {
+      return 'Internet Connection Has been Lost. Please Connect To the Internet.';
+    }
+
+    const deviceExpires = settings[`breaking_news_expires_at_${target}`];
+    if (deviceExpires && new Date(deviceExpires).getTime() > Date.now()) {
+      return settings[`breaking_news_text_${target}`] || '';
+    }
+    return settings.breaking_news_text_all || '';
+  })();
+
+  const showBreakingBar = breakingNewsActive;
+
   // ── Loading ──
   if (loading) {
     return (
@@ -254,18 +324,6 @@ export default function PlayerPage() {
           >
             Retry
           </button>
-        </div>
-      </div>
-    );
-  }
-
-  // ── No content fallback ──
-  if (announcements.length === 0 && events.length === 0 && ticker.length === 0) {
-    return (
-      <div className="h-screen flex items-center justify-center" style={{ background: C.navyDark, color: C.white }}>
-        <div className="text-center">
-          <h2 className="text-5xl font-bold mb-6" style={{ color: 'rgba(255,255,255,0.2)' }}>{target}</h2>
-          <p className="text-2xl" style={{ color: C.textDim }}>No content available. Send content from the admin panel.</p>
         </div>
       </div>
     );
@@ -304,6 +362,7 @@ export default function PlayerPage() {
       <main className="flex-1 min-h-0 flex overflow-hidden">
 
         {/* Events panel */}
+        {showEventsPanel && (
         <section className={`${showRoomSchedule ? 'flex-[80]' : 'flex-1'} min-w-0 flex flex-col p-4 ${showRoomSchedule ? 'pr-2' : ''} overflow-hidden`}>
           <div className="flex-shrink-0 flex items-center justify-between mb-2">
             <h2 className="text-sm font-black tracking-[0.2em] uppercase" style={{ color: C.gold }}>
@@ -359,10 +418,11 @@ export default function PlayerPage() {
             </AnimatePresence>
           </div>
         </section>
+        )}
 
         {/* RIGHT: Room Schedule (conditional) */}
         {showRoomSchedule && (
-        <section className="flex-[20] min-w-0 flex flex-col p-4 pl-2 overflow-hidden gap-2">
+        <section className={`${showEventsPanel ? 'flex-[20] pl-2' : 'flex-1 pl-4'} min-w-0 flex flex-col p-4 overflow-hidden gap-2`}>
           <h2 className="flex-shrink-0 text-xs font-black tracking-[0.18em] uppercase" style={{ color: C.gold }}>
             Live Room Schedule
           </h2>
@@ -483,20 +543,29 @@ export default function PlayerPage() {
           </div>
         </section>
         )}
+
+        {!showEventsPanel && !showRoomSchedule && (
+          <section className="flex-1 min-w-0 p-4 flex items-center justify-center">
+            <div className="text-center rounded-2xl px-6 py-8"
+              style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}` }}>
+              <Monitor className="w-12 h-12 mx-auto mb-3" style={{ color: C.textMuted }} />
+              <p className="text-lg font-medium" style={{ color: C.textMuted }}>No main panel enabled for {target}</p>
+              <p className="text-sm mt-1" style={{ color: C.textDim }}>Enable Events or Room Schedule from TV Devices settings</p>
+            </div>
+          </section>
+        )}
       </main>
 
-      {/* =========== BREAKING NEWS or TICKER + HEADLINES =========== */}
-      {breakingNewsActive ? (
-        <div className="flex-shrink-0 flex items-stretch overflow-hidden" style={{ height: '54px' }}>
-          <div className="flex-shrink-0 px-4 flex items-center gap-2"
-            style={{ background: 'linear-gradient(135deg, #b71c1c 0%, #d32f2f 100%)' }}>
+      {/* =========== BREAKING NEWS or TICKER BAR =========== */}
+      {showBreakingBar ? (
+        <div className="flex-shrink-0 flex items-stretch overflow-hidden" style={{ height: '36px' }}>
+          <div className="flex-shrink-0 px-4 flex items-center gap-2" style={{ background: 'linear-gradient(135deg, #b71c1c 0%, #d32f2f 100%)' }}>
             <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
-            <span className="text-white font-black text-xs tracking-[0.25em] uppercase whitespace-nowrap">
+            <span className="text-white font-black text-[11px] tracking-[0.25em] uppercase whitespace-nowrap">
               BREAKING
             </span>
           </div>
-          <div className="flex-1 flex items-center overflow-hidden px-4"
-            style={{ background: 'linear-gradient(135deg, #c62828 0%, #e53935 100%)' }}>
+          <div className="flex-1 flex items-center overflow-hidden px-4" style={{ background: 'linear-gradient(135deg, #c62828 0%, #e53935 100%)' }}>
             <div className="flex h-full items-center animate-marquee whitespace-nowrap">
               {[breakingNewsText, breakingNewsText].map((text, i) => (
                 <span key={i} className="mx-8 inline-flex items-center gap-3 text-sm font-bold text-white">
@@ -509,73 +578,73 @@ export default function PlayerPage() {
         </div>
       ) : (
         <>
-          {/* TICKER BAR */}
-          {ticker.length > 0 && (
-            <div className="flex-shrink-0 flex items-stretch overflow-hidden" style={{ height: '36px' }}>
-              <div className="flex-shrink-0 px-4 flex items-center gap-2" style={{ background: `linear-gradient(135deg, ${C.teal}, ${C.tealDark})` }}>
-                <Zap className="w-3.5 h-3.5 text-white" />
-                <span className="text-white font-black text-[11px] tracking-[0.2em] uppercase whitespace-nowrap">
-                  {ticker[tickerIndex]?.label || 'SPECIAL UPDATE'}
-                </span>
-              </div>
-              <div className="flex-1 px-4 flex items-center overflow-hidden" style={{ background: C.navy, borderTop: `1px solid ${C.border}` }}>
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={tickerIndex}
-                    initial={{ opacity: 0, x: 30 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -30 }}
-                    transition={{ duration: 0.3 }}
-                    className="flex items-center gap-3 whitespace-nowrap overflow-hidden"
-                  >
-                    {ticker[tickerIndex] && (
-                      <>
-                        <span
-                          className="flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-bold border"
-                          style={{ background: 'rgba(0,121,107,0.2)', color: C.tealLight, borderColor: 'rgba(0,121,107,0.4)' }}
-                        >
-                          {ticker[tickerIndex].type.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-                        </span>
-                        <span className="text-white font-semibold text-sm truncate">{ticker[tickerIndex].text}</span>
-                        {ticker[tickerIndex].course_code && (
-                          <span className="text-xs flex-shrink-0" style={{ color: C.textMuted }}>{ticker[tickerIndex].course_code}</span>
-                        )}
-                      </>
-                    )}
-                  </motion.div>
-                </AnimatePresence>
-                <div className="flex-shrink-0 ml-auto flex items-center gap-1 pl-4">
-                  {ticker.map((_, i) => (
-                    <div key={i} className="w-1.5 h-1.5 rounded-full" style={{ background: i === tickerIndex ? C.teal : C.textDim }} />
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* HEADLINES MARQUEE */}
-          {announcements.length > 0 && (
-            <div className="flex-shrink-0 flex items-stretch overflow-hidden" style={{ height: '34px' }}>
-              <div className="flex-shrink-0 px-4 flex items-center gap-2" style={{ background: C.gold }}>
-                <Radio className="w-3 h-3 animate-pulse" style={{ color: C.navyDark }} />
-                <span className="font-black text-[11px] tracking-[0.2em] uppercase whitespace-nowrap" style={{ color: C.navyDark }}>
-                  {headlinePrefix}
-                </span>
-              </div>
-              <div className="flex-1 overflow-hidden" style={{ background: C.navyDark }}>
-                <div className="flex h-full items-center animate-marquee whitespace-nowrap">
-                  {[...announcements, ...announcements].map((a, i) => (
-                    <span key={`${a.id}-${i}`} className="mx-8 inline-flex items-center gap-3 text-sm">
-                      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: C.gold }} />
-                      <span className="font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>{a.title}</span>
-                      <span style={{ color: C.textMuted }}>{a.content.slice(0, 80)}</span>
+          {/* =========== TICKER BAR =========== */}
+          {showTickerBar && ticker.length > 0 && (
+        <div className="flex-shrink-0 flex items-stretch overflow-hidden" style={{ height: '36px' }}>
+          <div className="flex-shrink-0 px-4 flex items-center gap-2" style={{ background: `linear-gradient(135deg, ${C.teal}, ${C.tealDark})` }}>
+            <Zap className="w-3.5 h-3.5 text-white" />
+            <span className="text-white font-black text-[11px] tracking-[0.2em] uppercase whitespace-nowrap">
+              {ticker[tickerIndex]?.label || 'SPECIAL UPDATE'}
+            </span>
+          </div>
+          <div className="flex-1 px-4 flex items-center overflow-hidden" style={{ background: C.navy, borderTop: `1px solid ${C.border}` }}>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={tickerIndex}
+                initial={{ opacity: 0, x: 30 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -30 }}
+                transition={{ duration: 0.3 }}
+                className="flex items-center gap-3 whitespace-nowrap overflow-hidden"
+              >
+                {ticker[tickerIndex] && (
+                  <>
+                    <span
+                      className="flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-bold border"
+                      style={{ background: 'rgba(0,121,107,0.2)', color: C.tealLight, borderColor: 'rgba(0,121,107,0.4)' }}
+                    >
+                      {ticker[tickerIndex].type.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                     </span>
-                  ))}
-                </div>
-              </div>
+                    <span className="text-white font-semibold text-sm truncate">{ticker[tickerIndex].text}</span>
+                    {ticker[tickerIndex].course_code && (
+                      <span className="text-xs flex-shrink-0" style={{ color: C.textMuted }}>{ticker[tickerIndex].course_code}</span>
+                    )}
+                  </>
+                )}
+              </motion.div>
+            </AnimatePresence>
+            <div className="flex-shrink-0 ml-auto flex items-center gap-1 pl-4">
+              {ticker.map((_, i) => (
+                <div key={i} className="w-1.5 h-1.5 rounded-full" style={{ background: i === tickerIndex ? C.teal : C.textDim }} />
+              ))}
             </div>
+          </div>
+        </div>
           )}
         </>
+      )}
+
+      {/* =========== HEADLINES MARQUEE =========== */}
+      {!showBreakingBar && showHeadlinesBar && announcements.length > 0 && (
+        <div className="flex-shrink-0 flex items-stretch overflow-hidden" style={{ height: '34px' }}>
+          <div className="flex-shrink-0 px-4 flex items-center gap-2" style={{ background: C.gold }}>
+            <Radio className="w-3 h-3 animate-pulse" style={{ color: C.navyDark }} />
+            <span className="font-black text-[11px] tracking-[0.2em] uppercase whitespace-nowrap" style={{ color: C.navyDark }}>
+              {headlinePrefix}
+            </span>
+          </div>
+          <div className="flex-1 overflow-hidden" style={{ background: C.navyDark }}>
+            <div className="flex h-full items-center animate-marquee whitespace-nowrap">
+              {[...announcements, ...announcements].map((a, i) => (
+                <span key={`${a.id}-${i}`} className="mx-8 inline-flex items-center gap-3 text-sm">
+                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: C.gold }} />
+                  <span className="font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>{a.title}</span>
+                  <span style={{ color: C.textMuted }}>{a.content.slice(0, 80)}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

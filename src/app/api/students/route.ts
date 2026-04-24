@@ -5,11 +5,12 @@
 // ==========================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { hashPassword, getStudentInitialPassword } from '@/lib/passwordUtils';
-import { badRequest, conflict, guardSupabase, internalError, noContent, ok } from '@/lib/apiResponse';
+import { badRequest, conflict, internalError, noContent, ok } from '@/lib/apiResponse';
 import { requireFields, runValidations, validateEmail, validateTerm } from '@/lib/validators';
 import { WITH_PROFILE } from '@/lib/queryConstants';
+import { getSupabaseAdmin, isSupabaseAdminConfigured } from '@/lib/supabaseAdmin';
+import { requireServerSession } from '@/lib/serverAuth';
 
 // ── Helpers ────────────────────────────────────────────
 
@@ -21,13 +22,23 @@ function isDuplicateError(error: { message: string }): boolean {
   return error.message.includes('unique') || error.message.includes('duplicate');
 }
 
+function serviceGuard() {
+  if (!isSupabaseAdminConfigured()) {
+    return internalError('Secure Supabase service role is not configured.');
+  }
+  return null;
+}
+
 // ── POST /api/students ─────────────────────────────────
 
 export async function POST(request: NextRequest) {
-  const guard = guardSupabase(isSupabaseConfigured());
+  const auth = requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
+  const guard = serviceGuard();
   if (guard) return guard;
 
   try {
+    const db = getSupabaseAdmin();
     const body = await request.json();
     const { full_name, email, phone, roll_no, term, session } = body;
 
@@ -43,7 +54,7 @@ export async function POST(request: NextRequest) {
     const passwordHash = await hashPassword(initialPassword);
 
     // 1. Create profile (auth only)
-    const { error: profileError } = await supabase
+    const { error: profileError } = await db
       .from('profiles')
       .insert({
         user_id: tempUserId,
@@ -59,7 +70,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Create student record
-    const { error: studentError } = await supabase
+    const { error: studentError } = await db
       .from('students')
       .insert({ user_id: tempUserId, roll_no, full_name, phone, term, session });
 
@@ -69,7 +80,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Fetch complete student data
-    const { data: studentData, error: fetchError } = await supabase
+    const { data: studentData, error: fetchError } = await db
       .from('students')
       .select(WITH_PROFILE)
       .eq('user_id', tempUserId)
@@ -85,12 +96,14 @@ export async function POST(request: NextRequest) {
 
 // ── GET /api/students ──────────────────────────────────
 
-export async function GET() {
-  const guard = guardSupabase(isSupabaseConfigured());
+export async function GET(request: NextRequest) {
+  const auth = requireServerSession(request);
+  if (auth.response) return auth.response;
+  const guard = serviceGuard();
   if (guard) return guard;
 
   try {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabaseAdmin()
       .from('students')
       .select(WITH_PROFILE)
       .order('created_at', { ascending: false });
@@ -105,7 +118,9 @@ export async function GET() {
 // ── PATCH /api/students ────────────────────────────────
 
 export async function PATCH(request: NextRequest) {
-  const guard = guardSupabase(isSupabaseConfigured());
+  const auth = requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
+  const guard = serviceGuard();
   if (guard) return guard;
 
   try {
@@ -118,7 +133,7 @@ export async function PATCH(request: NextRequest) {
     );
     if (validationError) return badRequest(validationError);
 
-    const { error } = await supabase
+    const { error } = await getSupabaseAdmin()
       .from('students')
       .update({ term, updated_at: new Date().toISOString() })
       .eq('user_id', user_id);
@@ -133,7 +148,9 @@ export async function PATCH(request: NextRequest) {
 // ── DELETE /api/students ───────────────────────────────
 
 export async function DELETE(request: NextRequest) {
-  const guard = guardSupabase(isSupabaseConfigured());
+  const auth = requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
+  const guard = serviceGuard();
   if (guard) return guard;
 
   try {
@@ -142,7 +159,7 @@ export async function DELETE(request: NextRequest) {
 
     if (!userId) return badRequest('User ID required');
 
-    const { error } = await supabase
+    const { error } = await getSupabaseAdmin()
       .from('profiles')
       .update({ is_active: false })
       .eq('user_id', userId);

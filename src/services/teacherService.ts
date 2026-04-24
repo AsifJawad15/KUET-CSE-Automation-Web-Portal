@@ -32,7 +32,11 @@ const ENDPOINT = '/teachers';
 
 /** Create a new teacher (profile + teacher record). */
 export async function addTeacher(input: AddTeacherInput): Promise<AddTeacherResponse> {
-  return apiClient.post<TeacherWithAuth>(ENDPOINT, input) as Promise<AddTeacherResponse>;
+  const result = await apiClient.post<TeacherWithAuth & { generatedPassword?: string }>(ENDPOINT, input);
+  return {
+    ...result,
+    generatedPassword: result.data?.generatedPassword,
+  };
 }
 
 /** Fetch all teachers with their auth info. */
@@ -65,6 +69,18 @@ export async function toggleTeacherLeave(
     action: 'toggle_leave',
     is_on_leave: isOnLeave,
     leave_reason: leaveReason || null,
+  });
+}
+
+/** Promote or remove a teacher as department head. */
+export async function setTeacherHead(
+  userId: string,
+  isHead: boolean
+): Promise<ServiceResult<void>> {
+  return apiClient.patch(ENDPOINT, {
+    userId,
+    action: 'set_head',
+    is_head: isHead,
   });
 }
 

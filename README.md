@@ -12,7 +12,7 @@
 
 ### Web Portal
 
-**A full-featured academic management system for the CSE Department**  
+**A full-featured academic management system for the CSE Department**
 **of Khulna University of Engineering & Technology**
 
 <br/>
@@ -58,10 +58,10 @@ The portal connects directly to the same PostgreSQL database as the companion Fl
 
 ### 🔐 Authentication & Access Control
 
-- Email and password sign-in with **bcrypt** password hashing  
-- Role-based dashboards: **Admin**, **Teacher**, **Student**  
-- Protected routes with server-side session validation  
-- Secure sign-up with email uniqueness checks  
+- Email and password sign-in with **bcrypt** password hashing
+- Role-based dashboards: **Admin**, **Teacher**, **Student**
+- Protected routes with server-side session validation
+- Secure sign-up with email uniqueness checks
 
 ---
 
@@ -70,91 +70,91 @@ The portal connects directly to the same PostgreSQL database as the companion Fl
 <details>
 <summary><strong>👨‍🎓 Student Management</strong></summary>
 
-- Add individual students or bulk-import via CSV  
-- View and edit student profiles (roll number, batch, year, term, section)  
-- Manage CR (Class Representative) designations  
-- Track CGPA and academic standing  
+- Add individual students or bulk-import via CSV
+- View and edit student profiles (roll number, batch, year, term, section)
+- Manage CR (Class Representative) designations
+- Track CGPA and academic standing
 
 </details>
 
 <details>
 <summary><strong>👨‍🏫 Faculty Management</strong></summary>
 
-- Add teachers with designation, employee ID, and office room  
-- View and edit teacher profiles  
-- Department-wise faculty listing  
-- Leave management records  
+- Add teachers with designation, employee ID, and office room
+- View and edit teacher profiles
+- Department-wise faculty listing
+- Leave management records
 
 </details>
 
 <details>
 <summary><strong>📚 Course & Curriculum Management</strong></summary>
 
-- Create and manage the course catalog (code, title, credits, type)  
-- Build 4-year curriculum by year and term  
-- Manage course offerings: assign courses to teachers per term/session  
-- Optional course allocation with student selection workflow  
+- Create and manage the course catalog (code, title, credits, type)
+- Build 4-year curriculum by year and term
+- Manage course offerings: assign courses to teachers per term/session
+- Optional course allocation with student selection workflow
 
 </details>
 
 <details>
 <summary><strong>🗓 Class Routine</strong></summary>
 
-- Build the weekly class routine using a visual period grid  
-- Assign rooms, teachers, and sections per slot  
-- Automatic conflict detection: no double-booking of rooms or teachers  
-- Combined lab-slot support (multiple teachers, merged view)  
-- Export routine as PDF  
+- Build the weekly class routine using a visual period grid
+- Assign rooms, teachers, and sections per slot
+- Automatic conflict detection: no double-booking of rooms or teachers
+- Combined lab-slot support (multiple teachers, merged view)
+- Export routine as PDF
 
 </details>
 
 <details>
 <summary><strong>🏢 Room Allocation & Management</strong></summary>
 
-- CRUD operations on the full room inventory  
-- Room attributes: building, capacity, type (theory / lab / seminar), facilities  
-- GPS coordinate entry per room (for geo-attendance radius calculation)  
-- Active / inactive room toggle  
-- Teacher ad-hoc room booking review  
-- CR student room request processing  
+- CRUD operations on the full room inventory
+- Room attributes: building, capacity, type (theory / lab / seminar), facilities
+- GPS coordinate entry per room (for geo-attendance radius calculation)
+- Active / inactive room toggle
+- Teacher ad-hoc room booking review
+- CR student room request processing
 
 </details>
 
 <details>
 <summary><strong>📝 Examination Management</strong></summary>
 
-- Schedule exams: type (Midterm / Final / Quiz), course, date, time, room  
-- Manage exam results: enter and publish marks  
-- Multi-question / multi-component score breakdown  
+- Schedule exams: type (Midterm / Final / Quiz), course, date, time, room
+- Manage exam results: enter and publish marks
+- Multi-question / multi-component score breakdown
 
 </details>
 
 <details>
 <summary><strong>📢 Notice Board</strong></summary>
 
-- Create targeted department-wide notices  
-- Priority levels: Normal, Important, Urgent  
-- Term / batch / session targeting  
-- Expiration date management  
-- Publish / unpublish control  
+- Create targeted department-wide notices
+- Priority levels: Normal, Important, Urgent
+- Term / batch / session targeting
+- Expiration date management
+- Publish / unpublish control
 
 </details>
 
 <details>
 <summary><strong>🔄 Term Upgrade</strong></summary>
 
-- Review student term-upgrade requests  
-- Batch approve or reject with remarks  
-- Automated rollover to next term upon approval  
+- Review student term-upgrade requests
+- Batch approve or reject with remarks
+- Automated rollover to next term upon approval
 
 </details>
 
 <details>
 <summary><strong>🌐 Website CMS</strong></summary>
 
-- Manage all public-facing content through an admin CMS  
-- Gallery uploads, news posts, faculty feature sections  
-- OCR-powered image-to-text for scanned document uploads  
+- Manage all public-facing content through an admin CMS
+- Gallery uploads, news posts, faculty feature sections
+- OCR-powered image-to-text for scanned document uploads
 
 </details>
 
@@ -165,35 +165,35 @@ The portal connects directly to the same PostgreSQL database as the companion Fl
 <details>
 <summary><strong>📍 Geo-Attendance Management</strong></summary>
 
-- Open a live geo-attendance room with one click  
-- Auto-closes previous active sessions for the same course offering  
-- Real-time list of students who have submitted attendance  
-- Close sessions manually or leave them to auto-expire  
+- Open a live geo-attendance room with one click
+- Auto-closes previous active sessions for the same course offering
+- Real-time list of students who have submitted attendance
+- Close sessions manually or leave them to auto-expire
 
 </details>
 
 <details>
 <summary><strong>📅 Schedule View</strong></summary>
 
-- Personal weekly timetable pulled from routine slots  
-- Today's classes highlighted  
-- Room and time details per slot  
+- Personal weekly timetable pulled from routine slots
+- Today's classes highlighted
+- Room and time details per slot
 
 </details>
 
 <details>
 <summary><strong>📊 Attendance Records</strong></summary>
 
-- View course-wise and date-wise attendance summaries  
-- Per-student attendance breakdown  
+- View course-wise and date-wise attendance summaries
+- Per-student attendance breakdown
 
 </details>
 
 <details>
 <summary><strong>📢 Announcements</strong></summary>
 
-- Create course-specific or department-wide announcements  
-- Push notification delivery to enrolled students via OneSignal  
+- Create course-specific or department-wide announcements
+- Push notification delivery to enrolled students via server-side FCM
 
 </details>
 
@@ -204,34 +204,34 @@ The portal connects directly to the same PostgreSQL database as the companion Fl
 <details>
 <summary><strong>📍 Geo-Attendance Submission</strong></summary>
 
-- View currently open attendance sessions filtered by term and section  
-- Submit GPS-verified attendance (Haversine distance ≤ 30 m threshold)  
-- Duplicate-submission prevention with real-time status  
+- View currently open attendance sessions filtered by term and section
+- Submit GPS-verified attendance (Haversine distance ≤ 30 m threshold)
+- Duplicate-submission prevention with real-time status
 
 </details>
 
 <details>
 <summary><strong>📅 Personal Schedule</strong></summary>
 
-- Course-wise class timetable  
-- Upcoming exam schedule with countdown  
+- Course-wise class timetable
+- Upcoming exam schedule with countdown
 
 </details>
 
 <details>
 <summary><strong>📚 Curriculum & Results</strong></summary>
 
-- Browse the complete 4-year curriculum  
-- View published exam results and grade breakdown  
+- Browse the complete 4-year curriculum
+- View published exam results and grade breakdown
 
 </details>
 
 <details>
 <summary><strong>🏫 CR Room Requests</strong></summary>
 
-- Class Representatives submit room booking requests  
-- FCFS auto-approval with live conflict checking  
-- Period-based and custom break-period support  
+- Class Representatives submit room booking requests
+- FCFS auto-approval with live conflict checking
+- Period-based and custom break-period support
 
 </details>
 
@@ -239,10 +239,10 @@ The portal connects directly to the same PostgreSQL database as the companion Fl
 
 ### 📺 TV Display Mode
 
-- Real-time full-screen room schedule for department monitors  
-- Displays today's approved bookings, routine slots, and CR allocations  
-- Auto-refreshes on schedule changes via Supabase Realtime  
-- Available as a standalone **Electron desktop app** (`tv-player-app/`)  
+- Real-time full-screen room schedule for department monitors
+- Displays today's approved bookings, routine slots, and CR allocations
+- Auto-refreshes on schedule changes via Supabase Realtime
+- Available as a standalone **Electron desktop app** (`tv-player-app/`)
 
 ---
 
@@ -251,8 +251,8 @@ The portal connects directly to the same PostgreSQL database as the companion Fl
 | Channel | Mechanism |
 |---|---|
 | In-app inbox | `notifications` table with Supabase Realtime |
-| Push (closed app) | OneSignal REST API via `notification_push_outbox` |
-| Background dispatch | Cron-driven `/api/notifications/push-dispatch` |
+| Push (closed app) | FCM HTTP v1 via `notification_push_outbox` |
+| Background dispatch | Immediate server dispatch with Supabase Edge Function fallback |
 | Target types | COURSE, YEAR_TERM, SECTION, TEACHER, USER |
 
 ---
@@ -329,11 +329,14 @@ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
 # ── Application ───────────────────────────────────────────────────
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+AUTH_SESSION_SECRET=generate_a_long_random_secret
 NODE_ENV=development
 
-# ── Push Notifications (OneSignal) ────────────────────────────────
-ONESIGNAL_APP_ID=your_onesignal_app_id
-ONESIGNAL_REST_API_KEY=your_onesignal_rest_api_key
+# ── Push Notifications (FCM HTTP v1) ──────────────────────────────
+FCM_PROJECT_ID=your_firebase_project_id
+FCM_CLIENT_EMAIL=your_firebase_service_account_email
+FCM_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+NOTIFICATION_DISPATCH_KEY=optional_shared_secret
 ```
 
 > ⚠️ **The `SUPABASE_SERVICE_ROLE_KEY` has elevated privileges. Never expose it in client-side code.**
@@ -355,11 +358,40 @@ supabase_migration_20260316_room_booking_web_notification.sql
 supabase_migration_20260327_exam_notification_trigger.sql
 supabase_migration_20260327_exam_type_to_text.sql
 supabase_migration_20260407_rooms_coordinates.sql
+supabase_migration_20260417_fcm_notifications_roles.sql
 ```
 
 You can also review `database_schema.sql` for the complete consolidated reference.
 
-### 5 — Start the Development Server
+If you need to create the first web admin account after migrating, update and run:
+
+```bash
+supabase_bootstrap_first_admin.sql
+```
+
+### 5 — Deploy the Push Edge Function
+
+Deploy the Supabase Edge Function after setting the project secrets:
+
+```bash
+supabase login
+supabase link --project-ref your_project_ref
+supabase functions deploy send-push-notification
+```
+
+Required function secrets:
+
+```bash
+SUPABASE_URL
+SUPABASE_SERVICE_ROLE_KEY
+FCM_PROJECT_ID
+FCM_CLIENT_EMAIL
+FCM_PRIVATE_KEY
+```
+
+> If mobile clients will invoke dispatch directly, leave `NOTIFICATION_DISPATCH_KEY` unset until you move that call behind a trusted backend.
+
+### 6 — Start the Development Server
 
 ```bash
 npm run dev
@@ -463,7 +495,7 @@ kuet-cse-automation-web/
 │   ├── lib/
 │   │   ├── supabase.ts              ← Supabase client (anon + service)
 │   │   ├── notifications.ts         ← Notification helpers
-│   │   └── pushDispatch.ts          ← OneSignal push dispatcher
+│   │   └── pushDispatch.ts          ← FCM push dispatcher
 │   │
 │   ├── styles/                      ← Additional global styles
 │   │
@@ -479,7 +511,7 @@ kuet-cse-automation-web/
 ├── next.config.ts
 ├── tailwind.config.ts
 ├── tsconfig.json
-├── vercel.json
+├── supabase_bootstrap_first_admin.sql
 └── package.json
 ```
 
@@ -538,7 +570,7 @@ All API routes live under `/src/app/api/`. Each folder maps to a Next.js Route H
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/notifications/push-dispatch` | Cron-triggered OneSignal push dispatch |
+| `POST` | `/api/notifications/push-dispatch` | Authenticated FCM push dispatch |
 
 ---
 
@@ -594,13 +626,13 @@ All API routes live under `/src/app/api/`. Each folder maps to a Next.js Route H
 
 ## 🎨 UI / UX Highlights
 
-- **Fully Responsive** — desktop, tablet, and mobile layouts  
-- **Dark Mode** — integrated theme toggle persisted via context  
-- **Smooth Animations** — Framer Motion page transitions + GSAP scroll effects  
-- **Real-time Updates** — Supabase Realtime subscriptions in TV Display and notification inbox  
-- **PDF Export** — Class routine and result sheets exportable as PDF  
-- **CSV Import** — Bulk student addition via CSV upload (PapaParse)  
-- **OCR Support** — Scanned document text extraction (Tesseract via `eng.traineddata`)  
+- **Fully Responsive** — desktop, tablet, and mobile layouts
+- **Dark Mode** — integrated theme toggle persisted via context
+- **Smooth Animations** — Framer Motion page transitions + GSAP scroll effects
+- **Real-time Updates** — Supabase Realtime subscriptions in TV Display and notification inbox
+- **PDF Export** — Class routine and result sheets exportable as PDF
+- **CSV Import** — Bulk student addition via CSV upload (PapaParse)
+- **OCR Support** — Scanned document text extraction (Tesseract via `eng.traineddata`)
 
 ---
 
@@ -657,12 +689,10 @@ npm run build       # Build distributable
 
 ### Vercel (Recommended)
 
-1. Push the repository to GitHub.  
-2. Import the project in [Vercel](https://vercel.com).  
-3. Add all environment variables from `.env.local` in the Vercel dashboard.  
-4. Deploy — Vercel auto-detects Next.js and configures edge functions.  
-
-The `vercel.json` in the project root contains any custom routing or header rules.
+1. Push the repository to GitHub.
+2. Import the project in [Vercel](https://vercel.com).
+3. Add all environment variables from `.env.local` in the Vercel dashboard.
+4. Deploy — Vercel auto-detects Next.js and configures edge functions.
 
 ---
 
@@ -670,16 +700,16 @@ The `vercel.json` in the project root contains any custom routing or header rule
 
 We welcome contributions! Please follow these steps:
 
-1. **Fork** the repository  
-2. **Create a feature branch**  
+1. **Fork** the repository
+2. **Create a feature branch**
    ```bash
    git checkout -b feature/your-feature-name
    ```
-3. **Commit your changes**  
+3. **Commit your changes**
    ```bash
    git commit -m "feat: add your feature description"
    ```
-4. **Push to your fork**  
+4. **Push to your fork**
    ```bash
    git push origin feature/your-feature-name
    ```
@@ -687,11 +717,11 @@ We welcome contributions! Please follow these steps:
 
 ### Coding Standards
 
-- Use TypeScript strict mode — avoid `any`  
-- Follow the existing module structure (`modules/` for features, `services/` for data-fetching)  
-- Use Tailwind utility classes; avoid inline `style` props  
-- All API routes must use the **service role client** for write operations  
-- Use `await` for all notification calls — never fire-and-forget in serverless handlers  
+- Use TypeScript strict mode — avoid `any`
+- Follow the existing module structure (`modules/` for features, `services/` for data-fetching)
+- Use Tailwind utility classes; avoid inline `style` props
+- All API routes must use the **service role client** for write operations
+- Use `await` for all notification calls — never fire-and-forget in serverless handlers
 
 ---
 
@@ -699,11 +729,11 @@ We welcome contributions! Please follow these steps:
 
 Found a bug? Please [open an issue](https://github.com/abdullahshahporan/KUET-CSE-Automation-Web-Portal/issues) with:
 
-- Browser and OS version  
-- Node.js and npm versions  
-- Steps to reproduce  
-- Expected vs. actual behaviour  
-- Console errors or screenshots  
+- Browser and OS version
+- Node.js and npm versions
+- Steps to reproduce
+- Expected vs. actual behaviour
+- Console errors or screenshots
 
 ---
 
@@ -728,9 +758,8 @@ Distributed under the **MIT License**. See [`LICENSE`](./LICENSE) for details.
 
 ## 👥 Authors
 
-**Abdullah Shah Poran** — _Batch 2K21_  
-**Asif Jawad** — Batch 2K21
->**CSE Department, Khulna University of Engineering & Technology**
+**Abdullah Shah Poran** — _Lead Developer_
+CSE Department, Khulna University of Engineering & Technology
 
 > Built with ❤️ for KUET CSE — bridging administration and academics through modern technology.
 

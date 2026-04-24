@@ -4,6 +4,8 @@
 // ==========================================
 
 import { badRequest, created, guardSupabase, internalError, noContent } from '@/lib/apiResponse';
+import { createNotification } from '@/lib/notifications';
+import { requireServerSession } from '@/lib/serverAuth';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { requireFields } from '@/lib/validators';
 import { NextRequest, NextResponse } from 'next/server';
@@ -43,12 +45,15 @@ export type NotificationType =
 //   ?offset=0             — pagination offset
 
 export async function GET(request: NextRequest) {
+  const auth = requireServerSession(request);
+  if (auth.response) return auth.response;
+
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
   try {
     const { searchParams } = new URL(request.url);
-    const user_id = searchParams.get('user_id');
+    const user_id = auth.user.id;
     const unread_only = searchParams.get('unread_only') === 'true';
     const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 100);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
@@ -146,14 +151,17 @@ export async function GET(request: NextRequest) {
 //   created_by, created_by_role, metadata?, expires_at?
 
 export async function POST(request: NextRequest) {
+  const auth = requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
+
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
   try {
     const body = await request.json();
 
-    const { type, title, body: notifBody, target_type, created_by, created_by_role } = body;
-    const validation = requireFields({ type, title, body: notifBody, target_type, created_by, created_by_role });
+    const { type, title, body: notifBody, target_type } = body;
+    const validation = requireFields({ type, title, body: notifBody, target_type });
     if (!validation.valid) return badRequest(validation.error!);
 
     // Validate target_type
@@ -171,25 +179,25 @@ export async function POST(request: NextRequest) {
       return badRequest('target_year_term is required when target_type is SECTION');
     }
 
-    const { data, error } = await supabase
-      .from('notifications')
-      .insert({
-        type,
-        title,
-        body: notifBody,
-        target_type,
-        target_value: body.target_value ?? null,
-        target_year_term: body.target_year_term ?? null,
-        created_by,
-        created_by_role,
-        metadata: body.metadata ?? {},
-        expires_at: body.expires_at ?? null,
-      })
-      .select()
-      .single();
+    const notificationId = await createNotification({
+      type,
+      title,
+      body: notifBody,
+      target_type,
+      target_value: body.target_value ?? null,
+      target_year_term: body.target_year_term ?? null,
+      created_by: auth.user.id,
+      created_by_role: 'ADMIN',
+      metadata: body.metadata ?? {},
+      expires_at: body.expires_at ?? null,
+      dedupeKey: body.dedupe_key,
+    });
 
-    if (error) throw error;
-    return created(data);
+    if (!notificationId) {
+      throw new Error('Notification could not be created');
+    }
+
+    return created({ id: notificationId });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Failed to create notification';
     return internalError(msg);
@@ -200,14 +208,17 @@ export async function POST(request: NextRequest) {
 // Body: { user_id, notification_ids: string[] }  OR  { user_id, mark_all: true }
 
 export async function PATCH(request: NextRequest) {
+  const auth = requireServerSession(request);
+  if (auth.response) return auth.response;
+
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
   try {
     const body = await request.json();
-    const { user_id, notification_ids, mark_all } = body;
+    const { notification_ids, mark_all } = body;
+    const user_id = auth.user.id;
 
-    if (!user_id) return badRequest('user_id is required');
     if (!mark_all && (!notification_ids || !Array.isArray(notification_ids) || notification_ids.length === 0)) {
       return badRequest('Either mark_all:true or notification_ids[] is required');
     }
@@ -220,7 +231,10 @@ export async function PATCH(request: NextRequest) {
       // For simplicity, fetch ids first:
       const visibleRes = await fetch(
         `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/notifications?user_id=${user_id}&limit=500`,
-        { method: 'GET' }
+        {
+          method: 'GET',
+          headers: { cookie: request.headers.get('cookie') || '' },
+        }
       );
       if (visibleRes.ok) {
         const visibleData = await visibleRes.json() as { notifications: { id: string; is_read: boolean }[] };

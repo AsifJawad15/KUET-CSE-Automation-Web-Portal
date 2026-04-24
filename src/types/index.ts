@@ -3,7 +3,7 @@
 // ==========================================
 
 // User Roles
-export type UserRole = 'student' | 'teacher' | 'admin';
+export type UserRole = 'student' | 'teacher' | 'admin' | 'head' | 'staff';
 
 // Course Types
 export type CourseType = 'theory' | 'lab';

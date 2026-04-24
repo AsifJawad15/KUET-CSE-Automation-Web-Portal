@@ -13,6 +13,7 @@ import {
   fetchActiveDevices,
   fetchTvDisplayDataForTarget,
 } from '@/services/tvDisplayService';
+import { cacheTvDisplayData, getCachedTvDisplayData, useNetworkStatus } from '@/lib/tvDisplayCache';
 import type { CmsTvAnnouncement, CmsTvDevice, CmsTvEvent, CmsTvTicker } from '@/types/cms';
 import type { DBRoutineSlotWithDetails } from '@/types/database';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -28,6 +29,8 @@ import {
   Radio,
   Tv,
   User,
+  Wifi,
+  WifiOff,
   Zap,
 } from 'lucide-react';
 import Image from 'next/image';
@@ -187,6 +190,8 @@ function TVPreview({ target, showRoomSchedule }: { target: string; showRoomSched
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [routineSlots, setRoutineSlots] = useState<DBRoutineSlotWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isOnline] = useNetworkStatus();
+  const [wasOffline, setWasOffline] = useState(false);
 
   const [now, setNow] = useState(new Date());
   const [eventPage, setEventPage] = useState(0);
@@ -203,19 +208,39 @@ function TVPreview({ target, showRoomSchedule }: { target: string; showRoomSched
       const todayStr = new Date().toISOString().split('T')[0];
       const [tvData, slots] = await Promise.all([
         fetchTvDisplayDataForTarget(target),
-        getRoutineSlots(undefined, undefined, undefined, todayStr).catch(() => [] as DBRoutineSlotWithDetails[]),
+        getRoutineSlots(undefined, undefined, undefined, todayStr),
       ]);
       setAnnouncements(tvData.announcements);
       setTicker(tvData.ticker);
       setEvents(tvData.events);
       setSettings(tvData.settings);
       setRoutineSlots(slots);
+
+      // Cache the fetched data
+      cacheTvDisplayData(target, tvData);
+
+      // If we were offline, mark that we're online now
+      if (wasOffline) {
+        setWasOffline(false);
+      }
     } catch (err) {
       console.error('TV Viewer fetch error:', err);
+
+      // Try to load from cache on error
+      const cachedData = getCachedTvDisplayData(target);
+      if (cachedData) {
+        console.log('Loading from cache due to fetch error');
+        setAnnouncements(cachedData.announcements);
+        setTicker(cachedData.ticker);
+        setEvents(cachedData.events);
+        setSettings(cachedData.settings);
+        setWasOffline(true);
+      }
+      // Keep the previous routine slot state while offline.
     } finally {
       setLoading(false);
     }
-  }, [target]);
+  }, [target, wasOffline]);
 
   // Initial fetch + polling
   useEffect(() => {
@@ -226,6 +251,18 @@ function TVPreview({ target, showRoomSchedule }: { target: string; showRoomSched
     const interval = setInterval(fetchData, POLL_MS);
     return () => clearInterval(interval);
   }, [fetchData]);
+
+  // Handle online/offline transitions
+  useEffect(() => {
+    if (isOnline && wasOffline) {
+      console.log('Internet connection restored, attempting fresh fetch...');
+      setWasOffline(false);
+      fetchData();
+    } else if (!isOnline && !wasOffline) {
+      console.log('Internet connection lost');
+      setWasOffline(true);
+    }
+  }, [isOnline, wasOffline, fetchData]);
 
   // Realtime subscription for content tables
   useEffect(() => {
@@ -290,21 +327,41 @@ function TVPreview({ target, showRoomSchedule }: { target: string; showRoomSched
   const prevEvents = () => setEventPage(p => (p <= 0 ? maxPage : p - 1));
   const nextEvents = () => setEventPage(p => (p >= maxPage ? 0 : p + 1));
 
-  // Breaking News (check device-specific first, then 'all')
+  // Breaking News (check device-specific first, then 'all', then offline status)
   const breakingNewsActive = (() => {
+    // If offline (immediately detected via isOnline), show offline breaking news
+    if (!isOnline) return true;
+
     const deviceExpires = settings[`breaking_news_expires_at_${target}`];
     if (deviceExpires && new Date(deviceExpires).getTime() > Date.now()) return true;
     const allExpires = settings.breaking_news_expires_at_all;
     if (allExpires && new Date(allExpires).getTime() > Date.now()) return true;
     return false;
   })();
+
   const breakingNewsText = (() => {
+    // If offline (immediately detected via isOnline), show offline message
+    if (!isOnline) {
+      return 'Internet Connection Has been Lost. Please Connect To the Internet.';
+    }
+
     const deviceExpires = settings[`breaking_news_expires_at_${target}`];
     if (deviceExpires && new Date(deviceExpires).getTime() > Date.now()) {
       return settings[`breaking_news_text_${target}`] || '';
     }
     return settings.breaking_news_text_all || '';
   })();
+
+  const isTargetSectionEnabled = (section: 'events' | 'ticker' | 'headlines') => {
+    const value = settings[`tv_show_${section}_${target}`];
+    if (!value) return true;
+    return value !== 'false' && value !== '0';
+  };
+
+  const showEventsPanel = isTargetSectionEnabled('events');
+  const showTickerBar = isTargetSectionEnabled('ticker');
+  const showHeadlinesBar = isTargetSectionEnabled('headlines');
+  const showBreakingBar = breakingNewsActive && showTickerBar;
 
   if (loading) {
     return (
@@ -347,6 +404,7 @@ function TVPreview({ target, showRoomSchedule }: { target: string; showRoomSched
       {/* MAIN CONTENT */}
       <main className="flex-1 min-h-0 flex overflow-hidden">
         {/* LEFT: Events */}
+        {showEventsPanel && (
         <section className={`${showRoomSchedule ? 'flex-[80]' : 'flex-1'} min-w-0 flex flex-col p-3 ${showRoomSchedule ? 'pr-1.5' : ''} overflow-hidden`}>
           <div className="flex-shrink-0 flex items-center justify-between mb-1.5">
             <h2 className="text-xs font-black tracking-[0.2em] uppercase" style={{ color: C.gold }}>
@@ -395,10 +453,11 @@ function TVPreview({ target, showRoomSchedule }: { target: string; showRoomSched
             </AnimatePresence>
           </div>
         </section>
+        )}
 
         {/* RIGHT: Schedule */}
         {showRoomSchedule && (
-        <section className="flex-[20] min-w-0 flex flex-col p-3 pl-1.5 overflow-hidden gap-1.5">
+        <section className={`${showEventsPanel ? 'flex-[20] pl-1.5' : 'flex-1 pl-3'} min-w-0 flex flex-col p-3 overflow-hidden gap-1.5`}>
           <h2 className="flex-shrink-0 text-[10px] font-black tracking-[0.18em] uppercase" style={{ color: C.gold }}>
             Live Room Schedule
           </h2>
@@ -519,10 +578,21 @@ function TVPreview({ target, showRoomSchedule }: { target: string; showRoomSched
           </div>
         </section>
         )}
+
+        {!showEventsPanel && !showRoomSchedule && (
+          <section className="flex-1 min-w-0 p-3 flex items-center justify-center">
+            <div className="text-center rounded-xl px-4 py-6"
+              style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}` }}>
+              <Monitor className="w-10 h-10 mx-auto mb-2" style={{ color: C.textMuted }} />
+              <p className="text-sm font-medium" style={{ color: C.textMuted }}>No main panel enabled for {target}</p>
+              <p className="text-[10px] mt-1" style={{ color: C.textDim }}>Enable Events or Room Schedule from TV Devices settings</p>
+            </div>
+          </section>
+        )}
       </main>
 
       {/* BREAKING NEWS or TICKER + HEADLINES */}
-      {breakingNewsActive ? (
+      {showBreakingBar ? (
         <div className="flex-shrink-0 flex items-stretch overflow-hidden" style={{ height: '54px' }}>
           <div className="flex-shrink-0 px-4 flex items-center gap-2"
             style={{ background: 'linear-gradient(135deg, #b71c1c 0%, #d32f2f 100%)' }}>
@@ -546,7 +616,7 @@ function TVPreview({ target, showRoomSchedule }: { target: string; showRoomSched
       ) : (
         <>
           {/* TICKER BAR */}
-          {ticker.length > 0 && (
+          {showTickerBar && ticker.length > 0 && (
         <div className="flex-shrink-0 flex items-stretch overflow-hidden" style={{ height: '28px' }}>
           <div className="flex-shrink-0 px-3 flex items-center gap-1.5"
             style={{ background: `linear-gradient(135deg, ${C.teal}, ${C.tealDark})` }}>
@@ -580,7 +650,7 @@ function TVPreview({ target, showRoomSchedule }: { target: string; showRoomSched
       )}
 
       {/* HEADLINES MARQUEE */}
-      {announcements.length > 0 && (
+      {showHeadlinesBar && announcements.length > 0 && (
         <div className="flex-shrink-0 flex items-stretch overflow-hidden" style={{ height: '26px' }}>
           <div className="flex-shrink-0 px-3 flex items-center gap-1.5" style={{ background: C.gold }}>
             <Radio className="w-2.5 h-2.5 animate-pulse" style={{ color: C.navyDark }} />

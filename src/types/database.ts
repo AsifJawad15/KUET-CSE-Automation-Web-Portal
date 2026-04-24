@@ -7,7 +7,7 @@
 // ── Enums / Unions ─────────────────────────────────────
 
 export type TeacherDesignation = 'PROFESSOR' | 'ASSOCIATE_PROFESSOR' | 'ASSISTANT_PROFESSOR' | 'LECTURER';
-export type UserRole = 'ADMIN' | 'TEACHER' | 'STUDENT';
+export type UserRole = 'ADMIN' | 'TEACHER' | 'STUDENT' | 'HEAD' | 'STAFF';
 export type DBRoomType = 'classroom' | 'lab' | 'seminar' | 'research';
 export type TermUpgradeStatus = 'pending' | 'approved' | 'rejected';
 export type ValidTerm = '1-1' | '1-2' | '2-1' | '2-2' | '3-1' | '3-2' | '4-1' | '4-2';
@@ -36,6 +36,7 @@ export interface Teacher {
   office_room: string | null;
   is_on_leave: boolean;
   leave_reason: string | null;
+  is_head?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -63,6 +64,31 @@ export interface Student {
 
 export interface StudentWithAuth extends Student {
   profile: Profile;
+}
+
+// ── Staff ──────────────────────────────────────────────
+
+export interface Staff {
+  user_id: string;
+  staff_uid: string;
+  full_name: string;
+  phone: string | null;
+  designation: string;
+  department: string;
+  is_admin: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminPermissions {
+  all?: boolean;
+  menus?: string[];
+  source?: string;
+}
+
+export interface StaffWithAuth extends Staff {
+  profile: Profile;
+  admin_permissions?: AdminPermissions | null;
 }
 
 // ── Course ─────────────────────────────────────────────

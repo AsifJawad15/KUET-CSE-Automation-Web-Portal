@@ -6,14 +6,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { badRequest, guardSupabase, internalError } from '@/lib/apiResponse';
+import { GEO_ATTENDANCE_DEFAULTS } from '@/lib/geoAttendanceConfig';
 
 // KUET CSE Building coordinates (fallback when room has no stored coordinates)
 const BUILDING_LAT = 22.8993;
 const BUILDING_LNG = 89.5023;
-/** Max distance when a room has its own GPS coordinates. */
-const ROOM_MAX_DISTANCE = 30;
-/** Fallback max distance when a room has no stored GPS coordinates. */
-const BUILDING_MAX_DISTANCE = 100;
 
 function extractError(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
@@ -146,31 +143,36 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Determine target coordinates and max distance
-    //    Use room-specific GPS coords (30 m) if stored; else building center (100 m)
     let targetLat = BUILDING_LAT;
     let targetLng = BUILDING_LNG;
-    let maxDistance = BUILDING_MAX_DISTANCE;
+    let maxDistance =
+      typeof room.range_meters === 'number' && room.range_meters > 0
+        ? Math.round(room.range_meters)
+        : GEO_ATTENDANCE_DEFAULTS.rangeMeters;
+    let targetLabel = 'building';
 
     if (room.room_number) {
       const { data: roomRow } = await supabase
         .from('rooms')
-        .select('latitude, longitude')
+        .select('latitude, longitude, is_active')
         .eq('room_number', room.room_number)
         .maybeSingle();
-      if (roomRow?.latitude != null && roomRow?.longitude != null) {
+
+      if (roomRow?.is_active !== false &&
+          roomRow?.latitude != null &&
+          roomRow?.longitude != null) {
         targetLat = roomRow.latitude as number;
         targetLng = roomRow.longitude as number;
-        maxDistance = ROOM_MAX_DISTANCE;
+        targetLabel = 'room';
       }
     }
 
     const distance = haversineDistance(latitude, longitude, targetLat, targetLng);
 
     if (distance > maxDistance) {
-      const label = maxDistance === ROOM_MAX_DISTANCE ? 'room' : 'building';
       return NextResponse.json({
         success: false,
-        error: `You are ${Math.round(distance)}m from the ${label}. Must be within ${maxDistance}m.`,
+        error: `You are ${Math.round(distance)}m from the ${targetLabel}. Must be within ${maxDistance}m.`,
         distance: Math.round(distance),
       }, { status: 403 });
     }

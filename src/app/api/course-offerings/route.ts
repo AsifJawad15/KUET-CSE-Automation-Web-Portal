@@ -5,11 +5,12 @@
 // ==========================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { isSupabaseConfigured, supabase } from '@/lib/supabase';
-import { badRequest, conflict, guardSupabase, internalError, noContent, ok } from '@/lib/apiResponse';
+import { badRequest, conflict, internalError, ok } from '@/lib/apiResponse';
 import { requireField, requireFields } from '@/lib/validators';
 import { COURSE_OFFERING_WITH_DETAILS } from '@/lib/queryConstants';
 import { notifyTeacherCourseAssigned, notifyStudentCourseAssigned } from '@/lib/notifications';
+import { getSupabaseAdmin, isSupabaseAdminConfigured } from '@/lib/supabaseAdmin';
+import { requireServerSession } from '@/lib/serverAuth';
 
 // ── Helpers ────────────────────────────────────────────
 
@@ -17,12 +18,19 @@ function extractErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
 
+function serviceGuard() {
+  if (!isSupabaseAdminConfigured()) {
+    return internalError('Secure Supabase service role is not configured.');
+  }
+  return null;
+}
+
 /** Resolve a term from the curriculum table or course code pattern. */
-async function resolveTerm(courseId: string, providedTerm?: string): Promise<string> {
+async function resolveTerm(db: ReturnType<typeof getSupabaseAdmin>, courseId: string, providedTerm?: string): Promise<string> {
   if (providedTerm) return providedTerm;
 
   // Try curriculum table
-  const { data: curriculumEntry } = await supabase
+  const { data: curriculumEntry } = await db
     .from('curriculum')
     .select('term')
     .eq('course_id', courseId)
@@ -32,7 +40,7 @@ async function resolveTerm(courseId: string, providedTerm?: string): Promise<str
   if (curriculumEntry?.term) return curriculumEntry.term;
 
   // Try course code pattern (e.g., CSE 3200 → "3-1")
-  const { data: courseData } = await supabase
+  const { data: courseData } = await db
     .from('courses')
     .select('code')
     .eq('id', courseId)
@@ -59,14 +67,17 @@ function resolveSession(provided?: string): string {
 // ── GET /api/course-offerings ──────────────────────────
 
 export async function GET(request: NextRequest) {
-  const guard = guardSupabase(isSupabaseConfigured());
+  const auth = requireServerSession(request);
+  if (auth.response) return auth.response;
+  const guard = serviceGuard();
   if (guard) return guard;
 
   try {
+    const db = getSupabaseAdmin();
     const { searchParams } = new URL(request.url);
     const courseId = searchParams.get('course_id');
 
-    let query = supabase
+    let query = db
       .from('course_offerings')
       .select(COURSE_OFFERING_WITH_DETAILS)
       .order('created_at', { ascending: false });
@@ -85,10 +96,13 @@ export async function GET(request: NextRequest) {
 // ── POST /api/course-offerings ─────────────────────────
 
 export async function POST(request: NextRequest) {
-  const guard = guardSupabase(isSupabaseConfigured());
+  const auth = requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
+  const guard = serviceGuard();
   if (guard) return guard;
 
   try {
+    const db = getSupabaseAdmin();
     const body = await request.json();
     const { course_id, teacher_user_id, section, term, session } = body;
 
@@ -96,7 +110,7 @@ export async function POST(request: NextRequest) {
     if (!fieldCheck.valid) return badRequest(fieldCheck.error!);
 
     // Check for duplicate assignment
-    const { data: existing } = await supabase
+    const { data: existing } = await db
       .from('course_offerings')
       .select('id')
       .eq('course_id', course_id)
@@ -105,7 +119,7 @@ export async function POST(request: NextRequest) {
 
     if (existing) return conflict('This teacher is already assigned to this course');
 
-    const resolvedTerm = await resolveTerm(course_id, term);
+    const resolvedTerm = await resolveTerm(db, course_id, term);
     const resolvedSession = resolveSession(session);
 
     const insertData: Record<string, unknown> = {
@@ -116,7 +130,7 @@ export async function POST(request: NextRequest) {
     };
     if (section) insertData.section = section;
 
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('course_offerings')
       .insert(insertData)
       .select(COURSE_OFFERING_WITH_DETAILS)
@@ -161,10 +175,13 @@ export async function POST(request: NextRequest) {
 // ── PATCH /api/course-offerings ────────────────────────
 
 export async function PATCH(request: NextRequest) {
-  const guard = guardSupabase(isSupabaseConfigured());
+  const auth = requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
+  const guard = serviceGuard();
   if (guard) return guard;
 
   try {
+    const db = getSupabaseAdmin();
     const body = await request.json();
     const { id, teacher_user_id, section } = body;
 
@@ -177,7 +194,7 @@ export async function PATCH(request: NextRequest) {
 
     if (Object.keys(updates).length === 0) return badRequest('No fields to update');
 
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('course_offerings')
       .update(updates)
       .eq('id', id)
@@ -226,7 +243,9 @@ export async function PATCH(request: NextRequest) {
 // ── DELETE /api/course-offerings ───────────────────────
 
 export async function DELETE(request: NextRequest) {
-  const guard = guardSupabase(isSupabaseConfigured());
+  const auth = requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
+  const guard = serviceGuard();
   if (guard) return guard;
 
   try {
@@ -235,7 +254,7 @@ export async function DELETE(request: NextRequest) {
 
     if (!id) return badRequest('Offering ID is required');
 
-    const { error } = await supabase
+    const { error } = await getSupabaseAdmin()
       .from('course_offerings')
       .delete()
       .eq('id', id);

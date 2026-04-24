@@ -276,12 +276,14 @@ export async function notifyGeoAttendanceRoomOpened(
     return;
   }
 
+  const normalizedSection = normalizeSection(opts.section);
   await createNotification({
     type: 'geo_attendance_open',
     title,
     body,
-    target_type: 'YEAR_TERM',
-    target_value: normalizedTerm,
+    target_type: normalizedSection ? 'SECTION' : 'YEAR_TERM',
+    target_value: normalizedSection ?? normalizedTerm,
+    target_year_term: normalizedSection ? normalizedTerm : null,
     created_by: opts.teacherUserId,
     created_by_role: 'TEACHER',
     metadata,

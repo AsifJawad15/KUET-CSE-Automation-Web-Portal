@@ -132,6 +132,16 @@ export async function fetchTvDisplayDataForTarget(target: TvTarget): Promise<TvD
       .order('display_order', { ascending: true }),
   ]);
 
+  if (announcementsRes.error || tickerRes.error || settingsRes.error || eventsRes.error) {
+    throw new Error(
+      announcementsRes.error?.message ||
+      tickerRes.error?.message ||
+      settingsRes.error?.message ||
+      eventsRes.error?.message ||
+      'Failed to fetch TV display data'
+    );
+  }
+
   const settings: Record<string, string> = {};
   (settingsRes.data as CmsTvSetting[] | null)?.forEach((row) => {
     settings[row.key] = row.value;
@@ -171,6 +181,16 @@ export async function fetchAllTvDisplayData(): Promise<TvDisplayData> {
       .order('display_order', { ascending: true }),
   ]);
 
+  if (announcementsRes.error || tickerRes.error || settingsRes.error || eventsRes.error) {
+    throw new Error(
+      announcementsRes.error?.message ||
+      tickerRes.error?.message ||
+      settingsRes.error?.message ||
+      eventsRes.error?.message ||
+      'Failed to fetch TV display data'
+    );
+  }
+
   const settings: Record<string, string> = {};
   (settingsRes.data as CmsTvSetting[] | null)?.forEach((row) => {
     settings[row.key] = row.value;
@@ -200,11 +220,16 @@ export async function fetchActiveDevices(): Promise<CmsTvDevice[]> {
  * Fetch device settings for a specific TV target.
  */
 export async function fetchDeviceByName(name: string): Promise<CmsTvDevice | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('cms_tv_devices')
     .select('*')
     .eq('name', name)
     .single();
+
+  if (error) {
+    throw new Error(error.message || 'Failed to fetch TV device');
+  }
+
   return (data as CmsTvDevice) || null;
 }
 
@@ -260,8 +285,7 @@ export async function fetchTodayRoutineSlots(): Promise<RoutineSlotWithDetails[]
     .order('start_time', { ascending: true });
 
   if (error) {
-    console.error('Failed to fetch routine slots:', error);
-    return [];
+    throw new Error(error.message || 'Failed to fetch routine slots');
   }
 
   return (data as RoutineSlotWithDetails[]) || [];

@@ -363,7 +363,7 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
 
   // ── Breaking News (per-TV target) ──
   const [breakingNewsText, setBreakingNewsText] = useState('');
-  const [breakingNewsDuration, setBreakingNewsDuration] = useState<15 | 30>(15);
+  const [breakingNewsDurationInput, setBreakingNewsDurationInput] = useState('');
   const [breakingNewsTarget, setBreakingNewsTarget] = useState<string>('all');
   const [activatingBreaking, setActivatingBreaking] = useState(false);
 
@@ -393,10 +393,15 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
 
   const handleActivateBreakingNews = async () => {
     if (!breakingNewsText.trim()) return;
+    const durationMinutes = Number.parseInt(breakingNewsDurationInput.trim(), 10);
+    if (Number.isNaN(durationMinutes) || durationMinutes <= 0) {
+      alert('Please enter duration in minutes.');
+      return;
+    }
     setActivatingBreaking(true);
     try {
       const suffix = `_${breakingNewsTarget}`;
-      const expiresAt = new Date(Date.now() + breakingNewsDuration * 60 * 1000).toISOString();
+      const expiresAt = new Date(Date.now() + durationMinutes * 60 * 1000).toISOString();
       await upsertSetting(`breaking_news_text${suffix}`, breakingNewsText.trim());
       await upsertSetting(`breaking_news_expires_at${suffix}`, expiresAt);
       setBreakingNewsText('');
@@ -469,17 +474,6 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
             >
               <Eye className="w-4 h-4" />
               TV Viewer
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => { setActiveTab('announcements'); setShowForm(true); }}
-              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-lg transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              New Announcement
             </motion.button>
           </div>
         </div>
@@ -576,23 +570,26 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
           </div>
           <div className="flex-shrink-0">
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Duration</label>
-            <select
-              value={breakingNewsDuration}
-              onChange={(e) => setBreakingNewsDuration(Number(e.target.value) as 15 | 30)}
+            <input
+              type="number"
+              min={1}
+              value={breakingNewsDurationInput}
+              onChange={(e) => setBreakingNewsDurationInput(e.target.value)}
+              placeholder="Minutes"
               className="px-3 py-2.5 border border-gray-200 rounded-lg bg-white text-gray-900 text-sm focus:ring-2 focus:ring-red-400 focus:border-transparent"
-            >
-              <option value={15}>15 Minutes</option>
-              <option value={30}>30 Minutes</option>
-            </select>
+              required
+            />
           </div>
-          <button
-            onClick={handleActivateBreakingNews}
-            disabled={activatingBreaking || !breakingNewsText.trim()}
-            className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors text-sm disabled:opacity-50"
-          >
-            <AlertTriangle className="w-4 h-4" />
-            {activatingBreaking ? 'Activating...' : 'Go Live'}
-          </button>
+          <div className="flex-shrink-0">
+            <button
+              onClick={handleActivateBreakingNews}
+              disabled={activatingBreaking || !breakingNewsText.trim() || !breakingNewsDurationInput.trim()}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors text-sm disabled:opacity-50"
+            >
+              <AlertTriangle className="w-4 h-4" />
+              {activatingBreaking ? 'Activating...' : 'Go Live'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -962,6 +959,18 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
       {/* ══════ TAB: Announcements ══════ */}
       {activeTab === 'announcements' && (
         <div className="space-y-4">
+          <div className="flex justify-end mb-2">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowForm(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-lg transition-colors text-sm"
+            >
+              <Plus className="w-4 h-4" />
+              New Announcement
+            </motion.button>
+          </div>
+
           {announcements.length === 0 ? (
             <SpotlightCard className="rounded-2xl border border-gray-200 dark:border-[#3d4951] bg-white dark:bg-transparent p-12 text-center" spotlightColor="rgba(217, 162, 153, 0.2)">
               <div className="w-16 h-16 bg-gray-50 dark:bg-[#0b090a] rounded-full flex items-center justify-center mx-auto mb-4">
@@ -1334,7 +1343,7 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
 
       {/* ══════ TAB: TV Devices ══════ */}
       {activeTab === 'devices' && (
-        <DevicesTab devices={devices} onReload={loadData} />
+        <DevicesTab devices={devices} settings={settings} onReload={loadData} />
       )}
     </div>
   );
@@ -1440,11 +1449,37 @@ function SettingsTab({ settings, onSave }: { settings: Record<string, string>; o
 // Devices Tab Component
 // ══════════════════════════════════════
 
-function DevicesTab({ devices, onReload }: { devices: CmsTvDevice[]; onReload: () => Promise<void> }) {
+function DevicesTab({
+  devices,
+  settings,
+  onReload,
+}: {
+  devices: CmsTvDevice[];
+  settings: Record<string, string>;
+  onReload: () => Promise<void>;
+}) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({ name: '', label: '', location: '' });
+
+  const getDeviceSectionEnabled = (
+    deviceName: string,
+    section: 'events' | 'ticker' | 'headlines'
+  ) => {
+    const value = settings[`tv_show_${section}_${deviceName}`];
+    if (!value) return true;
+    return value !== 'false' && value !== '0';
+  };
+
+  const handleToggleDeviceSection = async (
+    deviceName: string,
+    section: 'events' | 'ticker' | 'headlines',
+    currentValue: boolean
+  ) => {
+    await upsertSetting(`tv_show_${section}_${deviceName}`, (!currentValue).toString());
+    await onReload();
+  };
 
   const resetForm = () => {
     setFormData({ name: '', label: '', location: '' });
@@ -1645,6 +1680,37 @@ function DevicesTab({ devices, onReload }: { devices: CmsTvDevice[]; onReload: (
                     device.show_room_schedule ? 'translate-x-6' : 'translate-x-1'
                   }`} />
                 </button>
+              </div>
+
+              <div className="mb-4 px-3 py-3 rounded-lg border border-gray-200 dark:border-[#3d4951] bg-white/50 dark:bg-[#0b090a]/50 space-y-2.5">
+                <p className="text-xs font-medium text-gray-400 dark:text-[#b1a7a6] uppercase tracking-wide">
+                  Display Content
+                </p>
+
+                {(['events', 'ticker', 'headlines'] as const).map((section) => {
+                  const enabled = getDeviceSectionEnabled(device.name, section);
+                  const label = section === 'events' ? 'Events Panel' : section === 'ticker' ? 'Ticker Bar' : 'Headlines Bar';
+
+                  return (
+                    <div key={section} className="flex items-center justify-between">
+                      <span className="text-sm text-gray-700 dark:text-[#d3d3d3]">{label}</span>
+                      <button
+                        onClick={async () => {
+                          await handleToggleDeviceSection(device.name, section, enabled);
+                        }}
+                        className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors ${
+                          enabled ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                            enabled ? 'translate-x-5' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
 
               <div className="flex items-center gap-2 pt-3 border-t border-gray-200 dark:border-[#3d4951]">

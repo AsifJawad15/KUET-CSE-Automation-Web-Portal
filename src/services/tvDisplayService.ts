@@ -44,6 +44,16 @@ export async function fetchTvDisplayData(): Promise<TvDisplayData> {
       .order('display_order', { ascending: true }),
   ]);
 
+  if (announcementsRes.error || tickerRes.error || settingsRes.error || eventsRes.error) {
+    throw new Error(
+      announcementsRes.error?.message ||
+      tickerRes.error?.message ||
+      settingsRes.error?.message ||
+      eventsRes.error?.message ||
+      'Failed to fetch TV display data'
+    );
+  }
+
   // Convert settings array → key-value map
   const settings: Record<string, string> = {};
   (settingsRes.data as CmsTvSetting[] | null)?.forEach((row) => {
@@ -87,6 +97,16 @@ export async function fetchTvDisplayDataForTarget(target: TvTarget): Promise<TvD
       .in('target', [target, 'all'])
       .order('display_order', { ascending: true }),
   ]);
+
+  if (announcementsRes.error || tickerRes.error || settingsRes.error || eventsRes.error) {
+    throw new Error(
+      announcementsRes.error?.message ||
+      tickerRes.error?.message ||
+      settingsRes.error?.message ||
+      eventsRes.error?.message ||
+      'Failed to fetch TV display data'
+    );
+  }
 
   const settings: Record<string, string> = {};
   (settingsRes.data as CmsTvSetting[] | null)?.forEach((row) => {

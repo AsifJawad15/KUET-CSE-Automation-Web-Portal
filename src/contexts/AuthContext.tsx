@@ -11,13 +11,18 @@ import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, 
 
 // ── Types ──────────────────────────────────────────────
 
-export type UserRole = 'admin' | 'teacher' | null;
+export type UserRole = 'admin' | 'teacher' | 'head' | null;
 
 export interface User {
   id: string;
   email: string;
   name: string;
   role: UserRole;
+  permissions?: {
+    all?: boolean;
+    menus?: string[];
+    source?: string;
+  } | null;
   avatar?: string;
   department?: string;
   designation?: string;
@@ -82,6 +87,7 @@ async function authenticateViaAPI(email: string, password: string): Promise<Logi
         email: data.email,
         name: data.name,
         role: data.role as UserRole,
+        permissions: data.permissions ?? null,
         department: data.department,
         designation: data.designation,
       },
@@ -122,6 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     setUser(null);
     clearPersistedUser();
+    void fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
   }, []);
 
   const value = useMemo<AuthContextType>(() => ({

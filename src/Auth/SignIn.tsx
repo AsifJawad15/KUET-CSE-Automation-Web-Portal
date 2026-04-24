@@ -12,15 +12,12 @@ import {
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-interface SignInProps {
-  onToggleForm: () => void;
-}
-
-export default function SignIn({ onToggleForm }: SignInProps) {
+export default function SignIn() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [infoBanner, setInfoBanner] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { login } = useAuth();
@@ -30,7 +27,7 @@ export default function SignIn({ onToggleForm }: SignInProps) {
     setError('');
     setIsLoading(true);
 
-    const result = await login(email, password);
+    const result = await login(email.trim(), password);
     
     if (result.success) {
       router.replace('/dashboard');
@@ -47,7 +44,7 @@ export default function SignIn({ onToggleForm }: SignInProps) {
           Welcome Back
         </h2>
         <p className="text-sm text-gray-500">
-          Sign in to access the KUET CSE Automation Portal
+          Secure access for department administration and teaching workflows
         </p>
       </div>
 
@@ -55,6 +52,13 @@ export default function SignIn({ onToggleForm }: SignInProps) {
         <div className="p-3 rounded-lg bg-red-50 border border-red-200 flex items-center gap-3">
           <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
           <p className="text-sm text-red-700">{error}</p>
+        </div>
+      )}
+
+      {infoBanner && (
+        <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 flex items-center gap-3">
+          <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+          <p className="text-sm text-amber-800">{infoBanner}</p>
         </div>
       )}
 
@@ -67,11 +71,13 @@ export default function SignIn({ onToggleForm }: SignInProps) {
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="email"
-              placeholder="Enter your email"
+              placeholder="name@cse.kuet.ac.bd"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
               className="input-primary pl-10"
               required
+              disabled={isLoading}
             />
           </div>
         </div>
@@ -87,8 +93,10 @@ export default function SignIn({ onToggleForm }: SignInProps) {
               placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
               className="input-primary pl-10 pr-10"
               required
+              disabled={isLoading}
             />
             <button
               type="button"
@@ -100,15 +108,9 @@ export default function SignIn({ onToggleForm }: SignInProps) {
           </div>
         </div>
 
-        <div className="flex items-center justify-between">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input 
-              type="checkbox" 
-              className="w-4 h-4 rounded border-gray-200 text-gray-900 focus:ring-indigo-500"
-            />
-            <span className="text-sm text-gray-500">Remember me</span>
-          </label>
-        </div>
+        <p className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs leading-relaxed text-gray-600">
+          Use the account assigned by the department office. Passwords are verified securely on the server.
+        </p>
 
         <button
           type="submit"
@@ -129,10 +131,13 @@ export default function SignIn({ onToggleForm }: SignInProps) {
       <p className="text-center text-sm text-gray-500">
         Don&apos;t have an account?{' '}
         <button
-          onClick={onToggleForm}
+          type="button"
+          onClick={() =>
+            setInfoBanner('For account creation, visit the office or contact the system administrator.')
+          }
           className="font-semibold text-gray-900 underline"
         >
-          Contact Admin
+          Sign Up
         </button>
       </p>
     </div>
