@@ -5,6 +5,8 @@ type SearchIntent =
   | { type: 'student'; value: string }
   | { type: 'course'; value: string }
   | { type: 'teacher'; value: string }
+  | { type: 'teacher-schedule'; value: string; scope: 'weekly' | 'next-week' }
+  | { type: 'class-schedule'; term: string; section?: string; dayOfWeek?: number; label: string }
   | { type: 'room'; value: string }
   | { type: 'tv'; value?: string };
 
@@ -21,6 +23,7 @@ type StudentRow = {
 };
 
 type TeacherRow = {
+  user_id?: string | null;
   full_name?: string | null;
   teacher_uid?: string | null;
   phone?: string | null;
@@ -30,6 +33,29 @@ type TeacherRow = {
   is_on_leave?: boolean | null;
   leave_reason?: string | null;
   profile?: { email?: string | null; is_active?: boolean | null } | null;
+};
+
+type RoutineSlotRow = {
+  room_number?: string | null;
+  day_of_week?: number | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  section?: string | null;
+  valid_from?: string | null;
+  valid_until?: string | null;
+  course_offerings?: {
+    term?: string | null;
+    session?: string | null;
+    courses?: {
+      code?: string | null;
+      title?: string | null;
+      credit?: number | null;
+      course_type?: string | null;
+    } | null;
+    teachers?: {
+      full_name?: string | null;
+    } | null;
+  } | null;
 };
 
 type CourseRow = {
@@ -54,6 +80,12 @@ export function detectSystemInfoSearch(message: string): SearchIntent | null {
   const text = message.trim();
   const normalized = text.toLowerCase();
 
+  const classSchedule = parseClassScheduleIntent(text);
+  if (classSchedule) return classSchedule;
+
+  const teacherSchedule = parseTeacherScheduleIntent(text);
+  if (teacherSchedule) return teacherSchedule;
+
   const roll = text.match(/\broll\s*(?:no\.?|number)?\s*[:#-]?\s*(\d{4,})\b/i)?.[1];
   if (roll || (/\bstudent\b/.test(normalized) && /\b\d{4,}\b/.test(normalized))) {
     return { type: 'student', value: roll ?? normalized.match(/\b\d{4,}\b/)?.[0] ?? '' };
@@ -72,10 +104,8 @@ export function detectSystemInfoSearch(message: string): SearchIntent | null {
     return { type: 'tv', value: target ? `TV${target}` : undefined };
   }
 
-  if (/\bteacher\b|\bfaculty\b|\bprofessor\b|\blecturer\b/.test(normalized)) {
-    const cleaned = text
-      .replace(/\b(find|show|get|search|info|information|details|about|teacher|faculty|professor|lecturer)\b/gi, '')
-      .trim();
+  if (/\bteacher\b|\bfaculty\b|\bprofessor\b|\blecturer\b|\bsir\b|\bmadam\b|\bma'am\b|\binfo\b|\binformation\b|\bdetails\b/.test(normalized)) {
+    const cleaned = cleanPersonQuery(text);
     if (cleaned.length >= 2) return { type: 'teacher', value: cleaned };
   }
 
@@ -90,6 +120,10 @@ export async function answerSystemInfoSearch(intent: SearchIntent): Promise<stri
       return searchCourse(intent.value);
     case 'teacher':
       return searchTeacher(intent.value);
+    case 'teacher-schedule':
+      return searchTeacherSchedule(intent.value, intent.scope);
+    case 'class-schedule':
+      return searchClassSchedule(intent);
     case 'room':
       return searchRoom(intent.value);
     case 'tv':
@@ -158,7 +192,7 @@ async function searchTeacher(query: string): Promise<string> {
   const { data, error } = await academicDb()
     .from('teachers')
     .select(`
-      full_name, teacher_uid, phone, designation, department, office_room, is_on_leave, leave_reason,
+      user_id, full_name, teacher_uid, phone, designation, department, office_room, is_on_leave, leave_reason,
       profile:profiles(email, is_active)
     `)
     .or(`full_name.ilike.%${query}%,teacher_uid.ilike.%${query}%`)
@@ -169,7 +203,7 @@ async function searchTeacher(query: string): Promise<string> {
   if (teachers.length === 0) return `No teacher found for "${query}".`;
 
   return [
-    `Teacher Search Results`,
+    teachers.length === 1 ? `Teacher Information` : `Teacher Search Results`,
     ...teachers.map((teacher, index) => [
       `${index + 1}. ${teacher.full_name ?? 'N/A'}`,
       `   ID: ${teacher.teacher_uid ?? 'N/A'}`,
@@ -180,6 +214,52 @@ async function searchTeacher(query: string): Promise<string> {
       `   Status: ${teacher.is_on_leave ? `On leave${teacher.leave_reason ? ` (${teacher.leave_reason})` : ''}` : 'Available'}`,
     ].join('\n')),
   ].join('\n');
+}
+
+async function searchTeacherSchedule(query: string, scope: 'weekly' | 'next-week'): Promise<string> {
+  const teacher = await findBestTeacher(query);
+  if (!teacher?.user_id) return `No teacher found for "${query}".`;
+
+  const slots = await fetchTeacherSlots(teacher.user_id);
+  const heading = scope === 'next-week'
+    ? `Next Week Schedule for ${teacher.full_name ?? query}`
+    : `Weekly Schedule for ${teacher.full_name ?? query}`;
+
+  const regularSlots = slots
+    .filter((slot) => !slot.valid_from && !slot.valid_until)
+    .sort(sortSlots);
+
+  return formatGroupedSchedule(regularSlots, heading);
+}
+
+async function searchClassSchedule(intent: Extract<SearchIntent, { type: 'class-schedule' }>): Promise<string> {
+  let query = academicDb()
+    .from('routine_slots')
+    .select(`
+      room_number, day_of_week, start_time, end_time, section, valid_from, valid_until,
+      course_offerings!inner (
+        term, session,
+        courses ( code, title, credit, course_type ),
+        teachers!course_offerings_teacher_user_id_fkey ( full_name )
+      )
+    `)
+    .eq('course_offerings.term', intent.term)
+    .is('valid_from', null)
+    .is('valid_until', null);
+
+  if (intent.section) query = query.eq('section', intent.section);
+  if (intent.dayOfWeek !== undefined) query = query.eq('day_of_week', intent.dayOfWeek);
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const slots = ((data ?? []) as RoutineSlotRow[]).sort(sortSlots);
+  const dayPrefix = intent.dayOfWeek !== undefined ? `${DAY_NAMES[intent.dayOfWeek]} ` : '';
+  const sectionSuffix = intent.section ? ` Section ${intent.section}` : '';
+  return formatGroupedSchedule(
+    slots,
+    `${dayPrefix}Class Schedule for ${intent.label}${sectionSuffix}`,
+  );
 }
 
 async function searchRoom(roomNumber: string): Promise<string> {
@@ -237,4 +317,164 @@ async function searchTv(target?: string): Promise<string> {
       `   Room Schedule: ${device.show_room_schedule ? 'Shown' : 'Hidden'}`,
     ].join('\n')),
   ].join('\n');
+}
+
+async function findBestTeacher(query: string): Promise<TeacherRow | null> {
+  const { data, error } = await academicDb()
+    .from('teachers')
+    .select(`
+      user_id, full_name, teacher_uid, phone, designation, department, office_room, is_on_leave, leave_reason,
+      profile:profiles(email, is_active)
+    `)
+    .or(`full_name.ilike.%${query}%,teacher_uid.ilike.%${query}%`)
+    .limit(10);
+
+  if (error) throw error;
+
+  const teachers = (data ?? []) as TeacherRow[];
+  if (teachers.length <= 1) return teachers[0] ?? null;
+
+  const tokens = normalizeName(query).split(' ').filter(Boolean);
+  return teachers
+    .map((teacher) => ({
+      teacher,
+      score: tokens.filter((token) => normalizeName(teacher.full_name ?? '').includes(token)).length,
+    }))
+    .sort((left, right) => right.score - left.score)[0]?.teacher ?? teachers[0];
+}
+
+async function fetchTeacherSlots(teacherId: string): Promise<RoutineSlotRow[]> {
+  const { data, error } = await academicDb()
+    .from('routine_slots')
+    .select(`
+      room_number, day_of_week, start_time, end_time, section, valid_from, valid_until,
+      course_offerings!inner (
+        term, session, teacher_user_id, is_active,
+        courses ( code, title, credit, course_type ),
+        teachers!course_offerings_teacher_user_id_fkey ( full_name )
+      )
+    `)
+    .eq('course_offerings.teacher_user_id', teacherId)
+    .eq('course_offerings.is_active', true);
+
+  if (error) throw error;
+  return (data ?? []) as RoutineSlotRow[];
+}
+
+function parseTeacherScheduleIntent(text: string): SearchIntent | null {
+  const lower = text.toLowerCase();
+  if (!/\b(schedule|routine|timetable|class)\b/.test(lower)) return null;
+  if (!/\bsir\b|\bmadam\b|\bma'am\b|\bteacher\b|\bfaculty\b/.test(lower)) return null;
+
+  const scope = /\bnext\s+week\b|\bupcoming\s+week\b/.test(lower) ? 'next-week' : 'weekly';
+  const teacherName = cleanPersonQuery(text)
+    .replace(/\b(next|upcoming|full|all|weekly|week|schedule|routine|timetable|class|classes)\b/gi, '')
+    .trim();
+
+  return teacherName.length >= 2 ? { type: 'teacher-schedule', value: teacherName, scope } : null;
+}
+
+function parseClassScheduleIntent(text: string): SearchIntent | null {
+  const lower = text.toLowerCase();
+  if (!/\b(schedule|routine|timetable|class)\b/.test(lower)) return null;
+
+  const term = parseTerm(text);
+  if (!term) return null;
+
+  const section = text.match(/\bsection\s*([A-Z])\b/i)?.[1]?.toUpperCase();
+  const dayOfWeek = parseDayOfWeek(lower);
+
+  return {
+    type: 'class-schedule',
+    term,
+    section,
+    dayOfWeek,
+    label: termToLabel(term),
+  };
+}
+
+function parseTerm(text: string): string | null {
+  const direct = text.match(/\b([1-4])\s*[-/]\s*([1-2])\b/) ?? text.match(/\b([1-4])\s+([1-2])\b/);
+  if (direct) return `${direct[1]}-${direct[2]}`;
+
+  const year = parseOrdinal(text, 'year');
+  const semester = parseOrdinal(text, 'semester') ?? parseOrdinal(text, 'term');
+  if (year && semester) return `${year}-${semester}`;
+
+  return null;
+}
+
+function parseOrdinal(text: string, unit: 'year' | 'semester' | 'term'): string | null {
+  const match = text.match(new RegExp(`\\b(1st|first|1|2nd|second|2|3rd|third|3|4th|fourth|4)\\s+${unit}\\b`, 'i'));
+  const value = match?.[1]?.toLowerCase();
+  if (!value) return null;
+  if (['1st', 'first', '1'].includes(value)) return '1';
+  if (['2nd', 'second', '2'].includes(value)) return '2';
+  if (['3rd', 'third', '3'].includes(value)) return '3';
+  if (['4th', 'fourth', '4'].includes(value)) return '4';
+  return null;
+}
+
+function parseDayOfWeek(text: string): number | undefined {
+  return DAY_NAMES.findIndex((day) => text.includes(day.toLowerCase())) !== -1
+    ? DAY_NAMES.findIndex((day) => text.includes(day.toLowerCase()))
+    : undefined;
+}
+
+function cleanPersonQuery(text: string): string {
+  return text
+    .replace(/\b(give|find|show|get|search|full|all|info|information|details|about|teacher|faculty|professor|lecturer|schedule|routine|timetable|class|classes|next|week|sir|madam|ma'am)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function normalizeName(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+function sortSlots(left: RoutineSlotRow, right: RoutineSlotRow): number {
+  const leftDay = left.day_of_week ?? 0;
+  const rightDay = right.day_of_week ?? 0;
+  if (leftDay !== rightDay) return leftDay - rightDay;
+  return String(left.start_time ?? '').localeCompare(String(right.start_time ?? ''));
+}
+
+function trimTime(value?: string | null): string {
+  return value && value.length >= 5 ? value.slice(0, 5) : value || 'N/A';
+}
+
+function termToLabel(term: string): string {
+  const [year, semester] = term.split('-');
+  return `${ordinal(year)} Year ${ordinal(semester)} Semester`;
+}
+
+function ordinal(value: string): string {
+  return value === '1' ? '1st' : value === '2' ? '2nd' : value === '3' ? '3rd' : `${value}th`;
+}
+
+function formatGroupedSchedule(slots: RoutineSlotRow[], heading: string): string {
+  if (slots.length === 0) return `${heading}\nNo schedule slots found.`;
+
+  const lines = [heading];
+  for (let dayIndex = 0; dayIndex < DAY_NAMES.length; dayIndex += 1) {
+    const daySlots = slots.filter((slot) => slot.day_of_week === dayIndex).sort(sortSlots);
+    if (daySlots.length === 0) continue;
+    lines.push(`${DAY_NAMES[dayIndex]}:`);
+    lines.push(...daySlots.map((slot) => `- ${formatSlot(slot)}`));
+  }
+
+  return lines.join('\n');
+}
+
+function formatSlot(slot: RoutineSlotRow): string {
+  const course = slot.course_offerings?.courses;
+  const teacher = slot.course_offerings?.teachers?.full_name;
+  const courseCode = course?.code ?? 'Course';
+  const title = course?.title ? ` (${course.title})` : '';
+  const room = slot.room_number || 'Not assigned';
+  const section = slot.section ? `, Section ${slot.section}` : '';
+  const teacherText = teacher ? `, ${teacher}` : '';
+  return `${trimTime(slot.start_time)} - ${trimTime(slot.end_time)} : ${courseCode}${title} room No.: ${room}${section}${teacherText}`;
 }

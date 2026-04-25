@@ -3,7 +3,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { askAssistant } from '@/services/assistantService';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Bot, CalendarDays, Loader2, MessageCircle, Minimize2, Send, Sparkles, X } from 'lucide-react';
+import { Bot, CalendarDays, MessageCircle, Minimize2, Send, Sparkles, X } from 'lucide-react';
 import { FormEvent, useMemo, useRef, useState } from 'react';
 
 type ChatMessage = {
@@ -145,9 +145,14 @@ export default function AdminTeacherChatbot() {
 
               {isSending && (
                 <div className="flex justify-start">
-                  <div className="flex items-center gap-2 rounded-2xl rounded-bl-md border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-500 shadow-sm dark:border-[#3d4951]/60 dark:bg-[#161a1d] dark:text-[#b1a7a6]">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Thinking
+                  <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-md border border-gray-200 bg-white px-4 py-3 shadow-sm dark:border-[#3d4951]/60 dark:bg-[#161a1d]">
+                    {[0, 1, 2].map((index) => (
+                      <span
+                        key={index}
+                        className="h-2 w-2 animate-bounce rounded-full bg-gray-400 dark:bg-[#b1a7a6]"
+                        style={{ animationDelay: `${index * 120}ms` }}
+                      />
+                    ))}
                   </div>
                 </div>
               )}
@@ -192,21 +197,23 @@ export default function AdminTeacherChatbot() {
         )}
       </AnimatePresence>
 
-      <button
-        type="button"
-        onClick={() => {
-          setIsOpen(true);
-          setIsMinimized(false);
-        }}
-        className="group flex items-center gap-3"
-      >
-        <span className="hidden rounded-full bg-white px-5 py-3 text-sm font-bold text-gray-600 shadow-xl shadow-black/15 ring-1 ring-gray-100 transition group-hover:-translate-y-0.5 group-hover:text-[#6E4229] dark:bg-[#161a1d] dark:text-[#F8E9D7] dark:ring-[#3d4951]/60 sm:inline-flex">
-          Ask me...
-        </span>
-        <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#6E4229] text-white shadow-xl shadow-[#6E4229]/35 ring-4 ring-white transition group-hover:-translate-y-0.5 group-hover:bg-[#5B3521] dark:ring-[#121417]">
-          <MessageCircle className="h-7 w-7" />
-        </span>
-      </button>
+      {(!isOpen || isMinimized) && (
+        <button
+          type="button"
+          onClick={() => {
+            setIsOpen(true);
+            setIsMinimized(false);
+          }}
+          className="group flex items-center gap-2"
+        >
+          <span className="hidden rounded-full bg-white px-4 py-2.5 text-sm font-bold text-gray-600 shadow-xl shadow-black/15 ring-1 ring-gray-100 transition group-hover:-translate-y-0.5 group-hover:text-[#6E4229] dark:bg-[#161a1d] dark:text-[#F8E9D7] dark:ring-[#3d4951]/60 sm:inline-flex">
+            Ask me...
+          </span>
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#6E4229] text-white shadow-xl shadow-[#6E4229]/35 ring-[3px] ring-white transition group-hover:-translate-y-0.5 group-hover:bg-[#5B3521] dark:ring-[#121417]">
+            <MessageCircle className="h-5 w-5" />
+          </span>
+        </button>
+      )}
     </div>
   );
 }
