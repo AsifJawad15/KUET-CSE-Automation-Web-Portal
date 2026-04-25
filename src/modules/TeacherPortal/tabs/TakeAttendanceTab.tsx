@@ -63,6 +63,7 @@ function rollSuffix(roll: string): number {
 }
 
 type ViewMode = 'take' | 'preview' | 'geo';
+type PreviewColumn = { key: string; date: string };
 
 // Section/group definitions
 interface GroupDef { label: string; min: number; max: number; }
@@ -419,13 +420,16 @@ export default function TakeAttendanceTab() {
 
   // Build preview tables per section
   const previewTable = useMemo(() => {
-    if (!previewData.length || !students.length) return { dates: [] as string[], rows: [] as { roll: string; name: string; statuses: Record<string, Status> }[] };
-    const dates = [...new Set(previewData.map(r => r.date))].sort();
+    if (!previewData.length || !students.length) return { columns: [] as PreviewColumn[], rows: [] as { roll: string; name: string; statuses: Record<string, Status> }[] };
+    const columnMap = new Map<string, PreviewColumn>();
     const rollMap = new Map<string, Record<string, Status>>();
     for (const r of previewData) {
+      const key = r.session_id ? `${r.date}::${r.session_id}` : r.date;
+      if (!columnMap.has(key)) columnMap.set(key, { key, date: r.date });
       if (!rollMap.has(r.student_roll)) rollMap.set(r.student_roll, {});
-      rollMap.get(r.student_roll)![r.date] = r.status;
+      rollMap.get(r.student_roll)![key] = r.status;
     }
+    const columns = [...columnMap.values()].sort((a, b) => a.date.localeCompare(b.date) || a.key.localeCompare(b.key));
     const g = groups[previewGroup];
     const rows = students
       .filter(s => { const suf = rollSuffix(s.roll_no); return suf >= g.min && suf <= g.max; })
@@ -434,7 +438,7 @@ export default function TakeAttendanceTab() {
         name: s.full_name,
         statuses: rollMap.get(s.roll_no) || {},
       }));
-    return { dates, rows };
+    return { columns, rows };
   }, [previewData, students, previewGroup, groups]);
 
   if (loadingCourses) {
@@ -578,9 +582,9 @@ export default function TakeAttendanceTab() {
                 </button>
               ))}
               <div className="ml-auto flex items-center gap-2">
-                {previewTable.dates.length > 0 && (
+                {previewTable.columns.length > 0 && (
                   <span className="text-xs text-gray-400 dark:text-[#b1a7a6]">
-                    {previewTable.dates.length} class{previewTable.dates.length !== 1 ? 'es' : ''} recorded
+                    {previewTable.columns.length} class{previewTable.columns.length !== 1 ? 'es' : ''} recorded
                   </span>
                 )}
               </div>
@@ -593,11 +597,11 @@ export default function TakeAttendanceTab() {
                     session: selectedCourse.session,
                     courseType: selectedCourse.course_type,
                     sectionLabel: groups[previewGroup].label,
-                    dates: previewTable.dates,
+                    dates: previewTable.columns.map(column => column.key),
                     rows: previewTable.rows,
                   })
                 }
-                disabled={previewTable.dates.length === 0}
+                disabled={previewTable.columns.length === 0}
                 className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-600 dark:bg-red-600 text-white text-xs font-medium hover:bg-[#4E342E] dark:hover:bg-[#e5191e] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Download className="w-3.5 h-3.5" />
@@ -606,7 +610,7 @@ export default function TakeAttendanceTab() {
             </div>
 
             {/* ── Attendance Table ── */}
-            {previewTable.dates.length === 0 ? (
+            {previewTable.columns.length === 0 ? (
               <div className="p-8 text-center">
                 <ClipboardCheck className="w-10 h-10 mx-auto text-[#DCC5B2] dark:text-[#3d4951] mb-3" />
                 <p className="text-gray-400 dark:text-[#b1a7a6]">No attendance records found yet.</p>
@@ -625,9 +629,9 @@ export default function TakeAttendanceTab() {
                       <th className="border border-gray-200 dark:border-[#3d4951] px-3 py-2 text-left text-xs font-semibold text-gray-700 dark:text-white whitespace-nowrap min-w-[160px] sticky left-[7.5rem] bg-gray-50 dark:bg-[#0b090a] z-10">
                         Name
                       </th>
-                      {previewTable.dates.map(d => (
-                        <th key={d} className="border border-gray-200 dark:border-[#3d4951] px-1.5 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-white whitespace-nowrap min-w-[42px]">
-                          {new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' })}
+                      {previewTable.columns.map(column => (
+                        <th key={column.key} className="border border-gray-200 dark:border-[#3d4951] px-1.5 py-2 text-center text-[10px] font-semibold text-gray-700 dark:text-white whitespace-nowrap min-w-[42px]">
+                          {new Date(column.date + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' })}
                         </th>
                       ))}
                     </tr>
@@ -635,7 +639,7 @@ export default function TakeAttendanceTab() {
                   <tbody>
                     {previewTable.rows.length === 0 ? (
                       <tr>
-                        <td colSpan={3 + previewTable.dates.length} className="border border-gray-200 dark:border-[#3d4951] p-6 text-center text-gray-400 dark:text-[#b1a7a6]">
+                        <td colSpan={3 + previewTable.columns.length} className="border border-gray-200 dark:border-[#3d4951] p-6 text-center text-gray-400 dark:text-[#b1a7a6]">
                           No students in this {isLab ? 'group' : 'section'}
                         </td>
                       </tr>
@@ -650,10 +654,10 @@ export default function TakeAttendanceTab() {
                         <td className="border border-gray-200 dark:border-[#3d4951] px-3 py-1.5 text-xs text-gray-900 dark:text-white whitespace-nowrap sticky left-[7.5rem] bg-white dark:bg-[#161a1d]">
                           {row.name}
                         </td>
-                        {previewTable.dates.map(d => {
-                          const s = row.statuses[d];
+                        {previewTable.columns.map(column => {
+                          const s = row.statuses[column.key];
                           return (
-                            <td key={d} className="border border-gray-200 dark:border-[#3d4951] px-1 py-1.5 text-center">
+                            <td key={column.key} className="border border-gray-200 dark:border-[#3d4951] px-1 py-1.5 text-center">
                               {s ? (
                                 <span className={`text-xs font-bold ${
                                   s === 'present' ? 'text-emerald-600 dark:text-emerald-400'

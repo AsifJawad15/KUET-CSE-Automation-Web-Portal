@@ -27,6 +27,7 @@ export interface AttendanceRecord {
   date: string;
   status: 'present' | 'absent' | 'late';
   section_or_group?: string;
+  session_id?: string;
 }
 
 export interface ExamMarksRecord {

@@ -41,6 +41,7 @@ interface AttendancePreviewRecord {
   date: string;
   status: string;
   section_or_group: string | null;
+  session_id?: string;
 }
 
 function toPreviewStatus(status: string | null | undefined): string {
@@ -59,6 +60,10 @@ function toPreviewStatus(status: string | null | undefined): string {
 function toIsoDate(value: string | null | undefined): string | null {
   if (!value) return null;
   return value.length >= 10 ? value.slice(0, 10) : value;
+}
+
+function previewKey(studentRoll: string, date: string, sessionId?: string): string {
+  return `${studentRoll}::${sessionId || date}`;
 }
 
 async function notifyAttendanceUpdates(records: AttendanceUploadRecord[]) {
@@ -385,7 +390,7 @@ export async function GET(request: NextRequest) {
     for (const record of (data || [])) {
       const normalizedDate = toIsoDate(record.date);
       if (!normalizedDate) continue;
-      mergedRecords.set(`${record.student_roll}::${normalizedDate}`, {
+      mergedRecords.set(previewKey(record.student_roll, normalizedDate), {
         course_code: record.course_code,
         student_roll: record.student_roll,
         date: normalizedDate,
@@ -438,9 +443,59 @@ export async function GET(request: NextRequest) {
             .filter((entry): entry is readonly [string, string] => entry !== null),
         );
 
+        const { data: enrollmentRows, error: enrollmentsError } = await supabase
+          .from('enrollments')
+          .select('id, student_user_id')
+          .in('offering_id', offeringIds);
+
+        if (enrollmentsError) throw enrollmentsError;
+
+        const enrolledStudentUserIds = [...new Set(
+          (enrollmentRows || []).map((enrollment: { student_user_id: string }) => enrollment.student_user_id),
+        )];
+
+        if (enrolledStudentUserIds.length > 0) {
+          const { data: enrolledStudents, error: enrolledStudentsError } = await supabase
+            .from('students')
+            .select('user_id, roll_no')
+            .in('user_id', enrolledStudentUserIds);
+
+          if (enrolledStudentsError) throw enrolledStudentsError;
+
+          const rollByUserId = new Map(
+            (enrolledStudents || []).map((student: { user_id: string; roll_no: string }) => [
+              student.user_id,
+              student.roll_no,
+            ]),
+          );
+
+          for (const session of sessions as Array<{ id: string }>) {
+            const normalizedDate = sessionDateMap.get(session.id);
+            if (!normalizedDate) continue;
+
+            for (const studentUserId of enrolledStudentUserIds) {
+              const studentRoll = rollByUserId.get(studentUserId);
+              if (!studentRoll) continue;
+
+              const key = previewKey(studentRoll, normalizedDate, session.id);
+              mergedRecords.delete(previewKey(studentRoll, normalizedDate));
+              if (mergedRecords.has(key)) continue;
+
+              mergedRecords.set(key, {
+                course_code: courseCode || '',
+                student_roll: studentRoll,
+                date: normalizedDate,
+                status: 'absent',
+                section_or_group: null,
+                session_id: session.id,
+              });
+            }
+          }
+        }
+
         const { data: normalizedRows, error: normalizedError } = await supabase
           .from('attendance_records')
-          .select('session_id, status, enrollments!inner(student_user_id)')
+          .select('session_id, enrollment_id, status, enrollments!inner(student_user_id)')
           .in('session_id', sessionIds);
 
         if (normalizedError) throw normalizedError;
@@ -476,12 +531,14 @@ export async function GET(request: NextRequest) {
             const normalizedDate = sessionDateMap.get(row.session_id);
             if (!studentRoll || !normalizedDate) continue;
 
-            mergedRecords.set(`${studentRoll}::${normalizedDate}`, {
+            mergedRecords.delete(previewKey(studentRoll, normalizedDate));
+            mergedRecords.set(previewKey(studentRoll, normalizedDate, row.session_id), {
               course_code: courseCode || '',
               student_roll: studentRoll,
               date: normalizedDate,
               status: toPreviewStatus(row.status),
               section_or_group: null,
+              session_id: row.session_id,
             });
           }
         }
