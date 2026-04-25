@@ -23,6 +23,11 @@ interface TeacherData {
   profiles: TeacherProfile;
 }
 
+type AssignTeacherInput = {
+  teacherUserId?: string;
+  externalTeacherName?: string;
+};
+
 interface OfferingData {
   id: string;
   course_id: string;
@@ -50,21 +55,24 @@ function AssignTeacherModal({
   allTeachers: TeacherData[];
   existingAssignments: string[]; // teacher user_ids already assigned
   onClose: () => void;
-  onAssign: (teacherUserId: string) => void;
+  onAssign: (input: AssignTeacherInput) => void;
   assigning: boolean;
 }) {
   const [search, setSearch] = useState('');
   const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
+  const [externalTeacherName, setExternalTeacherName] = useState('');
+  const cleanedExternalTeacherName = externalTeacherName.trim().replace(/\s+/g, ' ');
 
   const filteredTeachers = allTeachers.filter(
     (t) =>
       !existingAssignments.includes(t.user_id) &&
       !t.is_on_leave &&
+      t.department !== 'External' &&
       (t.full_name.toLowerCase().includes(search.toLowerCase()) ||
         t.designation.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const onLeaveCount = allTeachers.filter((t) => t.is_on_leave && !existingAssignments.includes(t.user_id)).length;
+  const onLeaveCount = allTeachers.filter((t) => t.is_on_leave && t.department !== 'External' && !existingAssignments.includes(t.user_id)).length;
 
   return (
     <motion.div
@@ -91,6 +99,25 @@ function AssignTeacherModal({
 
         {/* Search */}
         <div className="px-6 pt-4">
+          <div className="mb-4 rounded-xl border border-dashed border-[#D9A299]/70 dark:border-red-400/40 bg-[#FFF7ED] dark:bg-red-950/10 p-3">
+            <label className="block text-xs font-semibold text-gray-700 dark:text-[#d3d3d3] mb-1">
+              External teacher
+            </label>
+            <p className="text-[11px] text-gray-400 dark:text-[#b1a7a6] mb-2">
+              If the teacher is not in the system, type the name here and assign.
+            </p>
+            <input
+              type="text"
+              value={externalTeacherName}
+              onChange={(e) => {
+                setExternalTeacherName(e.target.value);
+                setSelectedTeacherId(null);
+              }}
+              placeholder="e.g. Dr. External Faculty"
+              className="w-full px-3 py-2 border border-[#D9A299]/50 dark:border-red-400/30 rounded-lg bg-white dark:bg-[#0b090a] text-gray-700 dark:text-white placeholder-gray-400/50 dark:placeholder-[#b1a7a6]/50 focus:ring-2 focus:ring-indigo-300 dark:focus:ring-red-400 focus:border-transparent text-sm transition-all"
+            />
+          </div>
+
           <div className="relative">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-[#b1a7a6]/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -119,7 +146,10 @@ function AssignTeacherModal({
                   key={teacher.user_id}
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
-                  onClick={() => setSelectedTeacherId(isSelected ? null : teacher.user_id)}
+                  onClick={() => {
+                    setSelectedTeacherId(isSelected ? null : teacher.user_id);
+                    setExternalTeacherName('');
+                  }}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-200 text-left ${
                     isSelected
                       ? 'bg-indigo-100/20 border-[#D9A299]/50 dark:bg-red-600/20 dark:border-red-400/40'
@@ -169,8 +199,16 @@ function AssignTeacherModal({
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => selectedTeacherId && onAssign(selectedTeacherId)}
-            disabled={!selectedTeacherId || assigning}
+            onClick={() => {
+              if (selectedTeacherId) {
+                onAssign({ teacherUserId: selectedTeacherId });
+                return;
+              }
+              if (cleanedExternalTeacherName) {
+                onAssign({ externalTeacherName: cleanedExternalTeacherName });
+              }
+            }}
+            disabled={(!selectedTeacherId && !cleanedExternalTeacherName) || assigning}
             className="px-5 py-2 rounded-lg bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#ba181b] dark:to-[#e5383b] text-white font-medium text-sm shadow-lg shadow-[#D9A299]/25 dark:shadow-red-600/25 hover:from-[#C88989] hover:to-[#CCB5A2] dark:hover:from-[#e32a2d] dark:hover:to-[#ea5f62] transition-all disabled:opacity-50"
           >
             {assigning ? 'Assigning...' : 'Assign Teacher'}
@@ -357,7 +395,7 @@ export default function CourseAllocationPage() {
   });
 
   // Assign teacher
-  const handleAssign = async (teacherUserId: string) => {
+  const handleAssign = async ({ teacherUserId, externalTeacherName }: AssignTeacherInput) => {
     if (!assignCourse) return;
     try {
       setAssigning(true);
@@ -367,17 +405,18 @@ export default function CourseAllocationPage() {
         body: JSON.stringify({
           course_id: assignCourse.id,
           teacher_user_id: teacherUserId,
+          external_teacher_name: externalTeacherName,
         }),
       });
       const result = await res.json();
-      if (!result.success) {
+      if (!res.ok || !result.success) {
         setError(result.error || 'Failed to assign teacher');
         return;
       }
       await fetchData();
       setAssignCourse(null);
       setError(null);
-      setSuccessMsg('Teacher assigned successfully!');
+      setSuccessMsg(`${externalTeacherName ? 'External teacher' : 'Teacher'} assigned successfully!`);
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch {
       setError('Failed to assign teacher');
