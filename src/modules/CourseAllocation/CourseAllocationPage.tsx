@@ -4,7 +4,7 @@ import SpotlightCard from '@/components/ui/SpotlightCard';
 import { DBCourse, isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCallback, useEffect, useState } from 'react';
-import { Upload } from 'lucide-react';
+import { Check, Search, UserPlus, Upload } from 'lucide-react';
 import { FileUploadModal, courseAllocationUploadConfig } from '@/components/upload';
 
 // Types for API responses
@@ -25,6 +25,7 @@ interface TeacherData {
 
 type AssignTeacherInput = {
   teacherUserId?: string;
+  teacherUserIds?: string[];
   externalTeacherName?: string;
 };
 
@@ -59,9 +60,11 @@ function AssignTeacherModal({
   assigning: boolean;
 }) {
   const [search, setSearch] = useState('');
-  const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
+  const [selectedTeacherIds, setSelectedTeacherIds] = useState<string[]>([]);
   const [externalTeacherName, setExternalTeacherName] = useState('');
   const cleanedExternalTeacherName = externalTeacherName.trim().replace(/\s+/g, ' ');
+  const remainingSlots = Math.max(0, 2 - existingAssignments.length);
+  const canSelectMoreTeachers = selectedTeacherIds.length < remainingSlots;
 
   const filteredTeachers = allTeachers.filter(
     (t) =>
@@ -111,17 +114,27 @@ function AssignTeacherModal({
               value={externalTeacherName}
               onChange={(e) => {
                 setExternalTeacherName(e.target.value);
-                setSelectedTeacherId(null);
+                setSelectedTeacherIds([]);
               }}
               placeholder="e.g. Dr. External Faculty"
               className="w-full px-3 py-2 border border-[#D9A299]/50 dark:border-red-400/30 rounded-lg bg-white dark:bg-[#0b090a] text-gray-700 dark:text-white placeholder-gray-400/50 dark:placeholder-[#b1a7a6]/50 focus:ring-2 focus:ring-indigo-300 dark:focus:ring-red-400 focus:border-transparent text-sm transition-all"
             />
           </div>
 
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold text-gray-700 dark:text-white">Choose teachers</p>
+              <p className="text-[11px] text-gray-400 dark:text-[#b1a7a6]">
+                Select up to {remainingSlots} teacher{remainingSlots === 1 ? '' : 's'} for this course.
+              </p>
+            </div>
+            <span className="rounded-full border border-[#D9A299]/50 bg-[#FFF7ED] px-3 py-1 text-xs font-semibold text-gray-700 dark:border-red-400/30 dark:bg-red-500/10 dark:text-red-100">
+              {selectedTeacherIds.length}/{remainingSlots}
+            </span>
+          </div>
+
           <div className="relative">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-[#b1a7a6]/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-[#b1a7a6]/70" />
             <input
               type="text"
               value={search}
@@ -140,30 +153,39 @@ function AssignTeacherModal({
             </p>
           ) : (
             filteredTeachers.map((teacher) => {
-              const isSelected = selectedTeacherId === teacher.user_id;
+              const isSelected = selectedTeacherIds.includes(teacher.user_id);
+              const selectionDisabled = !isSelected && !canSelectMoreTeachers;
               return (
                 <motion.button
                   key={teacher.user_id}
-                  whileHover={{ scale: 1.01 }}
+                  whileHover={selectionDisabled ? undefined : { scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
                   onClick={() => {
-                    setSelectedTeacherId(isSelected ? null : teacher.user_id);
+                    if (isSelected) {
+                      setSelectedTeacherIds((current) => current.filter((id) => id !== teacher.user_id));
+                      return;
+                    }
+                    if (!canSelectMoreTeachers) return;
+                    setSelectedTeacherIds((current) => [...current, teacher.user_id]);
                     setExternalTeacherName('');
                   }}
+                  disabled={selectionDisabled}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-200 text-left ${
                     isSelected
-                      ? 'bg-indigo-100/20 border-[#D9A299]/50 dark:bg-red-600/20 dark:border-red-400/40'
-                      : 'bg-white dark:bg-white/[0.02] border-gray-200 dark:border-[#3d4951] hover:border-indigo-400/50 dark:hover:border-red-400/30'
+                      ? 'bg-[#FFF7ED] border-[#D9A299] shadow-sm dark:bg-red-600/20 dark:border-red-400/50'
+                      : selectionDisabled
+                        ? 'bg-gray-50 text-gray-400 border-gray-200 opacity-60 cursor-not-allowed dark:bg-white/[0.02] dark:border-[#3d4951]'
+                        : 'bg-white dark:bg-white/[0.02] border-gray-200 dark:border-[#3d4951] hover:border-indigo-400/50 dark:hover:border-red-400/30'
                   }`}
                 >
-                  {/* Radio */}
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                  {/* Checkbox */}
+                  <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${
                     isSelected
-                      ? 'bg-indigo-100 dark:bg-red-600 border-[#D9A299] dark:border-red-400'
+                      ? 'bg-[#D9A299] dark:bg-red-600 border-[#D9A299] dark:border-red-400'
                       : 'border-gray-200 dark:border-[#3d4951]'
                   }`}>
                     {isSelected && (
-                      <div className="w-2 h-2 rounded-full bg-white" />
+                      <Check className="h-3.5 w-3.5 text-white" />
                     )}
                   </div>
                   {/* Avatar */}
@@ -175,6 +197,11 @@ function AssignTeacherModal({
                     <p className="text-sm font-medium text-gray-700 dark:text-white truncate">{teacher.full_name}</p>
                     <p className="text-xs text-gray-400 dark:text-[#b1a7a6]">{teacher.designation}</p>
                   </div>
+                  {isSelected && (
+                    <span className="rounded-full bg-[#D9A299]/20 px-2 py-1 text-[11px] font-semibold text-gray-700 dark:bg-red-400/10 dark:text-red-100">
+                      Selected
+                    </span>
+                  )}
                 </motion.button>
               );
             })
@@ -200,18 +227,19 @@ function AssignTeacherModal({
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => {
-              if (selectedTeacherId) {
-                onAssign({ teacherUserId: selectedTeacherId });
+              if (selectedTeacherIds.length > 0) {
+                onAssign({ teacherUserIds: selectedTeacherIds });
                 return;
               }
               if (cleanedExternalTeacherName) {
                 onAssign({ externalTeacherName: cleanedExternalTeacherName });
               }
             }}
-            disabled={(!selectedTeacherId && !cleanedExternalTeacherName) || assigning}
-            className="px-5 py-2 rounded-lg bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#ba181b] dark:to-[#e5383b] text-white font-medium text-sm shadow-lg shadow-[#D9A299]/25 dark:shadow-red-600/25 hover:from-[#C88989] hover:to-[#CCB5A2] dark:hover:from-[#e32a2d] dark:hover:to-[#ea5f62] transition-all disabled:opacity-50"
+            disabled={(selectedTeacherIds.length === 0 && !cleanedExternalTeacherName) || assigning}
+            className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#ba181b] dark:to-[#e5383b] text-white font-medium text-sm shadow-lg shadow-[#D9A299]/25 dark:shadow-red-600/25 hover:from-[#C88989] hover:to-[#CCB5A2] dark:hover:from-[#e32a2d] dark:hover:to-[#ea5f62] transition-all disabled:opacity-50"
           >
-            {assigning ? 'Assigning...' : 'Assign Teacher'}
+            <UserPlus className="h-4 w-4" />
+            {assigning ? 'Assigning...' : selectedTeacherIds.length > 1 ? 'Assign Teachers' : 'Assign Teacher'}
           </motion.button>
         </div>
       </motion.div>
@@ -395,28 +423,38 @@ export default function CourseAllocationPage() {
   });
 
   // Assign teacher
-  const handleAssign = async ({ teacherUserId, externalTeacherName }: AssignTeacherInput) => {
+  const handleAssign = async ({ teacherUserId, teacherUserIds, externalTeacherName }: AssignTeacherInput) => {
     if (!assignCourse) return;
     try {
       setAssigning(true);
-      const res = await fetch('/api/course-offerings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          course_id: assignCourse.id,
-          teacher_user_id: teacherUserId,
-          external_teacher_name: externalTeacherName,
-        }),
-      });
-      const result = await res.json();
-      if (!res.ok || !result.success) {
-        setError(result.error || 'Failed to assign teacher');
-        return;
+      const selectedTeacherIds = teacherUserIds?.length ? teacherUserIds : teacherUserId ? [teacherUserId] : [];
+      const assignments = selectedTeacherIds.length > 0 ? selectedTeacherIds : [undefined];
+
+      for (const selectedTeacherId of assignments) {
+        const res = await fetch('/api/course-offerings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            course_id: assignCourse.id,
+            teacher_user_id: selectedTeacherId,
+            external_teacher_name: selectedTeacherId ? undefined : externalTeacherName,
+          }),
+        });
+        const result = await res.json();
+        if (!res.ok || !result.success) {
+          setError(result.error || 'Failed to assign teacher');
+          return;
+        }
       }
+
       await fetchData();
       setAssignCourse(null);
       setError(null);
-      setSuccessMsg(`${externalTeacherName ? 'External teacher' : 'Teacher'} assigned successfully!`);
+      setSuccessMsg(
+        externalTeacherName
+          ? 'External teacher assigned successfully!'
+          : `${assignments.length} teacher${assignments.length > 1 ? 's' : ''} assigned successfully!`
+      );
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch {
       setError('Failed to assign teacher');
@@ -622,15 +660,20 @@ export default function CourseAllocationPage() {
                     {courseOfferings.length === 0 ? (
                       <span className="text-xs text-amber-500 italic">No teacher assigned</span>
                     ) : (
-                      <div className="flex flex-col gap-1.5">
+                      <div className="flex flex-col gap-2">
                         {courseOfferings.map((offering) => {
                           const name = offering.teachers?.full_name || 'Unknown';
                           return (
-                            <div key={offering.id} className="flex items-center gap-2 group">
-                              <div className="w-7 h-7 rounded-full bg-indigo-100/30 dark:bg-red-600/30 border border-[#D9A299]/50 dark:border-red-400/40 flex items-center justify-center text-xs font-semibold text-gray-700 dark:text-white flex-shrink-0">
-                                {name.charAt(0)}
+                            <div
+                              key={offering.id}
+                              className="flex max-w-md items-center justify-between gap-3 rounded-xl border border-gray-200/70 bg-white px-3 py-2 shadow-sm transition-colors hover:border-[#D9A299]/70 hover:bg-[#FFF7ED] dark:border-[#3d4951]/60 dark:bg-white/[0.02] dark:hover:border-red-400/40 dark:hover:bg-red-950/10"
+                            >
+                              <div className="flex min-w-0 items-center gap-2">
+                                <div className="w-7 h-7 rounded-full bg-indigo-100/30 dark:bg-red-600/30 border border-[#D9A299]/50 dark:border-red-400/40 flex items-center justify-center text-xs font-semibold text-gray-700 dark:text-white flex-shrink-0">
+                                  {name.charAt(0)}
+                                </div>
+                                <span className="truncate text-sm text-gray-700 dark:text-[#d3d3d3]">{name}</span>
                               </div>
-                              <span className="text-sm text-gray-700 dark:text-[#d3d3d3] flex-1">{name}</span>
                               <button
                                 onClick={() => setRemoveInfo({
                                   offeringId: offering.id,
@@ -638,8 +681,9 @@ export default function CourseAllocationPage() {
                                   courseCode: course.code,
                                   courseTitle: course.title,
                                 })}
-                                className="opacity-0 group-hover:opacity-100 p-1 text-red-400 hover:bg-red-500/10 rounded transition-all"
+                                className="inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-500 transition-colors hover:bg-red-100 hover:text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300 dark:hover:bg-red-500/20"
                                 title="Remove teacher"
+                                aria-label={`Remove ${name}`}
                               >
                                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
