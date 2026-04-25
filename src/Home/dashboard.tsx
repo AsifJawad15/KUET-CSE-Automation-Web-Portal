@@ -7,6 +7,7 @@
 "use client";
 
 import AccessRestricted from '@/components/AccessRestricted';
+import AdminTeacherChatbot from '@/components/ai/AdminTeacherChatbot';
 import Sidebar from '@/components/Sidebar';
 import { useAuth, UserRole } from '@/contexts/AuthContext';
 import { canAccessMenu } from '@/lib/adminPermissions';
@@ -199,6 +200,8 @@ export default function Dashboard() {
           </AnimatePresence>
         </div>
       </motion.main>
+
+      <AdminTeacherChatbot />
     </div>
   );
 }

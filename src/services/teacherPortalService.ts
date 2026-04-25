@@ -170,9 +170,10 @@ export async function uploadAttendance(records: AttendanceRecord[], offeringId?:
   return apiClient.post(`${BASE}/attendance`, { records, offering_id: offeringId, teacher_id: teacherId });
 }
 
-export async function getAttendance(courseCode: string, date?: string): Promise<AttendanceRecord[]> {
+export async function getAttendance(courseCode: string, date?: string, offeringId?: string): Promise<AttendanceRecord[]> {
   const params: Record<string, string> = { course_code: courseCode };
   if (date) params.date = date;
+  if (offeringId) params.offering_id = offeringId;
   return apiClient.getList<AttendanceRecord>(`${BASE}/attendance`, params);
 }
 

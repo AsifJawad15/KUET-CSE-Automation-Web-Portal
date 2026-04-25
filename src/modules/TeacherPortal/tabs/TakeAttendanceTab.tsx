@@ -212,7 +212,7 @@ export default function TakeAttendanceTab() {
     if (result.success) {
       setMessage({ type: 'success', text: `Saved ${sectionRecords.length} students — ${g.label}` });
       if (selectedCourse) {
-        getAttendance(selectedCourse.course_code).then(setPreviewData);
+        getAttendance(selectedCourse.course_code, undefined, selectedCourse.offering_id).then(setPreviewData);
       }
     } else {
       setMessage({ type: 'error', text: result.error || 'Failed to save attendance' });
@@ -223,7 +223,7 @@ export default function TakeAttendanceTab() {
   const loadPreview = useCallback(async () => {
     if (!selectedCourse) return;
     setLoadingPreview(true);
-    const data = await getAttendance(selectedCourse.course_code);
+    const data = await getAttendance(selectedCourse.course_code, undefined, selectedCourse.offering_id);
     setPreviewData(data);
     setLoadingPreview(false);
   }, [selectedCourse]);

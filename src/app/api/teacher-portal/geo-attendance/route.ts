@@ -25,6 +25,243 @@ function cleanText(value: unknown): string | null {
   return trimmed || null;
 }
 
+type RollRange = {
+  min: number;
+  max: number;
+};
+
+type GeoAttendanceTargetStudent = {
+  user_id: string;
+  roll_no: string;
+  section: string | null;
+};
+
+function normalizeSection(section: string | null | undefined): string | null {
+  const cleaned = cleanText(section);
+  if (!cleaned) return null;
+
+  const normalized = cleaned.toUpperCase();
+  if (/^[A-Z]\d?$/.test(normalized)) {
+    return normalized;
+  }
+
+  const named = cleaned.match(/\b(section|group)\s+([A-Za-z]\d?)\b/i);
+  if (named) {
+    return named[2].toUpperCase();
+  }
+
+  return normalized;
+}
+
+function getRollRange(section: string | null | undefined): RollRange | null {
+  switch (normalizeSection(section)) {
+    case 'A':
+      return { min: 1, max: 60 };
+    case 'B':
+      return { min: 61, max: 120 };
+    case 'A1':
+      return { min: 1, max: 30 };
+    case 'A2':
+      return { min: 31, max: 60 };
+    case 'B1':
+      return { min: 61, max: 90 };
+    case 'B2':
+      return { min: 91, max: 120 };
+    default:
+      return null;
+  }
+}
+
+function extractRollSuffix(rollNo: string | null | undefined): number | null {
+  const digits = rollNo?.replace(/\D/g, '') ?? '';
+  if (!digits) return null;
+
+  const suffix = digits.slice(-3);
+  const parsed = Number.parseInt(suffix, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function isTargetStudentForSection(
+  student: Pick<GeoAttendanceTargetStudent, 'roll_no' | 'section'>,
+  section: string | null | undefined,
+): boolean {
+  const normalizedSection = normalizeSection(section);
+  if (!normalizedSection) return true;
+
+  const studentSection = cleanText(student.section)?.toUpperCase();
+  if (studentSection === normalizedSection) {
+    return true;
+  }
+
+  const rollRange = getRollRange(section);
+  const rollSuffix = extractRollSuffix(student.roll_no);
+  return !!rollRange &&
+    rollSuffix !== null &&
+    rollSuffix >= rollRange.min &&
+    rollSuffix <= rollRange.max;
+}
+
+async function resolveGeoAttendanceTargetStudents(opts: {
+  offeringId: string;
+  term: string | null;
+  section?: string | null;
+}): Promise<GeoAttendanceTargetStudent[]> {
+  const { data: enrollments, error: enrollmentError } = await supabase
+    .from('enrollments')
+    .select('student_user_id')
+    .eq('offering_id', opts.offeringId);
+
+  if (enrollmentError) throw enrollmentError;
+
+  const enrolledUserIds = [...new Set(
+    (enrollments || [])
+      .map((row) => cleanText(row.student_user_id))
+      .filter(Boolean),
+  )] as string[];
+
+  if (enrolledUserIds.length > 0) {
+    const { data: students, error: studentError } = await supabase
+      .from('students')
+      .select('user_id, roll_no, section')
+      .in('user_id', enrolledUserIds);
+
+    if (studentError) throw studentError;
+
+    return (students || [])
+      .map((row) => ({
+        user_id: row.user_id,
+        roll_no: row.roll_no,
+        section: row.section,
+      }))
+      .filter((row) => cleanText(row.user_id) && cleanText(row.roll_no))
+      .filter((row) => isTargetStudentForSection(row, opts.section));
+  }
+
+  if (!opts.term) {
+    return [];
+  }
+
+  const { data: students, error: fallbackError } = await supabase
+    .from('students')
+    .select('user_id, roll_no, section')
+    .eq('term', opts.term);
+
+  if (fallbackError) throw fallbackError;
+
+  return (students || [])
+    .map((row) => ({
+      user_id: row.user_id,
+      roll_no: row.roll_no,
+      section: row.section,
+    }))
+    .filter((row) => cleanText(row.user_id) && cleanText(row.roll_no))
+    .filter((row) => isTargetStudentForSection(row, opts.section));
+}
+
+async function seedDefaultGeoAttendanceAbsences(opts: {
+  offeringId: string;
+  sessionId: string;
+  teacherUserId: string;
+  courseCode: string | null;
+  term: string | null;
+  section?: string | null;
+  attendanceDate: string;
+}) {
+  const targetStudents = await resolveGeoAttendanceTargetStudents({
+    offeringId: opts.offeringId,
+    term: opts.term,
+    section: opts.section,
+  });
+
+  if (targetStudents.length === 0) {
+    return;
+  }
+
+  const studentUserIds = targetStudents.map((student) => student.user_id);
+
+  const { data: existingEnrollments, error: existingEnrollmentError } = await supabase
+    .from('enrollments')
+    .select('id, student_user_id')
+    .eq('offering_id', opts.offeringId)
+    .in('student_user_id', studentUserIds);
+
+  if (existingEnrollmentError) throw existingEnrollmentError;
+
+  const enrollmentByStudentId = new Map<string, string>();
+  for (const row of existingEnrollments || []) {
+    const studentUserId = cleanText(row.student_user_id);
+    const enrollmentId = cleanText(row.id);
+    if (studentUserId && enrollmentId) {
+      enrollmentByStudentId.set(studentUserId, enrollmentId);
+    }
+  }
+
+  const missingStudentUserIds = studentUserIds.filter(
+    (studentUserId) => !enrollmentByStudentId.has(studentUserId),
+  );
+
+  if (missingStudentUserIds.length > 0) {
+    const { data: insertedEnrollments, error: insertEnrollmentError } = await supabase
+      .from('enrollments')
+      .insert(
+        missingStudentUserIds.map((studentUserId) => ({
+          offering_id: opts.offeringId,
+          student_user_id: studentUserId,
+          enrollment_status: 'ENROLLED',
+        })),
+      )
+      .select('id, student_user_id');
+
+    if (insertEnrollmentError) throw insertEnrollmentError;
+
+    for (const row of insertedEnrollments || []) {
+      const studentUserId = cleanText(row.student_user_id);
+      const enrollmentId = cleanText(row.id);
+      if (studentUserId && enrollmentId) {
+        enrollmentByStudentId.set(studentUserId, enrollmentId);
+      }
+    }
+  }
+
+  const attendanceRows = targetStudents
+    .map((student) => {
+      const enrollmentId = enrollmentByStudentId.get(student.user_id);
+      if (!enrollmentId) return null;
+      return {
+        session_id: opts.sessionId,
+        enrollment_id: enrollmentId,
+        status: 'ABSENT',
+        marked_by_teacher_user_id: opts.teacherUserId,
+        remarks: 'No geo-attendance response received.',
+      };
+    })
+    .filter((row): row is NonNullable<typeof row> => row !== null);
+
+  if (attendanceRows.length > 0) {
+    const { error: attendanceError } = await supabase
+      .from('attendance_records')
+      .upsert(attendanceRows, { onConflict: 'session_id,enrollment_id' });
+
+    if (attendanceError) throw attendanceError;
+  }
+
+  if (opts.courseCode) {
+    const flatAttendanceRows = targetStudents.map((student) => ({
+      course_code: opts.courseCode,
+      student_roll: student.roll_no,
+      date: opts.attendanceDate,
+      status: 'absent',
+      section_or_group: opts.section || null,
+    }));
+
+    const { error: flatAttendanceError } = await supabase
+      .from('attendance')
+      .upsert(flatAttendanceRows, { onConflict: 'course_code,student_roll,date' });
+
+    if (flatAttendanceError) throw flatAttendanceError;
+  }
+}
+
 // Room limits per course type
 const MAX_THEORY_ROOMS = 2;
 const MAX_LAB_ROOMS = 4;
@@ -174,64 +411,100 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create a class_session for this geo-attendance
-    const { data: sessionData, error: sessionError } = await supabase
-      .from('class_sessions')
-      .insert({
-        offering_id,
-        starts_at: start_time,
-        ends_at: end_time,
-        room_number,
-        topic: 'Geo-Attendance Session',
-      })
-      .select('id')
-      .single();
+    let sessionId: string | null = null;
+    let roomId: string | null = null;
 
-    if (sessionError) throw sessionError;
+    try {
+      const attendanceDate = new Date(start_time).toISOString().split('T')[0];
 
-    // Create the geo-attendance room
-    const { data, error } = await supabase
-      .from('geo_attendance_rooms')
-      .insert({
-        offering_id,
-        session_id: sessionData.id,
-        teacher_user_id,
-        room_number,
-        section: resolvedSection,
-        range_meters: rangeMeters,
-        duration_minutes: durationMinutes,
-        absence_grace_minutes: absenceGraceMinutes,
-        date: new Date().toISOString().split('T')[0],
-        start_time,
-        end_time,
-        is_active: true,
-      })
-      .select('*')
-      .single();
+      const { data: sessionData, error: sessionError } = await supabase
+        .from('class_sessions')
+        .insert({
+          offering_id,
+          starts_at: start_time,
+          ends_at: end_time,
+          room_number,
+          topic: 'Geo-Attendance Session',
+        })
+        .select('id')
+        .single();
 
-    if (error) throw error;
+      if (sessionError) throw sessionError;
 
-    // Notify target students immediately when a geo-attendance room is opened.
-    if (courseCode && offeringTerm) {
-      const endDate = new Date(end_time);
-      const endLabel = Number.isNaN(endDate.getTime())
-        ? end_time
-        : endDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      const createdSessionId = sessionData.id;
+      sessionId = createdSessionId;
 
-      await notifyGeoAttendanceRoomOpened({
-        teacherUserId: teacher_user_id,
+      const { data, error } = await supabase
+        .from('geo_attendance_rooms')
+        .insert({
+          offering_id,
+          session_id: sessionId,
+          teacher_user_id,
+          room_number,
+          section: resolvedSection,
+          range_meters: rangeMeters,
+          duration_minutes: durationMinutes,
+          absence_grace_minutes: absenceGraceMinutes,
+          date: attendanceDate,
+          start_time,
+          end_time,
+          is_active: true,
+        })
+        .select('*')
+        .single();
+
+      if (error) throw error;
+
+      roomId = data.id;
+
+      await seedDefaultGeoAttendanceAbsences({
         offeringId: offering_id,
+        sessionId: createdSessionId,
+        teacherUserId: teacher_user_id,
         courseCode,
         term: offeringTerm,
         section: resolvedSection,
-        roomNumber: room_number,
-        durationMinutes,
-        endTime: endLabel,
-        roomId: data.id,
+        attendanceDate,
       });
-    }
 
-    return NextResponse.json({ success: true, data });
+      // Notify target students immediately when a geo-attendance room is opened.
+      if (courseCode && offeringTerm) {
+        const endDate = new Date(end_time);
+        const endLabel = Number.isNaN(endDate.getTime())
+          ? end_time
+          : endDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+        await notifyGeoAttendanceRoomOpened({
+          teacherUserId: teacher_user_id,
+          offeringId: offering_id,
+          courseCode,
+          term: offeringTerm,
+          section: resolvedSection,
+          roomNumber: room_number,
+          durationMinutes,
+          endTime: endLabel,
+          roomId,
+        });
+      }
+
+      return NextResponse.json({ success: true, data });
+    } catch (error) {
+      if (roomId) {
+        await supabase
+          .from('geo_attendance_rooms')
+          .delete()
+          .eq('id', roomId);
+      }
+
+      if (sessionId) {
+        await supabase
+          .from('class_sessions')
+          .delete()
+          .eq('id', sessionId);
+      }
+
+      throw error;
+    }
   } catch (error: unknown) {
     if (error instanceof GeoAttendanceInputError) {
       return badRequest(error.message);
@@ -365,10 +638,9 @@ export async function GET(request: NextRequest) {
       .from('geo_attendance_rooms')
       .select(`
         *,
-        course_offerings!inner (
+        course_offerings (
           id, term,
-          courses!inner ( code, title, course_type )
-        )
+          courses ( code, title, course_type )
         )
       `)
       .order('created_at', { ascending: false });

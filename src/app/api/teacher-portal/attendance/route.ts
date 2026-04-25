@@ -35,6 +35,32 @@ interface AttendanceUploadRecord {
   status: string;
 }
 
+interface AttendancePreviewRecord {
+  course_code: string;
+  student_roll: string;
+  date: string;
+  status: string;
+  section_or_group: string | null;
+}
+
+function toPreviewStatus(status: string | null | undefined): string {
+  switch ((status || '').trim().toUpperCase()) {
+    case 'PRESENT':
+      return 'present';
+    case 'LATE':
+      return 'late';
+    case 'ABSENT':
+      return 'absent';
+    default:
+      return (status || 'absent').toLowerCase();
+  }
+}
+
+function toIsoDate(value: string | null | undefined): string | null {
+  if (!value) return null;
+  return value.length >= 10 ? value.slice(0, 10) : value;
+}
+
 async function notifyAttendanceUpdates(records: AttendanceUploadRecord[]) {
   const absentRecords = records.filter((record) => record.status?.toLowerCase() === 'absent');
   if (absentRecords.length === 0) return;
@@ -332,14 +358,20 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const courseCode = searchParams.get('course_code');
+    const offeringId = searchParams.get('offering_id');
 
-    if (!courseCode) return badRequest('Course code is required');
+    if (!courseCode && !offeringId) {
+      return badRequest('Course code or offering ID is required');
+    }
 
     let query = supabase
       .from('attendance')
       .select('*')
-      .eq('course_code', courseCode)
       .order('date', { ascending: false });
+
+    if (courseCode) {
+      query = query.eq('course_code', courseCode);
+    }
 
     const date = searchParams.get('date');
     if (date) {
@@ -349,19 +381,21 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query;
     if (error) throw error;
 
-    const flatRecords = data || [];
+    const mergedRecords = new Map<string, AttendancePreviewRecord>();
+    for (const record of (data || [])) {
+      const normalizedDate = toIsoDate(record.date);
+      if (!normalizedDate) continue;
+      mergedRecords.set(`${record.student_roll}::${normalizedDate}`, {
+        course_code: record.course_code,
+        student_roll: record.student_roll,
+        date: normalizedDate,
+        status: toPreviewStatus(record.status),
+        section_or_group: record.section_or_group || null,
+      });
+    }
 
-    // Also fetch geo-attendance records for this course to merge into the view
-    // Look up offering_id for this course_code
-    const { data: offerings } = await supabase
-      .from('course_offerings')
-      .select('id')
-      .eq('course_id', courseCode);
-
-    // Try with courses.code join if direct lookup fails
-    let offeringIds: string[] = (offerings || []).map((o: { id: string }) => o.id);
-
-    if (offeringIds.length === 0) {
+    let offeringIds: string[] = offeringId ? [offeringId] : [];
+    if (offeringIds.length === 0 && courseCode) {
       const { data: courses } = await supabase
         .from('courses')
         .select('id')
@@ -378,6 +412,81 @@ export async function GET(request: NextRequest) {
     }
 
     if (offeringIds.length > 0) {
+      let sessionQuery = supabase
+        .from('class_sessions')
+        .select('id, starts_at, offering_id')
+        .in('offering_id', offeringIds)
+        .order('starts_at', { ascending: true });
+
+      if (date) {
+        sessionQuery = sessionQuery
+          .gte('starts_at', `${date}T00:00:00.000Z`)
+          .lte('starts_at', `${date}T23:59:59.999Z`);
+      }
+
+      const { data: sessions, error: sessionsError } = await sessionQuery;
+      if (sessionsError) throw sessionsError;
+
+      if (sessions && sessions.length > 0) {
+        const sessionIds = sessions.map((session: { id: string }) => session.id);
+        const sessionDateMap = new Map(
+          sessions
+            .map((session: { id: string; starts_at: string }) => {
+              const normalizedDate = toIsoDate(session.starts_at);
+              return normalizedDate ? [session.id, normalizedDate] as const : null;
+            })
+            .filter((entry): entry is readonly [string, string] => entry !== null),
+        );
+
+        const { data: normalizedRows, error: normalizedError } = await supabase
+          .from('attendance_records')
+          .select('session_id, status, enrollments!inner(student_user_id)')
+          .in('session_id', sessionIds);
+
+        if (normalizedError) throw normalizedError;
+
+        if (normalizedRows && normalizedRows.length > 0) {
+          const studentUserIds = [...new Set(
+            normalizedRows
+              .map((row) => {
+                const enrollment = Array.isArray(row.enrollments) ? row.enrollments[0] : row.enrollments;
+                return enrollment?.student_user_id as string | undefined;
+              })
+              .filter((value): value is string => Boolean(value)),
+          )];
+
+          const { data: studentRows, error: studentsError } = await supabase
+            .from('students')
+            .select('user_id, roll_no')
+            .in('user_id', studentUserIds);
+
+          if (studentsError) throw studentsError;
+
+          const rollByUserId = new Map(
+            (studentRows || []).map((student: { user_id: string; roll_no: string }) => [
+              student.user_id,
+              student.roll_no,
+            ]),
+          );
+
+          for (const row of normalizedRows) {
+            const enrollment = Array.isArray(row.enrollments) ? row.enrollments[0] : row.enrollments;
+            const studentUserId = enrollment?.student_user_id as string | undefined;
+            const studentRoll = studentUserId ? rollByUserId.get(studentUserId) : null;
+            const normalizedDate = sessionDateMap.get(row.session_id);
+            if (!studentRoll || !normalizedDate) continue;
+
+            mergedRecords.set(`${studentRoll}::${normalizedDate}`, {
+              course_code: courseCode || '',
+              student_roll: studentRoll,
+              date: normalizedDate,
+              status: toPreviewStatus(row.status),
+              section_or_group: null,
+            });
+          }
+        }
+      }
+
       // Get geo-attendance rooms for these offerings
       let geoRoomsQuery = supabase
         .from('geo_attendance_rooms')
@@ -401,35 +510,27 @@ export async function GET(request: NextRequest) {
           .in('geo_room_id', geoRoomIds);
 
         if (geoLogs && geoLogs.length > 0) {
-          // Build a set of existing (roll, date) keys from flat records
-          const existingKeys = new Set(
-            flatRecords.map((r: { student_roll: string; date: string }) => `${r.student_roll}::${r.date}`)
-          );
-
-          // Add geo-attendance as flat attendance records (only if not already present)
           for (const log of geoLogs) {
             const students = log.students as unknown as { roll_no: string } | { roll_no: string }[] | null;
             const rollNo = Array.isArray(students) ? students[0]?.roll_no : students?.roll_no;
             const logDate = roomDateMap.get(log.geo_room_id);
             if (!rollNo || !logDate) continue;
 
-            const key = `${rollNo}::${logDate}`;
-            if (!existingKeys.has(key)) {
-              flatRecords.push({
-                course_code: courseCode,
-                student_roll: rollNo,
-                date: logDate,
-                status: (log.status || 'PRESENT').toLowerCase(),
-                section_or_group: null,
-              });
-              existingKeys.add(key);
-            }
+            mergedRecords.set(`${rollNo}::${logDate}`, {
+              course_code: courseCode || '',
+              student_roll: rollNo,
+              date: logDate,
+              status: toPreviewStatus(log.status),
+              section_or_group: null,
+            });
           }
         }
       }
     }
 
-    return NextResponse.json(flatRecords);
+    return NextResponse.json(
+      [...mergedRecords.values()].sort((a, b) => b.date.localeCompare(a.date) || a.student_roll.localeCompare(b.student_roll)),
+    );
   } catch (error: unknown) {
     return internalError(extractError(error, 'Failed to fetch attendance'));
   }
