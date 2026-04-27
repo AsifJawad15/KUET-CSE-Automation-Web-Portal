@@ -11,6 +11,7 @@ import { COURSE_OFFERING_WITH_DETAILS } from '@/lib/queryConstants';
 import { notifyTeacherCourseAssigned, notifyStudentCourseAssigned } from '@/lib/notifications';
 import { getSupabaseAdmin, isSupabaseAdminConfigured } from '@/lib/supabaseAdmin';
 import { requireServerSession } from '@/lib/serverAuth';
+import { hashPassword } from '@/lib/passwordUtils';
 
 // ── Helpers ────────────────────────────────────────────
 
@@ -22,6 +23,19 @@ function serviceGuard() {
   if (!isSupabaseAdminConfigured()) {
     return internalError('Secure Supabase service role is not configured.');
   }
+  return null;
+}
+
+function deriveTermFromCode(code: string): string | null {
+  const digits = code.replace(/\D/g, '');
+  if (digits.length < 2) return null;
+
+  const year = Number.parseInt(digits[0], 10);
+  const semester = Number.parseInt(digits[1], 10);
+  if (year >= 1 && year <= 4 && semester >= 1 && semester <= 2) {
+    return `${year}-${semester}`;
+  }
+
   return null;
 }
 
@@ -39,7 +53,7 @@ async function resolveTerm(db: ReturnType<typeof getSupabaseAdmin>, courseId: st
 
   if (curriculumEntry?.term) return curriculumEntry.term;
 
-  // Try course code pattern (e.g., CSE 3200 → "3-1")
+  // Try course code pattern (e.g., CSE 3211 → "3-2")
   const { data: courseData } = await db
     .from('courses')
     .select('code')
@@ -47,10 +61,9 @@ async function resolveTerm(db: ReturnType<typeof getSupabaseAdmin>, courseId: st
     .single();
 
   if (courseData?.code) {
-    const match = courseData.code.match(/\d/);
-    if (match) {
-      const year = Math.min(Math.ceil(parseInt(match[0]) / 1), 4);
-      return `${year}-1`;
+    const derivedTerm = deriveTermFromCode(courseData.code);
+    if (derivedTerm) {
+      return derivedTerm;
     }
   }
 
@@ -62,6 +75,64 @@ function resolveSession(provided?: string): string {
   if (provided) return provided;
   const currentYear = new Date().getFullYear();
   return `${currentYear - 1}-${currentYear}`;
+}
+
+function normalizeExternalTeacherName(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const cleaned = value.trim().replace(/\s+/g, ' ');
+  return cleaned.length > 0 ? cleaned : null;
+}
+
+function buildExternalTeacherEmail(name: string, userId: string): string {
+  const slug = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '.')
+    .replace(/^\.+|\.+$/g, '')
+    .slice(0, 40) || 'external.teacher';
+  return `${slug}.${userId.slice(0, 8)}@external.kuet-cse.local`;
+}
+
+async function findOrCreateExternalTeacher(
+  db: ReturnType<typeof getSupabaseAdmin>,
+  fullName: string,
+): Promise<string> {
+  const { data: existing, error: existingError } = await db
+    .from('teachers')
+    .select('user_id')
+    .ilike('full_name', fullName)
+    .limit(1)
+    .maybeSingle();
+
+  if (existingError) throw existingError;
+  if (existing?.user_id) return existing.user_id;
+
+  const userId = crypto.randomUUID();
+  const passwordHash = await hashPassword(crypto.randomUUID());
+
+  const { error: profileError } = await db
+    .from('profiles')
+    .insert({
+      user_id: userId,
+      role: 'TEACHER',
+      email: buildExternalTeacherEmail(fullName, userId),
+      password_hash: passwordHash,
+      is_active: false,
+    });
+
+  if (profileError) throw profileError;
+
+  const { error: teacherError } = await db
+    .from('teachers')
+    .insert({
+      user_id: userId,
+      full_name: fullName,
+      phone: 'External',
+      designation: 'LECTURER',
+      department: 'External',
+    });
+
+  if (teacherError) throw teacherError;
+  return userId;
 }
 
 // ── GET /api/course-offerings ──────────────────────────
@@ -104,10 +175,20 @@ export async function POST(request: NextRequest) {
   try {
     const db = getSupabaseAdmin();
     const body = await request.json();
-    const { course_id, teacher_user_id, section, term, session } = body;
+    const { course_id, section, term, session } = body;
+    let { teacher_user_id } = body;
+    const externalTeacherName = normalizeExternalTeacherName(body.external_teacher_name);
 
-    const fieldCheck = requireFields({ course_id, teacher_user_id });
+    const fieldCheck = requireFields({ course_id });
     if (!fieldCheck.valid) return badRequest(fieldCheck.error!);
+    if (!teacher_user_id && !externalTeacherName) {
+      return badRequest('Teacher or external teacher name is required');
+    }
+
+    const isExternalTeacher = !teacher_user_id && !!externalTeacherName;
+    if (!teacher_user_id && externalTeacherName) {
+      teacher_user_id = await findOrCreateExternalTeacher(db, externalTeacherName);
+    }
 
     // Check for duplicate assignment
     const { data: existing } = await db
@@ -143,16 +224,18 @@ export async function POST(request: NextRequest) {
       const courses = (data as Record<string, unknown>).courses as { code?: string; title?: string } | null;
       const courseCode = courses?.code ?? 'Unknown';
       const courseTitle = courses?.title ?? courseCode;
-      const teachers = (data as Record<string, unknown>).teachers as { full_name?: string } | null;
+      const teachers = (data as Record<string, unknown>).teachers as { full_name?: string; department?: string } | null;
       const teacherName = teachers?.full_name ?? null;
       await Promise.all([
-        notifyTeacherCourseAssigned({
-          teacherUserId: teacher_user_id,
-          courseCode,
-          courseTitle,
-          term: resolvedTerm,
-          section: section ?? null,
-        }),
+        isExternalTeacher
+          ? Promise.resolve()
+          : notifyTeacherCourseAssigned({
+              teacherUserId: teacher_user_id,
+              courseCode,
+              courseTitle,
+              term: resolvedTerm,
+              section: section ?? null,
+            }),
         notifyStudentCourseAssigned({
           courseCode,
           courseTitle,

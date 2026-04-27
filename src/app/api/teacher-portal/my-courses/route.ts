@@ -11,6 +11,19 @@ function extractError(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
 
+function deriveTermFromCode(code: string): string | null {
+  const digits = code.replace(/\D/g, '');
+  if (digits.length < 2) return null;
+
+  const year = Number.parseInt(digits[0], 10);
+  const semester = Number.parseInt(digits[1], 10);
+  if (year >= 1 && year <= 4 && semester >= 1 && semester <= 2) {
+    return `${year}-${semester}`;
+  }
+
+  return null;
+}
+
 // ── GET /api/teacher-portal/my-courses ─────────────────
 
 export async function GET(request: NextRequest) {
@@ -43,7 +56,7 @@ export async function GET(request: NextRequest) {
         course_title: course?.title || '',
         credit: course?.credit || 0,
         course_type: course?.course_type || '',
-        term: o.term,
+        term: deriveTermFromCode(course?.code || '') || (o.term as string | null) || '',
         session: o.session,
         section: o.batch,
       };

@@ -27,6 +27,7 @@ export interface AttendanceRecord {
   date: string;
   status: 'present' | 'absent' | 'late';
   section_or_group?: string;
+  session_id?: string;
 }
 
 export interface ExamMarksRecord {
@@ -55,6 +56,10 @@ export interface RoomRequest {
   id?: string;
   teacher_user_id?: string;
   teacher_name?: string;
+  offering_id?: string;
+  course_code?: string;
+  course_title?: string;
+  section?: string | null;
   room_number: string;
   date: string;
   start_time: string;
@@ -62,6 +67,12 @@ export interface RoomRequest {
   purpose: string;
   status?: 'pending' | 'approved' | 'rejected';
   created_at?: string;
+}
+
+export interface RoomAvailabilitySlot {
+  start_time: string;
+  end_time: string;
+  label: string;
 }
 
 export interface TeacherScheduleSlot {
@@ -215,6 +226,17 @@ export async function requestRoom(data: RoomRequest): Promise<ServiceResult<Room
 
 export async function getMyRoomRequests(teacherId: string): Promise<RoomRequest[]> {
   return apiClient.getList<RoomRequest>(`${BASE}/room-requests`, { teacher_id: teacherId });
+}
+
+export async function getRoomAvailability(roomNumber: string, date: string): Promise<RoomAvailabilitySlot[]> {
+  const response = await apiClient.get<{ available_slots?: RoomAvailabilitySlot[] }>(`${BASE}/room-requests`, {
+    room_number: roomNumber,
+    date,
+    mode: 'availability',
+  });
+
+  if (!response.success) return [];
+  return response.data?.available_slots ?? [];
 }
 
 // ── Schedule ──

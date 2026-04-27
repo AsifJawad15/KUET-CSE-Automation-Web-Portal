@@ -100,7 +100,7 @@ export function downloadAttendancePDF(opts: AttendancePDFOptions): void {
 
   // ── Build table columns ──
   const dateHeaders = dates.map(d => {
-    const dt = new Date(d + 'T00:00:00');
+    const dt = new Date(d.slice(0, 10) + 'T00:00:00');
     return dt.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' });
   });
 

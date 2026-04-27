@@ -79,7 +79,7 @@ const PAGE_REGISTRY: Record<string, PageEntry> = {
 const STORAGE_KEY = 'dashboard_activeMenu';
 const DEFAULT_PAGE = 'dashboard';
 const TEACHER_DEFAULT_PAGE = 'tp-upload-csv';
-const TEACHER_ALLOWED_NON_TP_MENUS = new Set(['tv-display']);
+const TEACHER_ALLOWED_NON_TP_MENUS = new Set(['tv-display', 'tv-viewer']);
 
 const PAGE_VARIANTS = {
   initial: { opacity: 0, x: 20 },
