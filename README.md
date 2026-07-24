@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js"/>
+<img src="https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js"/>
 <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript"/>
 <img src="https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase"/>
 <img src="https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS"/>
@@ -10,7 +10,7 @@
 
 # 🎓 KUET CSE Automation Web Portal
 
-### **A full-featured, role-based academic management system for the CSE Department of Khulna University of Engineering & Technology (KUET)**
+### **A reusable, role-based department automation platform for academic administration, teaching, student services, and public communication**
 
 [![GitHub Stars](https://img.shields.io/github/stars/abdullahshahporan/KUET-CSE-Automation-Web-Portal?style=social)](https://github.com/abdullahshahporan/KUET-CSE-Automation-Web-Portal)
 [![GitHub Forks](https://img.shields.io/github/forks/abdullahshahporan/KUET-CSE-Automation-Web-Portal?style=social)](https://github.com/abdullahshahporan/KUET-CSE-Automation-Web-Portal/fork)
@@ -24,11 +24,13 @@
 
 ## 📖 Overview
 
-The **KUET CSE Automation Web Portal** is the administrative backbone of the KUET CSE department's digital ecosystem. Built with **Next.js 15 App Router** and **Supabase**, it provides three distinct role-based interfaces — **Admin**, **Teacher**, and **Student** — on a single, unified platform.
+The **KUET CSE Automation Web Portal** is the administrative backbone of a multi-channel department automation system. Built with **Next.js 16 App Router** and **Supabase**, it provides role-aware workflows for department heads, administrators, staff, and teachers, while sharing its backend with the companion Flutter student/teacher application and the TV display channel.
 
 The portal connects directly to the same PostgreSQL database as the companion Flutter mobile app, ensuring data consistency across every touchpoint: from room booking and schedule management to geo-attendance, exam results, term upgrades, and push notifications.
 
 > 📺 **TV Display Mode:** The portal also ships with a **TV Display mode** — a real-time, full-screen room schedule displayed on department monitors — and a standalone **Electron-based TV Player app** for dedicated display hardware.
+
+> ℹ️ **Named implementation:** “KUET CSE Automation” identifies the current reference deployment only. The data model, role system, scheduling workflows, CMS, mobile client, and TV Player can be configured and rebranded for other academic departments or institutions.
 
 ---
 
@@ -124,6 +126,8 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 - Assign rooms, teachers, and sections per slot  
 - Automatic conflict detection: no double-booking of rooms or teachers  
 - Combined lab-slot support (multiple teachers, merged view)  
+- Generate and compare constraint-aware routine drafts using course requirements, teacher availability, locked slots, and preferred rooms
+- Review draft scores, hard conflicts, and soft warnings; move and revalidate individual slots before publication
 - Export routine as PDF  
 
 </details>
@@ -141,11 +145,12 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 </details>
 
 <details>
-<summary><strong>📝 Examination Management</strong></summary>
+<summary><strong>📝 Examination & Assessment Data</strong></summary>
 
-- Schedule exams: type (Midterm / Final / Quiz), course, date, time, room  
-- Manage exam results: enter and publish marks  
-- Multi-question / multi-component score breakdown  
+- Maintain examination records used by mobile schedules, countdowns, and reminders
+- Support CR-authorized creation, updating, and removal of cohort examination entries
+- Provide schema and API foundations for multi-component scores
+- Result entry and publishing interfaces are still being completed and should not be treated as a finished workflow
 
 </details>
 
@@ -173,8 +178,8 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 <summary><strong>🌐 Website CMS</strong></summary>
 
 - Manage all public-facing content through an admin CMS  
-- Gallery uploads, news posts, faculty feature sections  
-- OCR-powered image-to-text for scanned document uploads  
+- Manage hero slides, department information, HOD messages, statistics, news, research, laboratories, clubs, galleries, navigation, page sections, and programs
+- Order, activate, hide, edit, and remove public content without changing application code
 
 </details>
 
@@ -219,14 +224,15 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 
 ---
 
-### 👨‍🎓 Student Portal
+### 👨‍🎓 Student and CR Integration
 
 <details>
 <summary><strong>📍 Geo-Attendance Submission</strong></summary>
 
 - View currently open attendance sessions filtered by term and section  
-- Submit GPS-verified attendance (Haversine distance ≤ 30 m threshold)  
-- Duplicate-submission prevention with real-time status  
+- Submit GPS-verified attendance within the teacher-configured radius
+- Validate the active time window, enrolment, room coordinates, optional verification code, and duplicate state
+- Require biometric confirmation in the mobile client and monitor post-check-in presence against the configured grace period
 
 </details>
 
@@ -242,7 +248,8 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 <summary><strong>📚 Curriculum & Results</strong></summary>
 
 - Browse the complete 4-year curriculum  
-- View published exam results and grade breakdown  
+- Browse optional-course allocation and academic information
+- Display result data when a deployment supplies published records; the bundled result screen currently demonstrates the intended presentation
 
 </details>
 
@@ -259,10 +266,11 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 
 ### 📺 TV Display Mode
 
-- Real-time full-screen room schedule for department monitors  
-- Displays today's approved bookings, routine slots, and CR allocations  
-- Auto-refreshes on schedule changes via Supabase Realtime  
-- Available as a standalone **Electron desktop app** (`tv-player-app/`)  
+- Real-time full-screen schedules, current/upcoming periods, events, announcements, tickers, and breaking news
+- Per-display content targeting, section visibility, rotation intervals, and layout configuration
+- Supabase Realtime plus polling, with cached content retained during temporary network loss
+- Electron control panel for display discovery, TV1/TV2 mapping, kiosk windows, HDMI changes, tray access, and persistent device mappings
+- Standalone Windows installer: **[TV Player v1.0.0 release](https://github.com/abdullahshahporan/KUET-CSE-Automation-Web-Portal/releases/tag/tv-player-v1.0.0)**
 
 ---
 
@@ -283,7 +291,7 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 
 | Layer | Technology |
 |---|---|
-| **Framework** | Next.js 15 (App Router) |
+| **Framework** | Next.js 16 (App Router) |
 | **Language** | TypeScript 5 |
 | **Styling** | Tailwind CSS 3.4 |
 | **Animations** | Framer Motion 12 + GSAP 3 |
@@ -687,6 +695,10 @@ npm run build
 
 A standalone **Electron** application that wraps the `/tv-display` route for dedicated department monitors.
 
+Windows users can download the packaged installer from the
+**[TV Player v1.0.0 GitHub Release](https://github.com/abdullahshahporan/KUET-CSE-Automation-Web-Portal/releases/tag/tv-player-v1.0.0)**.
+The release asset is `TV.Player.Setup.1.0.0.exe`.
+
 ```
 tv-player-app/
 ├── electron/               ← Main process (Electron)
@@ -700,6 +712,7 @@ cd tv-player-app
 npm install
 npm run dev         # Development mode
 npm run build       # Build distributable
+npm run package     # Build the Windows NSIS installer
 ```
 
 ---
@@ -712,6 +725,10 @@ npm run build       # Build distributable
 2. Import the project in [Vercel](https://vercel.com).  
 3. Add all environment variables from `.env.local` in the Vercel dashboard.  
 4. Deploy — Vercel auto-detects Next.js and configures edge functions.  
+
+Vercel hosts the web application; it does not need the Windows `.exe` in the
+deployment bundle. Publish packaged TV Player installers as GitHub Release
+assets instead.
 
 ---
 
@@ -766,12 +783,13 @@ Found a bug? Please [open an issue](https://github.com/abdullahshahporan/KUET-CS
 | [FIX-RLS-ERROR.md](./FIX-RLS-ERROR.md) | Common RLS error fixes |
 | [FIX-USER-NOT-ALLOWED.md](./FIX-USER-NOT-ALLOWED.md) | Auth permission fixes |
 | [SUPABASE-DATE-BASED-MIGRATION.md](./SUPABASE-DATE-BASED-MIGRATION.md) | Migration guide |
+| [TV-DISPLAY-OFFLINE-CACHING.md](./TV-DISPLAY-OFFLINE-CACHING.md) | TV display caching and recovery notes |
 
 ---
 
 ## 📄 License
 
-Distributed under the **MIT License**. See [`LICENSE`](./LICENSE) for details.
+Distributed under the **MIT License**. See [`LICENSE.txt`](./LICENSE.txt) for details.
 
 ---
 
