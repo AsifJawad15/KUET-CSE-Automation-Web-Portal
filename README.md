@@ -795,10 +795,15 @@ Distributed under the **MIT License**. See [`LICENSE.txt`](./LICENSE.txt) for de
 
 ## 👥 Authors
 
-**Abdullah Shah Poran** — _Lead Developer_  
-CSE Department, Khulna University of Engineering & Technology
+**Abdullah Shah Poran** 
 
-> Built with ❤️ for KUET CSE — bridging administration and academics through modern technology.
+**Asif Jawad** 
+
+**Department of Computer Science and Engineering**
+
+**Khulna University of Engineering & Technology, Khulna**
+
+
 
 ---
 
