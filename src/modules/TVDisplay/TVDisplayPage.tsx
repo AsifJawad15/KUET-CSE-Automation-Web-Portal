@@ -34,20 +34,61 @@ import {
 } from '@/services/tvDisplayService';
 import type { CmsTvAnnouncement, CmsTvDevice, CmsTvEvent, CmsTvTicker, TvAnnouncementPriority, TvAnnouncementType, TvTarget } from '@/types/cms';
 import { AnimatePresence, motion } from 'framer-motion';
-import { AlertTriangle, BarChart3, Bell, Calendar, Clock as ClockIcon, Eye, MapPin, Monitor, Plus, RotateCcw, Settings, SlidersHorizontal, Tv, Zap } from 'lucide-react';
+import {
+  Activity,
+  AlertTriangle,
+  BarChart3,
+  Bell,
+  Calendar,
+  CheckCircle2,
+  Clock as ClockIcon,
+  Eye,
+  MapPin,
+  Megaphone,
+  Monitor,
+  Plus,
+  Radio,
+  RefreshCw,
+  RotateCcw,
+  Search,
+  Settings,
+  SlidersHorizontal,
+  Tv,
+  X,
+  Zap,
+} from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 type AdminTab = 'announcements' | 'ticker' | 'events' | 'devices' | 'settings';
+type UiNotice = {
+  tone: 'success' | 'error' | 'warning';
+  title: string;
+  message?: string;
+};
 
 export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: string) => void }) {
   const [activeTab, setActiveTab] = useState<AdminTab>('announcements');
+  const [contentSearch, setContentSearch] = useState('');
+  const [visibilityFilter, setVisibilityFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [announcements, setAnnouncements] = useState<CmsTvAnnouncement[]>([]);
   const [tickerItems, setTickerItems] = useState<CmsTvTicker[]>([]);
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [devices, setDevices] = useState<CmsTvDevice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [notice, setNotice] = useState<UiNotice | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
+
+  const notify = useCallback((nextNotice: UiNotice) => setNotice(nextNotice), []);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timeout = window.setTimeout(() => setNotice(null), 4500);
+    return () => window.clearTimeout(timeout);
+  }, [notice]);
 
   async function uploadImage(file: File, field: 'image_url' | 'speaker_image_url') {
     setUploading(prev => ({ ...prev, [field]: true }));
@@ -60,10 +101,11 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
       if (error) throw error;
       const { data } = cmsSupabase.storage.from('cms-images').getPublicUrl(path);
       setEventFormData(prev => ({ ...prev, [field]: data.publicUrl }));
+      notify({ tone: 'success', title: 'Image uploaded', message: 'The event media is ready to publish.' });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : (err as { message?: string })?.message ?? String(err);
       console.error('Image upload failed:', err);
-      alert(`Image upload failed: ${msg}`);
+      notify({ tone: 'error', title: 'Image upload failed', message: msg });
     } finally {
       setUploading(prev => ({ ...prev, [field]: false }));
     }
@@ -116,20 +158,32 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
   // ── Fetch all data ──
   const loadData = useCallback(async () => {
     try {
-      const [annData, tickData, settData, evtData, devData] = await Promise.all([
+      const results = await Promise.allSettled([
         fetchAllAnnouncements(),
         fetchAllTicker(),
         fetchTvSettings(),
         fetchAllEvents(),
         fetchAllDevices(),
       ]);
-      setAnnouncements(annData);
-      setTickerItems(tickData);
-      setSettings(settData);
-      setEventItems(evtData);
-      setDevices(devData);
+
+      const [annData, tickData, settData, evtData, devData] = results;
+      if (annData.status === 'fulfilled') setAnnouncements(annData.value);
+      if (tickData.status === 'fulfilled') setTickerItems(tickData.value);
+      if (settData.status === 'fulfilled') setSettings(settData.value);
+      if (evtData.status === 'fulfilled') setEventItems(evtData.value);
+      if (devData.status === 'fulfilled') setDevices(devData.value);
+
+      const failed = results.filter((result) => result.status === 'rejected').length;
+      const succeeded = results.length - failed;
+      setLoadError(
+        failed > 0
+          ? `${failed} data ${failed === 1 ? 'source is' : 'sources are'} temporarily unavailable. Last-known data is preserved.`
+          : null,
+      );
+      if (succeeded > 0) setLastUpdated(new Date());
     } catch (err) {
       console.error('Failed to load TV display data:', err);
+      setLoadError('TV Display data could not be refreshed. Last-known data is preserved.');
     } finally {
       setLoading(false);
     }
@@ -140,6 +194,7 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
   // ── Announcement CRUD ──
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const wasEditing = Boolean(editingId);
     setSaving(true);
     try {
       if (editingId) {
@@ -167,9 +222,14 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
       }
       resetForm();
       await loadData();
+      notify({
+        tone: 'success',
+        title: wasEditing ? 'Announcement updated' : 'Announcement published',
+        message: 'The latest content is now available to its selected screens.',
+      });
     } catch (err) {
       console.error('Failed to save announcement:', err);
-      alert('Failed to save announcement. Check console for details.');
+      notify({ tone: 'error', title: 'Announcement was not saved', message: 'Check your connection and try again.' });
     } finally {
       setSaving(false);
     }
@@ -210,6 +270,7 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
   // ── Ticker CRUD ──
   const handleTickerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const wasEditing = Boolean(editingTickerId);
     setSaving(true);
     try {
       if (editingTickerId) {
@@ -235,9 +296,14 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
       }
       resetTickerForm();
       await loadData();
+      notify({
+        tone: 'success',
+        title: wasEditing ? 'Ticker item updated' : 'Ticker item published',
+        message: 'The ticker queue has been refreshed.',
+      });
     } catch (err) {
       console.error('Failed to save ticker item:', err);
-      alert('Failed to save ticker item.');
+      notify({ tone: 'error', title: 'Ticker item was not saved', message: 'Check your connection and try again.' });
     } finally {
       setSaving(false);
     }
@@ -277,6 +343,7 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
   // ── Event CRUD ──
   const handleEventSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const wasEditing = Boolean(editingEventId);
     setSaving(true);
     try {
       if (editingEventId) {
@@ -313,9 +380,14 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
       }
       resetEventForm();
       await loadData();
+      notify({
+        tone: 'success',
+        title: wasEditing ? 'Event updated' : 'Event published',
+        message: 'The event carousel has been refreshed.',
+      });
     } catch (err) {
       console.error('Failed to save event:', err);
-      alert('Failed to save event.');
+      notify({ tone: 'error', title: 'Event was not saved', message: 'Check your connection and try again.' });
     } finally {
       setSaving(false);
     }
@@ -366,9 +438,10 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
 
   // ── Breaking News (per-TV target) ──
   const [breakingNewsText, setBreakingNewsText] = useState('');
-  const [breakingNewsDurationInput, setBreakingNewsDurationInput] = useState('');
+  const [breakingNewsDurationInput, setBreakingNewsDurationInput] = useState('10');
   const [breakingNewsTarget, setBreakingNewsTarget] = useState<string>('all');
   const [activatingBreaking, setActivatingBreaking] = useState(false);
+  const [breakingClock, setBreakingClock] = useState(() => Date.now());
 
   // Collect all active breaking news across all targets
   const activeBreakingTargets = (() => {
@@ -378,7 +451,7 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
       const suffix = `_${t}`;
       const expires = settings[`breaking_news_expires_at${suffix}`];
       if (!expires) continue;
-      const diff = new Date(expires).getTime() - Date.now();
+      const diff = new Date(expires).getTime() - breakingClock;
       if (diff <= 0) continue;
       const mins = Math.floor(diff / 60000);
       const secs = Math.floor((diff % 60000) / 1000);
@@ -386,7 +459,7 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
         target: t,
         text: settings[`breaking_news_text${suffix}`] || '',
         expires,
-        timeLeft: `${mins}m ${secs}s`,
+        timeLeft: `${mins}m ${String(secs).padStart(2, '0')}s`,
       });
     }
     return targets;
@@ -394,11 +467,17 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
 
   const breakingNewsActive = activeBreakingTargets.length > 0;
 
+  useEffect(() => {
+    if (!breakingNewsActive) return;
+    const interval = window.setInterval(() => setBreakingClock(Date.now()), 1000);
+    return () => window.clearInterval(interval);
+  }, [breakingNewsActive]);
+
   const handleActivateBreakingNews = async () => {
     if (!breakingNewsText.trim()) return;
     const durationMinutes = Number.parseInt(breakingNewsDurationInput.trim(), 10);
     if (Number.isNaN(durationMinutes) || durationMinutes <= 0) {
-      alert('Please enter duration in minutes.');
+      notify({ tone: 'warning', title: 'Enter a valid duration', message: 'Use a duration of at least one minute.' });
       return;
     }
     setActivatingBreaking(true);
@@ -409,9 +488,10 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
       await upsertSetting(`breaking_news_expires_at${suffix}`, expiresAt);
       setBreakingNewsText('');
       await loadData();
+      notify({ tone: 'success', title: 'Urgent broadcast is live', message: 'Targeted screens will refresh automatically.' });
     } catch (err) {
       console.error('Failed to activate breaking news:', err);
-      alert('Failed to activate breaking news.');
+      notify({ tone: 'error', title: 'Broadcast could not be published', message: 'The previous screen content remains unchanged.' });
     } finally {
       setActivatingBreaking(false);
     }
@@ -422,6 +502,7 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
     try {
       await upsertSetting(`breaking_news_expires_at_${target}`, '');
       await loadData();
+      notify({ tone: 'success', title: 'Urgent broadcast ended', message: 'Normal ticker and headline programming will resume.' });
     } catch (err) {
       console.error('Failed to deactivate breaking news:', err);
     } finally {
@@ -432,195 +513,438 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
   // ── Badge helpers ──
   const getTypeBadge = (type: string) => {
     const styles: Record<string, string> = {
-      'class-test': 'bg-red-600/20 text-[#e5383b] border border-red-400/30',
-      'assignment': 'bg-blue-500/20 text-blue-400 border border-blue-500/30',
-      'notice': 'bg-white/10 text-white/70 border border-white/20',
-      'event': 'bg-pink-500/20 text-pink-400 border border-pink-500/30',
-      'lab-test': 'bg-[#d3d3d3]/20 text-[#d3d3d3] border border-[#d3d3d3]/30',
-      'quiz': 'bg-orange-500/20 text-orange-400 border border-orange-500/30',
+      'class-test': 'border border-red-200 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/15 dark:text-red-300',
+      'assignment': 'border border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/15 dark:text-blue-300',
+      'notice': 'border border-slate-200 bg-slate-50 text-slate-600 dark:border-white/15 dark:bg-white/10 dark:text-slate-200',
+      'event': 'border border-pink-200 bg-pink-50 text-pink-700 dark:border-pink-500/30 dark:bg-pink-500/15 dark:text-pink-300',
+      'lab-test': 'border border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-500/30 dark:bg-violet-500/15 dark:text-violet-300',
+      'quiz': 'border border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-500/30 dark:bg-orange-500/15 dark:text-orange-300',
     };
-    return styles[type] || 'bg-white/10 text-white/70 border border-white/20';
+    return styles[type] || 'border border-slate-200 bg-slate-50 text-slate-600 dark:border-white/15 dark:bg-white/10 dark:text-slate-200';
   };
 
   const formatType = (type: string) => {
     return type.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
 
+  const handleRefresh = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  };
+
+  const activeAnnouncements = announcements.filter((item) => item.is_active).length;
+  const activeTicker = tickerItems.filter((item) => item.is_active).length;
+  const activeEvents = eventItems.filter((item) => item.is_active).length;
+  const activeDevices = devices.filter((item) => item.is_active).length;
+  const highPriorityAnnouncements = announcements.filter(
+    (item) => item.is_active && item.priority === 'high',
+  ).length;
+  const totalPublished = activeAnnouncements + activeTicker + activeEvents;
+
+  const adminTabs: Array<{
+    id: AdminTab;
+    label: string;
+    shortLabel: string;
+    icon: typeof Bell;
+    count: number;
+  }> = [
+    { id: 'announcements', label: 'Announcements', shortLabel: 'Announcements', icon: Bell, count: announcements.length },
+    { id: 'ticker', label: 'Ticker items', shortLabel: 'Ticker', icon: Zap, count: tickerItems.length },
+    { id: 'events', label: 'Events', shortLabel: 'Events', icon: Calendar, count: eventItems.length },
+    { id: 'devices', label: 'TV devices', shortLabel: 'Devices', icon: Tv, count: devices.length },
+  ];
+
+  const normalizedSearch = contentSearch.trim().toLocaleLowerCase();
+  const matchesVisibility = (isActive: boolean) =>
+    visibilityFilter === 'all' ||
+    (visibilityFilter === 'active' && isActive) ||
+    (visibilityFilter === 'inactive' && !isActive);
+  const filteredAnnouncements = announcements.filter((item) =>
+    matchesVisibility(item.is_active) &&
+    (!normalizedSearch ||
+      `${item.title} ${item.content} ${item.course_code ?? ''} ${item.target ?? ''}`
+        .toLocaleLowerCase()
+        .includes(normalizedSearch)),
+  );
+  const filteredTickerItems = tickerItems.filter((item) =>
+    matchesVisibility(item.is_active) &&
+    (!normalizedSearch ||
+      `${item.label} ${item.text} ${item.course_code ?? ''} ${item.target ?? ''}`
+        .toLocaleLowerCase()
+        .includes(normalizedSearch)),
+  );
+  const filteredEvents = eventItems.filter((item) =>
+    matchesVisibility(item.is_active) &&
+    (!normalizedSearch ||
+      `${item.title} ${item.subtitle ?? ''} ${item.description ?? ''} ${item.speaker_name ?? ''} ${item.location ?? ''} ${item.target ?? ''}`
+        .toLocaleLowerCase()
+        .includes(normalizedSearch)),
+  );
+
   if (loading) {
     return (
-      <div className="h-full flex items-center justify-center p-12">
-        <div className="flex flex-col items-center gap-3">
-          <Monitor className="w-10 h-10 text-indigo-500 dark:text-red-600 animate-pulse" />
-          <p className="text-gray-400 dark:text-[#b1a7a6]">Loading TV Display data...</p>
+      <div className="flex min-h-[520px] items-center justify-center px-6 py-16">
+        <div className="w-full max-w-sm rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm dark:border-[#3d4951] dark:bg-[#111418]">
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#0f2947] text-white shadow-lg shadow-[#0f2947]/15">
+            <Monitor className="h-7 w-7 animate-pulse" />
+          </div>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">Preparing TV control center</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-[#b1a7a6]">
+            Loading screens, broadcasts, events and display settings.
+          </p>
+          <div className="mt-6 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
+            <div className="h-full w-2/3 animate-pulse rounded-full bg-[#0b7f72]" />
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full">
-      {/* Page Header */}
-      <SpotlightCard className="rounded-2xl border border-gray-200 dark:border-[#3d4951] bg-white dark:bg-transparent p-6 mb-6" spotlightColor="rgba(217, 162, 153, 0.2)">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-700 dark:text-white">TV Display Management</h1>
-            <p className="text-sm text-gray-400 dark:text-[#b1a7a6] mt-1">
-              Manage announcements, ticker & settings for department TV screens
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => onMenuChange?.('tv-viewer')}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-200 dark:border-[#3d4951] text-gray-700 dark:text-[#d3d3d3] hover:bg-gray-50 dark:hover:bg-[#0b090a] font-medium rounded-lg transition-all"
+    <div className="h-full pb-10">
+      <div className="mx-auto max-w-[1680px] space-y-5">
+        <AnimatePresence>
+          {notice && (
+            <motion.div
+              role="status"
+              aria-live="polite"
+              initial={{ opacity: 0, y: -12, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.98 }}
+              className={`fixed right-4 top-4 z-[70] flex w-[min(420px,calc(100vw-32px))] items-start gap-3 rounded-2xl border bg-white p-4 shadow-2xl dark:bg-[#15191d] ${
+                notice.tone === 'success'
+                  ? 'border-emerald-200 dark:border-emerald-500/30'
+                  : notice.tone === 'warning'
+                    ? 'border-amber-200 dark:border-amber-500/30'
+                    : 'border-red-200 dark:border-red-500/30'
+              }`}
             >
-              <Eye className="w-4 h-4" />
-              TV Viewer
-            </motion.button>
-          </div>
-        </div>
-        
-        {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-6 gap-4 mt-6 pt-6 border-t border-gray-200 dark:border-[#3d4951]">
-          <div className="text-center">
-            <p className="text-2xl font-bold text-gray-700 dark:text-white">{announcements.length}</p>
-            <p className="text-xs text-gray-400 dark:text-[#b1a7a6]">Total</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-indigo-500 dark:text-[#d3d3d3]">{announcements.filter(a => a.is_active).length}</p>
-            <p className="text-xs text-gray-400 dark:text-[#b1a7a6]">Active</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-red-500 dark:text-red-400">{announcements.filter(a => a.priority === 'high').length}</p>
-            <p className="text-xs text-gray-400 dark:text-[#b1a7a6]">High Priority</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-blue-500 dark:text-blue-400">{tickerItems.length}</p>
-            <p className="text-xs text-gray-400 dark:text-[#b1a7a6]">Ticker Items</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-teal-500 dark:text-teal-400">{eventItems.length}</p>
-            <p className="text-xs text-gray-400 dark:text-[#b1a7a6]">Events</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-purple-500 dark:text-purple-400">{devices.filter(d => d.is_active).length}</p>
-            <p className="text-xs text-gray-400 dark:text-[#b1a7a6]">Active TVs</p>
-          </div>
-        </div>
-      </SpotlightCard>
-
-      {/* ── Breaking News Control ── */}
-      <div className={`rounded-2xl border p-5 mb-6 ${breakingNewsActive ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-white'}`}>
-        <div className="flex items-center gap-3 mb-4">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${breakingNewsActive ? 'bg-red-600' : 'bg-gray-100'}`}>
-            <AlertTriangle className={`w-5 h-5 ${breakingNewsActive ? 'text-white' : 'text-gray-500'}`} />
-          </div>
-          <div className="flex-1">
-            <h3 className="text-lg font-bold text-gray-800">Breaking News</h3>
-            <p className="text-xs text-gray-500">
-              {breakingNewsActive
-                ? <>{activeBreakingTargets.length} active — Ticker &amp; headlines hidden on targeted TVs</>
-                : 'Activate to replace the ticker & headline bars on TV displays'}
-            </p>
-          </div>
-        </div>
-
-        {/* Active breaking news list */}
-        {activeBreakingTargets.length > 0 && (
-          <div className="space-y-2 mb-4">
-            {activeBreakingTargets.map(item => (
-              <div key={item.target} className="flex items-center gap-3 px-4 py-3 rounded-lg bg-red-100 border border-red-200">
-                <span className="px-2 py-0.5 rounded bg-red-600 text-white text-xs font-bold uppercase">{item.target === 'all' ? 'All TVs' : item.target}</span>
-                <span className="flex-1 text-red-800 font-semibold text-sm truncate">{item.text}</span>
-                <span className="text-xs text-red-600 font-medium">{item.timeLeft}</span>
-                <button
-                  onClick={() => handleDeactivateBreakingNews(item.target)}
-                  disabled={activatingBreaking}
-                  className="px-3 py-1.5 border border-red-300 text-red-700 font-medium rounded-lg hover:bg-red-200 transition-colors text-xs disabled:opacity-50"
-                >
-                  Deactivate
-                </button>
+              <div className={`mt-0.5 flex h-9 w-9 flex-none items-center justify-center rounded-xl ${
+                notice.tone === 'success'
+                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+                  : notice.tone === 'warning'
+                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'
+                    : 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300'
+              }`}>
+                {notice.tone === 'success'
+                  ? <CheckCircle2 className="h-5 w-5" />
+                  : <AlertTriangle className="h-5 w-5" />}
               </div>
-            ))}
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-slate-900 dark:text-white">{notice.title}</p>
+                {notice.message && <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{notice.message}</p>}
+              </div>
+              <button
+                type="button"
+                onClick={() => setNotice(null)}
+                aria-label="Dismiss notification"
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-white/10 dark:hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Operational header */}
+        <section className="relative overflow-hidden rounded-3xl border border-[#183d63] bg-[#0f2947] text-white shadow-[0_18px_45px_-28px_rgba(15,41,71,0.8)]">
+          <div className="absolute inset-x-0 top-0 h-1 bg-[#d7a928]" />
+          <div className="pointer-events-none absolute -right-20 -top-28 h-72 w-72 rounded-full border border-white/10 bg-white/[0.035]" />
+          <div className="relative px-5 py-6 sm:px-7 lg:px-8 lg:py-7">
+            <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+              <div className="max-w-3xl">
+                <div className="mb-3 flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#9fd4cf]">
+                  <span>KUET CSE</span>
+                  <span className="h-1 w-1 rounded-full bg-[#d7a928]" />
+                  <span>Digital signage operations</span>
+                </div>
+                <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">TV Display Control Center</h1>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300 sm:text-[15px]">
+                  Publish department updates, coordinate screen-specific content and keep every display ready for unattended operation.
+                </p>
+                <div className="mt-4 flex flex-wrap items-center gap-2.5">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-xs font-semibold text-emerald-100">
+                    <span className="relative flex h-2 w-2">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-50" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-300" />
+                    </span>
+                    Data services connected
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-slate-200">
+                    <ClockIcon className="h-3.5 w-3.5" />
+                    {lastUpdated
+                      ? `Updated ${lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                      : 'Awaiting first refresh'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex w-full flex-col gap-2.5 sm:w-auto sm:flex-row">
+                <button
+                  type="button"
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.07] px-4 text-sm font-semibold text-white transition-colors hover:bg-white/[0.12] focus:outline-none focus:ring-2 focus:ring-[#9fd4cf] disabled:cursor-wait disabled:opacity-60"
+                >
+                  <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                  {refreshing ? 'Refreshing' : 'Refresh data'}
+                </button>
+                <motion.button
+                  whileHover={{ y: -1 }}
+                  whileTap={{ y: 0 }}
+                  onClick={() => onMenuChange?.('tv-viewer')}
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-4 text-sm font-bold text-[#0f2947] shadow-sm transition-colors hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-[#d7a928]"
+                >
+                  <Eye className="h-4 w-4" />
+                  Open TV viewer
+                </motion.button>
+              </div>
+            </div>
+
+            <div className="mt-7 grid grid-cols-2 gap-2.5 border-t border-white/10 pt-5 md:grid-cols-3 xl:grid-cols-6">
+              {[
+                { label: 'Published', value: totalPublished, detail: 'active content', icon: Radio, tone: 'text-[#9fd4cf]' },
+                { label: 'Announcements', value: activeAnnouncements, detail: `${announcements.length} total`, icon: Bell, tone: 'text-[#f0c94d]' },
+                { label: 'High priority', value: highPriorityAnnouncements, detail: 'active alerts', icon: AlertTriangle, tone: 'text-[#ff9b9b]' },
+                { label: 'Ticker', value: activeTicker, detail: `${tickerItems.length} total`, icon: Zap, tone: 'text-[#7dd3fc]' },
+                { label: 'Events', value: activeEvents, detail: `${eventItems.length} total`, icon: Calendar, tone: 'text-[#7ee0c3]' },
+                { label: 'TV screens', value: activeDevices, detail: `${devices.length} registered`, icon: Tv, tone: 'text-[#c4b5fd]' },
+              ].map((metric) => {
+                const Icon = metric.icon;
+                return (
+                  <div key={metric.label} className="rounded-2xl border border-white/10 bg-white/[0.055] p-3.5 backdrop-blur-sm">
+                    <div className="flex items-center justify-between">
+                      <Icon className={`h-4 w-4 ${metric.tone}`} />
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{metric.label}</span>
+                    </div>
+                    <div className="mt-3 flex items-end justify-between gap-2">
+                      <span className="text-2xl font-bold tabular-nums">{metric.value}</span>
+                      <span className="pb-0.5 text-[11px] text-slate-400">{metric.detail}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {loadError && (
+          <div role="status" className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3.5 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+            <AlertTriangle className="mt-0.5 h-5 w-5 flex-none" />
+            <div className="flex-1">
+              <p className="text-sm font-bold">Some information could not be refreshed</p>
+              <p className="mt-0.5 text-xs leading-5 opacity-80">{loadError}</p>
+            </div>
+            <button type="button" onClick={handleRefresh} className="rounded-lg px-3 py-1.5 text-xs font-bold hover:bg-amber-100 dark:hover:bg-white/10">
+              Try again
+            </button>
           </div>
         )}
 
-        {/* New breaking news form */}
-        <div className="flex items-end gap-3">
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Breaking News Text</label>
-            <input
-              type="text"
-              value={breakingNewsText}
-              onChange={(e) => setBreakingNewsText(e.target.value)}
-              placeholder="Enter breaking news headline..."
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-red-400 focus:border-transparent transition-all text-sm"
-            />
-          </div>
-          <div className="flex-shrink-0">
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Target TV</label>
-            <select
-              value={breakingNewsTarget}
-              onChange={(e) => setBreakingNewsTarget(e.target.value)}
-              className="px-3 py-2.5 border border-gray-200 rounded-lg bg-white text-gray-900 text-sm focus:ring-2 focus:ring-red-400 focus:border-transparent"
-            >
-              <option value="all">All TVs</option>
-              {devices.filter(d => d.is_active).map(d => (
-                <option key={d.id} value={d.name}>{d.name}{d.label ? ` (${d.label})` : ''}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex-shrink-0">
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Duration</label>
-            <input
-              type="number"
-              min={1}
-              value={breakingNewsDurationInput}
-              onChange={(e) => setBreakingNewsDurationInput(e.target.value)}
-              placeholder="Minutes"
-              className="px-3 py-2.5 border border-gray-200 rounded-lg bg-white text-gray-900 text-sm focus:ring-2 focus:ring-red-400 focus:border-transparent"
-              required
-            />
-          </div>
-          <div className="flex-shrink-0">
-            <button
-              onClick={handleActivateBreakingNews}
-              disabled={activatingBreaking || !breakingNewsText.trim() || !breakingNewsDurationInput.trim()}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors text-sm disabled:opacity-50"
-            >
-              <AlertTriangle className="w-4 h-4" />
-              {activatingBreaking ? 'Activating...' : 'Go Live'}
-            </button>
-          </div>
-        </div>
-      </div>
+        {/* Urgent broadcast control */}
+        <section className={`overflow-hidden rounded-3xl border bg-white shadow-sm dark:bg-[#111418] ${
+          breakingNewsActive
+            ? 'border-red-300 dark:border-red-500/40'
+            : 'border-slate-200 dark:border-[#3d4951]'
+        }`}>
+          <div className={`h-1 ${breakingNewsActive ? 'bg-red-500' : 'bg-[#0b7f72]'}`} />
+          <div className="p-5 sm:p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex items-start gap-3.5">
+                <div className={`flex h-11 w-11 flex-none items-center justify-center rounded-2xl ${
+                  breakingNewsActive
+                    ? 'bg-red-600 text-white shadow-lg shadow-red-600/15'
+                    : 'bg-[#e7f5f2] text-[#0b7f72] dark:bg-[#0b7f72]/20 dark:text-[#77d3c9]'
+                }`}>
+                  <Megaphone className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-lg font-bold text-slate-900 dark:text-white">Urgent broadcast</h2>
+                    {breakingNewsActive && (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-red-700 dark:bg-red-500/15 dark:text-red-300">
+                        <Activity className="h-3 w-3" />
+                        Live on {activeBreakingTargets.length} {activeBreakingTargets.length === 1 ? 'target' : 'targets'}
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1 max-w-2xl text-sm leading-5 text-slate-500 dark:text-[#b1a7a6]">
+                    {breakingNewsActive
+                      ? 'The urgent message temporarily replaces ticker and headline content on each selected screen.'
+                      : 'Use only for time-sensitive department notices that must immediately take priority on screen.'}
+                  </p>
+                </div>
+              </div>
+              {breakingNewsActive && (
+                <div className="inline-flex w-fit items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
+                  <Radio className="h-3.5 w-3.5" />
+                  Broadcast active
+                </div>
+              )}
+            </div>
 
-      {/* ── Tab Navigation ── */}
-      <div className="flex items-center gap-2 mb-6 border-b border-gray-200 dark:border-[#3d4951] pb-3">
-        {([
-          { id: 'announcements' as AdminTab, label: 'Announcements', icon: Bell },
-          { id: 'ticker' as AdminTab, label: 'Ticker Items', icon: Zap },
-          { id: 'events' as AdminTab, label: 'Events', icon: Calendar },
-          { id: 'devices' as AdminTab, label: 'TV Devices', icon: Tv },
-        ]).map(tab => {
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === tab.id
-                  ? 'bg-slate-800 text-white shadow-sm'
-                  : 'text-gray-500 hover:bg-gray-100'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
+            {activeBreakingTargets.length > 0 && (
+              <div className="mt-5 grid gap-2">
+                {activeBreakingTargets.map((item) => (
+                  <div key={item.target} className="flex flex-col gap-3 rounded-2xl border border-red-200 bg-red-50/80 px-4 py-3 sm:flex-row sm:items-center dark:border-red-500/20 dark:bg-red-500/10">
+                    <span className="w-fit rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white">
+                      {item.target === 'all' ? 'All TVs' : item.target}
+                    </span>
+                    <p className="min-w-0 flex-1 truncate text-sm font-semibold text-red-900 dark:text-red-100">{item.text}</p>
+                    <span className="font-mono text-xs font-bold tabular-nums text-red-600 dark:text-red-300">{item.timeLeft}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleDeactivateBreakingNews(item.target)}
+                      disabled={activatingBreaking}
+                      className="min-h-9 rounded-lg border border-red-300 bg-white px-3 text-xs font-bold text-red-700 transition-colors hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:opacity-50 dark:border-red-500/30 dark:bg-transparent dark:text-red-200 dark:hover:bg-red-500/10"
+                    >
+                      End broadcast
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-5 grid grid-cols-1 gap-3 border-t border-slate-100 pt-5 lg:grid-cols-[minmax(0,1fr)_220px_150px_140px] dark:border-white/10">
+              <label className="min-w-0">
+                <span className="mb-1.5 flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-200">
+                  Message
+                  <span className="font-medium text-slate-400">{breakingNewsText.length}/180</span>
+                </span>
+                <input
+                  type="text"
+                  value={breakingNewsText}
+                  maxLength={180}
+                  onChange={(e) => setBreakingNewsText(e.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' && breakingNewsText.trim() && breakingNewsDurationInput.trim()) {
+                      void handleActivateBreakingNews();
+                    }
+                  }}
+                  placeholder="Type a concise, actionable headline…"
+                  className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-900 outline-none transition focus:border-red-400 focus:ring-4 focus:ring-red-100 dark:border-[#3d4951] dark:bg-[#0b0d10] dark:text-white dark:focus:ring-red-500/10"
+                />
+              </label>
+              <label>
+                <span className="mb-1.5 block text-xs font-bold text-slate-700 dark:text-slate-200">Target screens</span>
+                <select
+                  value={breakingNewsTarget}
+                  onChange={(e) => setBreakingNewsTarget(e.target.value)}
+                  className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 outline-none transition focus:border-red-400 focus:ring-4 focus:ring-red-100 dark:border-[#3d4951] dark:bg-[#0b0d10] dark:text-white dark:focus:ring-red-500/10"
+                >
+                  <option value="all">All active TVs</option>
+                  {devices.filter((device) => device.is_active).map((device) => (
+                    <option key={device.id} value={device.name}>
+                      {device.name}{device.label ? ` — ${device.label}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span className="mb-1.5 block text-xs font-bold text-slate-700 dark:text-slate-200">Duration</span>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min={1}
+                    max={1440}
+                    value={breakingNewsDurationInput}
+                    onChange={(e) => setBreakingNewsDurationInput(e.target.value)}
+                    className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 pr-12 text-sm font-semibold tabular-nums text-slate-900 outline-none transition focus:border-red-400 focus:ring-4 focus:ring-red-100 dark:border-[#3d4951] dark:bg-[#0b0d10] dark:text-white dark:focus:ring-red-500/10"
+                  />
+                  <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-medium text-slate-400">min</span>
+                </div>
+              </label>
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  onClick={handleActivateBreakingNews}
+                  disabled={activatingBreaking || !breakingNewsText.trim() || !breakingNewsDurationInput.trim()}
+                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-bold text-white shadow-sm transition-colors hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-200 disabled:cursor-not-allowed disabled:opacity-45 dark:focus:ring-red-500/20"
+                >
+                  <Radio className="h-4 w-4" />
+                  {activatingBreaking ? 'Publishing…' : 'Go live'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Content navigation */}
+        <nav aria-label="TV content sections" className="rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm dark:border-[#3d4951] dark:bg-[#111418]">
+          <div role="tablist" className="flex gap-1 overflow-x-auto">
+            {adminTabs.map((tab) => {
+              const Icon = tab.icon;
+              const selected = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={selected}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    setContentSearch('');
+                    setVisibilityFilter('all');
+                  }}
+                  className={`flex min-h-11 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-3 text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-[#0b7f72] focus:ring-offset-2 dark:focus:ring-offset-[#111418] ${
+                    selected
+                      ? 'bg-[#0f2947] text-white shadow-sm'
+                      : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white'
+                  }`}
+                >
+                  <Icon className={`h-4 w-4 ${selected ? 'text-[#85d5cc]' : ''}`} />
+                  <span className="hidden sm:inline">{tab.label}</span>
+                  <span className="sm:hidden">{tab.shortLabel}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums ${
+                    selected ? 'bg-white/12 text-white' : 'bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-slate-300'
+                  }`}>
+                    {tab.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+
+        {activeTab !== 'devices' && (
+          <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center dark:border-[#3d4951] dark:bg-[#111418]">
+            <label className="relative min-w-0 flex-1">
+              <span className="sr-only">Search {activeTab}</span>
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="search"
+                value={contentSearch}
+                onChange={(event) => setContentSearch(event.target.value)}
+                placeholder={`Search ${activeTab} by title, message or target…`}
+                className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-10 text-sm text-slate-900 outline-none transition focus:border-[#0b7f72] focus:bg-white focus:ring-4 focus:ring-[#0b7f72]/10 dark:border-[#3d4951] dark:bg-[#0b0d10] dark:text-white dark:focus:border-[#38a99d]"
+              />
+              {contentSearch && (
+                <button
+                  type="button"
+                  onClick={() => setContentSearch('')}
+                  aria-label="Clear search"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-white/10 dark:hover:text-white"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </label>
+            <label className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Visibility</span>
+              <select
+                value={visibilityFilter}
+                onChange={(event) => setVisibilityFilter(event.target.value as typeof visibilityFilter)}
+                className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 outline-none focus:border-[#0b7f72] focus:ring-4 focus:ring-[#0b7f72]/10 dark:border-[#3d4951] dark:bg-[#0b0d10] dark:text-white"
+              >
+                <option value="all">All content</option>
+                <option value="active">Active only</option>
+                <option value="inactive">Inactive only</option>
+              </select>
+            </label>
+          </div>
+        )}
 
       {/* ══════ Announcement Form Modal ══════ */}
       <AnimatePresence>
@@ -961,28 +1285,43 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
       {/* ══════ TAB: Announcements ══════ */}
       {activeTab === 'announcements' && (
         <div className="space-y-4">
-          <div className="flex justify-end mb-2">
+          <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between dark:border-[#3d4951] dark:bg-[#111418]">
+            <div>
+              <div className="flex items-center gap-2">
+                <Bell className="h-4 w-4 text-[#0b7f72]" />
+                <h2 className="font-bold text-slate-900 dark:text-white">Announcement library</h2>
+              </div>
+              <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-[#b1a7a6]">
+                {activeAnnouncements} active of {announcements.length} announcements across all screens.
+              </p>
+            </div>
             <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={{ y: -1 }}
+              whileTap={{ y: 0 }}
               onClick={() => setShowForm(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-lg transition-colors text-sm"
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[#0f2947] px-4 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#163a61] focus:outline-none focus:ring-4 focus:ring-[#0f2947]/15"
             >
               <Plus className="w-4 h-4" />
               New Announcement
             </motion.button>
           </div>
 
-          {announcements.length === 0 ? (
+          {filteredAnnouncements.length === 0 ? (
             <SpotlightCard className="rounded-2xl border border-gray-200 dark:border-[#3d4951] bg-white dark:bg-transparent p-12 text-center" spotlightColor="rgba(217, 162, 153, 0.2)">
               <div className="w-16 h-16 bg-gray-50 dark:bg-[#0b090a] rounded-full flex items-center justify-center mx-auto mb-4">
                 <Bell className="w-8 h-8 text-gray-400 dark:text-[#b1a7a6]/70" />
               </div>
-              <h3 className="text-lg font-medium text-gray-700 dark:text-white mb-2">No Announcements</h3>
-              <p className="text-gray-400 dark:text-[#b1a7a6]">Create your first announcement to display on department TVs</p>
+              <h3 className="text-lg font-medium text-gray-700 dark:text-white mb-2">
+                {announcements.length === 0 ? 'No announcements yet' : 'No matching announcements'}
+              </h3>
+              <p className="text-gray-400 dark:text-[#b1a7a6]">
+                {announcements.length === 0
+                  ? 'Create your first announcement to display on department TVs.'
+                  : 'Try a different search or visibility filter.'}
+              </p>
             </SpotlightCard>
           ) : (
-            announcements.map((announcement) => (
+            filteredAnnouncements.map((announcement) => (
               <motion.div
                 key={announcement.id}
                 initial={{ opacity: 0, y: 10 }}
@@ -991,7 +1330,7 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
                   !announcement.is_active && 'opacity-60'
                 }`}
               >
-                <div className="flex">
+                <div className="flex flex-col sm:flex-row">
                   {/* Left Priority Strip */}
                   <div className={`w-1.5 flex-shrink-0 ${
                     announcement.is_active 
@@ -1004,7 +1343,7 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
                   }`} />
                   
                   {/* Priority Info Section */}
-                  <div className={`w-24 flex-shrink-0 flex flex-col items-center justify-center gap-2 border-r border-gray-200 dark:border-[#3d4951] ${
+                  <div className={`flex w-full flex-shrink-0 items-center justify-start gap-2 border-b border-gray-200 px-4 py-3 sm:w-24 sm:flex-col sm:justify-center sm:border-b-0 sm:border-r sm:px-2 sm:py-5 dark:border-[#3d4951] ${
                     announcement.is_active 
                       ? announcement.priority === 'high' 
                         ? 'bg-red-500/10' 
@@ -1053,7 +1392,7 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
                   
                   {/* Main Content Area */}
                   <div className="flex-1 p-5">
-                    <div className="flex items-start justify-between gap-4 mb-3">
+                    <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-2">
                           <h3 className="text-lg font-semibold text-gray-700 dark:text-white">
@@ -1075,7 +1414,7 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
                             </span>
                           )}
                           {announcement.target && announcement.target !== 'all' && (
-                            <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+                            <span className="rounded-lg border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-xs font-bold text-cyan-700 dark:border-cyan-500/30 dark:bg-cyan-500/15 dark:text-cyan-300">
                               📺 {announcement.target}
                             </span>
                           )}
@@ -1083,13 +1422,13 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
                       </div>
                       
                       {/* Action Buttons */}
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 self-end sm:self-start">
                         <button
                           onClick={() => handleToggleActive(announcement.id, announcement.is_active)}
                           className={`p-2 rounded-lg transition-colors ${
                             announcement.is_active 
                               ? 'text-emerald-400 hover:bg-emerald-500/10' 
-                              : 'text-white/40 hover:bg-white/5'
+                              : 'text-slate-400 hover:bg-slate-100 dark:text-white/40 dark:hover:bg-white/5'
                           }`}
                           title={announcement.is_active ? 'Deactivate' : 'Activate'}
                         >
@@ -1106,7 +1445,7 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
                         </button>
                         <button
                           onClick={() => handleEdit(announcement)}
-                          className="p-2 rounded-lg text-[#d3d3d3] hover:bg-[#d3d3d3]/10 transition-colors"
+                          className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-[#d3d3d3] dark:hover:bg-[#d3d3d3]/10"
                           title="Edit"
                         >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1159,26 +1498,41 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
       {/* ══════ TAB: Ticker Items ══════ */}
       {activeTab === 'ticker' && (
         <div className="space-y-4">
-          <div className="flex justify-end mb-2">
+          <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between dark:border-[#3d4951] dark:bg-[#111418]">
+            <div>
+              <div className="flex items-center gap-2">
+                <Zap className="h-4 w-4 text-[#d7a928]" />
+                <h2 className="font-bold text-slate-900 dark:text-white">Ticker queue</h2>
+              </div>
+              <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-[#b1a7a6]">
+                {activeTicker} active of {tickerItems.length} messages, displayed in sort order.
+              </p>
+            </div>
             <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={{ y: -1 }}
+              whileTap={{ y: 0 }}
               onClick={() => setShowTickerForm(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-lg transition-colors text-sm"
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[#0f2947] px-4 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#163a61] focus:outline-none focus:ring-4 focus:ring-[#0f2947]/15"
             >
               <Zap className="w-4 h-4" />
               New Ticker Item
             </motion.button>
           </div>
 
-          {tickerItems.length === 0 ? (
+          {filteredTickerItems.length === 0 ? (
             <SpotlightCard className="rounded-2xl border border-gray-200 dark:border-[#3d4951] bg-white dark:bg-transparent p-12 text-center" spotlightColor="rgba(217, 162, 153, 0.2)">
               <Zap className="w-12 h-12 text-gray-400 dark:text-[#b1a7a6]/70 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-700 dark:text-white mb-2">No Ticker Items</h3>
-              <p className="text-gray-400 dark:text-[#b1a7a6]">Add ticker items that scroll at the bottom of the TV display</p>
+              <h3 className="text-lg font-medium text-gray-700 dark:text-white mb-2">
+                {tickerItems.length === 0 ? 'No ticker items yet' : 'No matching ticker items'}
+              </h3>
+              <p className="text-gray-400 dark:text-[#b1a7a6]">
+                {tickerItems.length === 0
+                  ? 'Add ticker items that scroll at the bottom of the TV display.'
+                  : 'Try a different search or visibility filter.'}
+              </p>
             </SpotlightCard>
           ) : (
-            tickerItems.map((item) => (
+            filteredTickerItems.map((item) => (
               <motion.div
                 key={item.id}
                 initial={{ opacity: 0, y: 10 }}
@@ -1187,10 +1541,10 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
                   !item.is_active && 'opacity-60'
                 }`}
               >
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                      <span className="rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/15 dark:text-blue-300">
                         {item.label}
                       </span>
                       <span className={`px-2.5 py-1 rounded-lg text-xs font-medium ${getTypeBadge(item.type)}`}>
@@ -1202,7 +1556,7 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
                         </span>
                       )}
                       {item.target && item.target !== 'all' && (
-                        <span className="px-2 py-0.5 rounded text-xs font-bold bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+                        <span className="rounded border border-cyan-200 bg-cyan-50 px-2 py-0.5 text-xs font-bold text-cyan-700 dark:border-cyan-500/30 dark:bg-cyan-500/15 dark:text-cyan-300">
                           📺 {item.target}
                         </span>
                       )}
@@ -1215,10 +1569,10 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
                     <p className="text-gray-700 dark:text-white font-medium">{item.text}</p>
                     <p className="text-xs text-gray-400 dark:text-[#b1a7a6]/50 mt-2">Sort order: {item.sort_order}</p>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 self-end sm:self-start">
                     <button
                       onClick={() => handleToggleTicker(item.id, item.is_active)}
-                      className={`p-2 rounded-lg transition-colors ${item.is_active ? 'text-emerald-400 hover:bg-emerald-500/10' : 'text-white/40 hover:bg-white/5'}`}
+                      className={`p-2 rounded-lg transition-colors ${item.is_active ? 'text-emerald-500 hover:bg-emerald-500/10' : 'text-slate-400 hover:bg-slate-100 dark:text-white/40 dark:hover:bg-white/5'}`}
                       title={item.is_active ? 'Deactivate' : 'Activate'}
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1229,7 +1583,7 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
                         )}
                       </svg>
                     </button>
-                    <button onClick={() => handleEditTicker(item)} className="p-2 rounded-lg text-[#d3d3d3] hover:bg-[#d3d3d3]/10 transition-colors" title="Edit">
+                    <button onClick={() => handleEditTicker(item)} className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-[#d3d3d3] dark:hover:bg-[#d3d3d3]/10" title="Edit">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
@@ -1250,26 +1604,41 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
       {/* ══════ TAB: Events ══════ */}
       {activeTab === 'events' && (
         <div className="space-y-4">
-          <div className="flex justify-end mb-2">
+          <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between dark:border-[#3d4951] dark:bg-[#111418]">
+            <div>
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-[#0b7f72]" />
+                <h2 className="font-bold text-slate-900 dark:text-white">Events carousel</h2>
+              </div>
+              <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-[#b1a7a6]">
+                {activeEvents} active of {eventItems.length} event slides available to the displays.
+              </p>
+            </div>
             <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={{ y: -1 }}
+              whileTap={{ y: 0 }}
               onClick={() => setShowEventForm(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-lg transition-colors text-sm"
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[#0f2947] px-4 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#163a61] focus:outline-none focus:ring-4 focus:ring-[#0f2947]/15"
             >
               <Calendar className="w-4 h-4" />
               New Event
             </motion.button>
           </div>
 
-          {eventItems.length === 0 ? (
+          {filteredEvents.length === 0 ? (
             <SpotlightCard className="rounded-2xl border border-gray-200 dark:border-[#3d4951] bg-white dark:bg-transparent p-12 text-center" spotlightColor="rgba(217, 162, 153, 0.2)">
               <Calendar className="w-12 h-12 text-gray-400 dark:text-[#b1a7a6]/70 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-700 dark:text-white mb-2">No Events</h3>
-              <p className="text-gray-400 dark:text-[#b1a7a6]">Create events to show on the TV display info board</p>
+              <h3 className="text-lg font-medium text-gray-700 dark:text-white mb-2">
+                {eventItems.length === 0 ? 'No events yet' : 'No matching events'}
+              </h3>
+              <p className="text-gray-400 dark:text-[#b1a7a6]">
+                {eventItems.length === 0
+                  ? 'Create events to show on the TV display info board.'
+                  : 'Try a different search or visibility filter.'}
+              </p>
             </SpotlightCard>
           ) : (
-            eventItems.map((ev) => (
+            filteredEvents.map((ev) => (
               <motion.div
                 key={ev.id}
                 initial={{ opacity: 0, y: 10 }}
@@ -1278,7 +1647,7 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
                   !ev.is_active && 'opacity-60'
                 }`}
               >
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
                       <h3 className="text-lg font-semibold text-gray-700 dark:text-white">{ev.title}</h3>
@@ -1288,7 +1657,7 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
                         </span>
                       )}
                       {ev.target && ev.target !== 'all' && (
-                        <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+                        <span className="rounded-lg border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-xs font-bold text-cyan-700 dark:border-cyan-500/30 dark:bg-cyan-500/15 dark:text-cyan-300">
                           📺 {ev.target}
                         </span>
                       )}
@@ -1306,10 +1675,10 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
                       <span>Order: {ev.display_order}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 self-end sm:self-start">
                     <button
                       onClick={() => handleToggleEvent(ev.id, ev.is_active)}
-                      className={`p-2 rounded-lg transition-colors ${ev.is_active ? 'text-emerald-400 hover:bg-emerald-500/10' : 'text-white/40 hover:bg-white/5'}`}
+                      className={`p-2 rounded-lg transition-colors ${ev.is_active ? 'text-emerald-500 hover:bg-emerald-500/10' : 'text-slate-400 hover:bg-slate-100 dark:text-white/40 dark:hover:bg-white/5'}`}
                       title={ev.is_active ? 'Deactivate' : 'Activate'}
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1320,7 +1689,7 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
                         )}
                       </svg>
                     </button>
-                    <button onClick={() => handleEditEvent(ev)} className="p-2 rounded-lg text-[#d3d3d3] hover:bg-[#d3d3d3]/10 transition-colors" title="Edit">
+                    <button onClick={() => handleEditEvent(ev)} className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-[#d3d3d3] dark:hover:bg-[#d3d3d3]/10" title="Edit">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
@@ -1342,8 +1711,9 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
 
       {/* ══════ TAB: TV Devices ══════ */}
       {activeTab === 'devices' && (
-        <DevicesTab devices={devices} settings={settings} onReload={loadData} />
+        <DevicesTab devices={devices} settings={settings} onReload={loadData} onNotice={notify} />
       )}
+      </div>
     </div>
   );
 }
@@ -1452,10 +1822,12 @@ function DevicesTab({
   devices,
   settings,
   onReload,
+  onNotice,
 }: {
   devices: CmsTvDevice[];
   settings: Record<string, string>;
   onReload: () => Promise<void>;
+  onNotice: (notice: UiNotice) => void;
 }) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -1488,6 +1860,7 @@ function DevicesTab({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const wasEditing = Boolean(editingId);
     setSaving(true);
     try {
       if (editingId) {
@@ -1496,20 +1869,27 @@ function DevicesTab({
           label: formData.label || null,
           location: formData.location || null,
         });
-        if (!res.success) { alert(res.error); return; }
+        if (!res.success) {
+          onNotice({ tone: 'error', title: 'Device was not updated', message: res.error });
+          return;
+        }
       } else {
         const res = await createDevice({
           name: formData.name,
           label: formData.label || undefined,
           location: formData.location || undefined,
         });
-        if (!res.success) { alert(res.error); return; }
+        if (!res.success) {
+          onNotice({ tone: 'error', title: 'Device was not added', message: res.error });
+          return;
+        }
       }
       resetForm();
       await onReload();
+      onNotice({ tone: 'success', title: wasEditing ? 'Device updated' : 'Device added', message: 'The screen registry is now up to date.' });
     } catch (err) {
       console.error('Failed to save device:', err);
-      alert('Failed to save device.');
+      onNotice({ tone: 'error', title: 'Device was not saved', message: 'Check your connection and try again.' });
     } finally {
       setSaving(false);
     }
@@ -1535,15 +1915,21 @@ function DevicesTab({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center mb-2">
-        <p className="text-sm text-gray-400 dark:text-[#b1a7a6]">
-          Manage physical TV screens. Each device can be targeted with specific content.
-        </p>
+      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between dark:border-[#3d4951] dark:bg-[#111418]">
+        <div>
+          <div className="flex items-center gap-2">
+            <Tv className="h-4 w-4 text-[#0b7f72]" />
+            <h2 className="font-bold text-slate-900 dark:text-white">Screen registry</h2>
+          </div>
+          <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-[#b1a7a6]">
+            {devices.filter((device) => device.is_active).length} active of {devices.length} registered screens. Configure content visibility and room schedules per device.
+          </p>
+        </div>
         <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+          whileHover={{ y: -1 }}
+          whileTap={{ y: 0 }}
           onClick={() => setShowForm(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-lg transition-colors text-sm"
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[#0f2947] px-4 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#163a61] focus:outline-none focus:ring-4 focus:ring-[#0f2947]/15"
         >
           <Plus className="w-4 h-4" />
           Add TV Device
@@ -1551,7 +1937,7 @@ function DevicesTab({
       </div>
 
       {/* Global Layout Sizing Config */}
-      <LayoutConfigPanel devices={devices} settings={settings} onReload={onReload} />
+      <LayoutConfigPanel devices={devices} settings={settings} onReload={onReload} onNotice={onNotice} />
 
       {/* Device form modal */}
       <AnimatePresence>
@@ -1623,13 +2009,13 @@ function DevicesTab({
           <p className="text-gray-400 dark:text-[#b1a7a6]">Add TV devices to target content to specific screens</p>
         </SpotlightCard>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {devices.map((device) => (
             <motion.div
               key={device.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`bg-white dark:bg-[#161a1d] rounded-xl border border-gray-200 dark:border-[#3d4951] p-5 transition-all hover:border-indigo-400 dark:hover:border-red-400/30 ${
+              className={`rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#0b7f72]/50 hover:shadow-md dark:border-[#3d4951] dark:bg-[#161a1d] dark:hover:border-[#0b7f72]/60 ${
                 !device.is_active && 'opacity-60'
               }`}
             >
@@ -1668,6 +2054,10 @@ function DevicesTab({
                   <span className="text-sm text-gray-700 dark:text-[#d3d3d3]">Room Schedule</span>
                 </div>
                 <button
+                  type="button"
+                  role="switch"
+                  aria-checked={device.show_room_schedule}
+                  aria-label={`Show room schedule on ${device.name}`}
                   onClick={async () => {
                     await toggleDeviceRoomSchedule(device.id, !device.show_room_schedule);
                     await onReload();
@@ -1697,6 +2087,10 @@ function DevicesTab({
                     <div key={section} className="flex items-center justify-between">
                       <span className="text-sm text-gray-700 dark:text-[#d3d3d3]">{label}</span>
                       <button
+                        type="button"
+                        role="switch"
+                        aria-checked={enabled}
+                        aria-label={`${enabled ? 'Hide' : 'Show'} ${label} on ${device.name}`}
                         onClick={async () => {
                           await handleToggleDeviceSection(device.name, section, enabled);
                         }}
@@ -1758,21 +2152,30 @@ function LayoutConfigPanel({
   devices,
   settings,
   onReload,
+  onNotice,
 }: {
   devices: CmsTvDevice[];
   settings: Record<string, string>;
   onReload: () => Promise<void>;
+  onNotice: (notice: UiNotice) => void;
 }) {
   const [target, setTarget] = useState<string>('all');
   const [expanded, setExpanded] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Read current values from settings or defaults based on target
-  const eventsFlex = parseInt(settings[`events_flex_${target}`] || String(DEFAULT_LAYOUT.events_flex), 10);
-  const currentFlex = parseInt(settings[`current_flex_${target}`] || String(DEFAULT_LAYOUT.current_flex), 10);
-  const tickerHeight = parseInt(settings[`ticker_height_${target}`] || String(DEFAULT_LAYOUT.ticker_height), 10);
-  const headlinesHeight = parseInt(settings[`headlines_height_${target}`] || String(DEFAULT_LAYOUT.headlines_height), 10);
-  const breakingHeight = parseInt(settings[`breaking_height_${target}`] || String(DEFAULT_LAYOUT.breaking_height), 10);
+  // Device values inherit global defaults before falling back to code defaults.
+  const inheritedSetting = (key: string, fallback: number) =>
+    parseInt(
+      settings[`${key}_${target}`] ||
+      (target === 'all' ? '' : settings[`${key}_all`]) ||
+      String(fallback),
+      10,
+    );
+  const eventsFlex = inheritedSetting('events_flex', DEFAULT_LAYOUT.events_flex);
+  const currentFlex = inheritedSetting('current_flex', DEFAULT_LAYOUT.current_flex);
+  const tickerHeight = inheritedSetting('ticker_height', DEFAULT_LAYOUT.ticker_height);
+  const headlinesHeight = inheritedSetting('headlines_height', DEFAULT_LAYOUT.headlines_height);
+  const breakingHeight = inheritedSetting('breaking_height', DEFAULT_LAYOUT.breaking_height);
 
   const [localEvents, setLocalEvents] = useState(eventsFlex);
   const [localCurrent, setLocalCurrent] = useState(currentFlex);
@@ -1820,12 +2223,14 @@ function LayoutConfigPanel({
       };
       const res = await upsertLayoutSettings(target, layout);
       if (!res.success) {
-        alert(res.error || 'Failed to save layout settings');
+        onNotice({ tone: 'error', title: 'Layout was not saved', message: res.error || 'Check your connection and try again.' });
+        return;
       }
       await onReload();
+      onNotice({ tone: 'success', title: 'Layout configuration saved', message: `${getTargetLabel()} will use the new sizing values.` });
     } catch (err) {
       console.error('Failed to save layout:', err);
-      alert('Failed to save layout settings.');
+      onNotice({ tone: 'error', title: 'Layout was not saved', message: 'Check your connection and try again.' });
     } finally {
       setSaving(false);
     }
@@ -1841,8 +2246,10 @@ function LayoutConfigPanel({
     try {
       await upsertLayoutSettings(target, DEFAULT_LAYOUT);
       await onReload();
+      onNotice({ tone: 'success', title: 'Layout defaults restored', message: `${getTargetLabel()} is using the standard proportions.` });
     } catch (err) {
       console.error('Failed to reset layout:', err);
+      onNotice({ tone: 'error', title: 'Defaults could not be restored', message: 'Check your connection and try again.' });
     } finally {
       setSaving(false);
     }

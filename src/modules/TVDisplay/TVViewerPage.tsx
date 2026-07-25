@@ -6,27 +6,43 @@
 // Admin can switch between TVs to preview their content
 // ==========================================
 
-import SpotlightCard from '@/components/ui/SpotlightCard';
 import { cmsSupabase } from '@/services/cmsService';
-import { getRoutineSlots } from '@/services/routineService';
 import {
   fetchActiveDevices,
-  fetchTvDisplayDataForTarget,
+  fetchTvSnapshotForTarget,
 } from '@/services/tvDisplayService';
+import { routineDisplaySlotToDb } from '@/lib/tvRoutineAdapter';
+import {
+  loadTvSnapshotFromWebCache,
+  prefetchTvSnapshotMedia,
+  saveTvSnapshotToWebCache,
+} from '@/lib/tvSnapshotCache';
 import { cacheTvDisplayData, getCachedTvDisplayData, getCachedTvDisplayEntry, useNetworkStatus } from '@/lib/tvDisplayCache';
+import {
+  TV_DISPLAY_TIME_ZONE,
+  clampSetting,
+  getZonedDateKey,
+  getZonedMinutes,
+  mergeTvSnapshots,
+} from '../../../shared/tv-display/domain';
 import type { CmsTvAnnouncement, CmsTvDevice, CmsTvEvent, CmsTvTicker } from '@/types/cms';
 import type { DBRoutineSlotWithDetails } from '@/types/database';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowLeft,
   Calendar,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Clock,
+  Expand,
   GraduationCap,
   MapPin,
+  Minimize2,
   Monitor,
   Radio,
+  RefreshCw,
+  ShieldCheck,
   Tv,
   User,
   Wifi,
@@ -34,7 +50,7 @@ import {
   Zap,
 } from 'lucide-react';
 import Image from 'next/image';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 // Color palette (same as /tv-display)
 const C = {
@@ -51,7 +67,7 @@ const C = {
   border:   'rgba(255,255,255,0.08)',
 } as const;
 
-const POLL_MS = 30_000;
+const POLL_MS = 60_000;
 
 // Routine helpers
 function timeToMins(t: string): number {
@@ -92,88 +108,317 @@ export default function TVViewerPage({ onMenuChange }: { onMenuChange?: (id: str
   const [devices, setDevices] = useState<CmsTvDevice[]>([]);
   const [selectedTarget, setSelectedTarget] = useState<string | null>(null);
   const [loadingDevices, setLoadingDevices] = useState(true);
+  const [deviceError, setDeviceError] = useState<string | null>(null);
+  const [previewRevision, setPreviewRevision] = useState(0);
 
-  // Load devices on mount
-  useEffect(() => {
-    fetchActiveDevices().then(devs => {
+  const loadDevices = useCallback(async () => {
+    setLoadingDevices(true);
+    try {
+      const devs = await fetchActiveDevices();
       setDevices(devs);
-      if (devs.length > 0) setSelectedTarget(devs[0].name);
+      setSelectedTarget((current) =>
+        current && devs.some((device) => device.name === current)
+          ? current
+          : devs[0]?.name ?? null,
+      );
+      setDeviceError(null);
+    } catch (error) {
+      console.error('Failed to load TV devices:', error);
+      setDeviceError('Active TV devices could not be loaded. Check the CMS connection and try again.');
+    } finally {
       setLoadingDevices(false);
-    });
+    }
   }, []);
+
+  useEffect(() => {
+    void loadDevices();
+  }, [loadDevices]);
 
   if (loadingDevices) {
     return (
-      <div className="h-full flex items-center justify-center p-12">
-        <div className="flex flex-col items-center gap-3">
-          <Monitor className="w-10 h-10 text-indigo-500 dark:text-red-600 animate-pulse" />
-          <p className="text-gray-400 dark:text-[#b1a7a6]">Loading TV devices...</p>
+      <div className="flex min-h-[560px] items-center justify-center p-8">
+        <div className="w-full max-w-sm rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm dark:border-[#3d4951] dark:bg-[#111418]">
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#0f2947] text-white">
+            <Monitor className="h-7 w-7 animate-pulse" />
+          </div>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">Preparing screen preview</h2>
+          <p className="mt-2 text-sm text-slate-500 dark:text-[#b1a7a6]">Loading active TVs and display content.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Header with device selector */}
-      <SpotlightCard className="rounded-2xl border border-gray-200 dark:border-[#3d4951] bg-white dark:bg-transparent p-4 mb-4 flex-shrink-0" spotlightColor="rgba(217, 162, 153, 0.2)">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+    <div className="min-h-full pb-8">
+      <div className="mx-auto max-w-[1800px] space-y-4">
+        <header className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-[#3d4951] dark:bg-[#111418]">
+          <div className="h-1 bg-[#d7a928]" />
+          <div className="flex flex-col gap-5 p-5 lg:flex-row lg:items-center lg:justify-between lg:px-6">
+            <div className="flex min-w-0 items-center gap-3.5">
             <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              whileHover={{ x: -1 }}
+              whileTap={{ x: 0 }}
               onClick={() => onMenuChange?.('tv-display')}
-              className="p-2 rounded-lg border border-gray-200 dark:border-[#3d4951] text-gray-700 dark:text-[#d3d3d3] hover:bg-gray-50 dark:hover:bg-[#0b090a] transition-colors"
+              aria-label="Back to TV Display management"
+              className="flex h-11 w-11 flex-none items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-4 focus:ring-[#0b7f72]/10 dark:border-[#3d4951] dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="h-5 w-5" />
             </motion.button>
-            <div>
-              <h1 className="text-xl font-bold text-gray-700 dark:text-white">TV Viewer</h1>
-              <p className="text-xs text-gray-400 dark:text-[#b1a7a6]">Preview what each TV screen displays</p>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-2xl">TV Viewer</h1>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Preview ready
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-slate-500 dark:text-[#b1a7a6]">
+                Complete 16:9 preview of the content shown on each registered screen.
+              </p>
             </div>
           </div>
 
-          {/* Device tabs */}
-          <div className="flex items-center gap-2">
-            {devices.map(device => (
-              <motion.button
-                key={device.id}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setSelectedTarget(device.name)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  selectedTarget === device.name
-                    ? 'bg-slate-800 text-white shadow-sm'
-                    : 'border border-gray-200 dark:border-[#3d4951] text-gray-500 hover:bg-gray-100'
-                }`}
+            <div className="flex items-center gap-2 self-stretch lg:self-auto">
+              <label className="min-w-0 flex-1 lg:hidden">
+                <span className="sr-only">Select TV screen</span>
+                <select
+                  value={selectedTarget ?? ''}
+                  onChange={(event) => setSelectedTarget(event.target.value)}
+                  className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-800 outline-none focus:border-[#0b7f72] focus:ring-4 focus:ring-[#0b7f72]/10 dark:border-[#3d4951] dark:bg-[#0b0d10] dark:text-white"
+                >
+                  {devices.map((device) => (
+                    <option key={device.id} value={device.name}>
+                      {device.name}{device.label ? ` — ${device.label}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div role="tablist" aria-label="TV screens" className="hidden max-w-[900px] items-center gap-2 overflow-x-auto lg:flex">
+                {devices.map((device) => {
+                  const selected = selectedTarget === device.name;
+                  return (
+                    <motion.button
+                      key={device.id}
+                      role="tab"
+                      aria-selected={selected}
+                      whileHover={{ y: -1 }}
+                      whileTap={{ y: 0 }}
+                      onClick={() => setSelectedTarget(device.name)}
+                      className={`flex min-h-11 items-center gap-2 whitespace-nowrap rounded-xl px-4 text-sm font-bold transition-colors focus:outline-none focus:ring-4 focus:ring-[#0b7f72]/10 ${
+                        selected
+                          ? 'bg-[#0f2947] text-white shadow-sm'
+                          : 'border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:border-[#3d4951] dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white'
+                      }`}
+                    >
+                      <Tv className={`h-4 w-4 ${selected ? 'text-[#85d5cc]' : ''}`} />
+                      <span>{device.name}</span>
+                      {device.label && (
+                        <span className={`max-w-36 truncate text-xs ${selected ? 'text-white/65' : 'text-slate-400'}`}>
+                          {device.label}
+                        </span>
+                      )}
+                    </motion.button>
+                  );
+                })}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  void loadDevices();
+                  setPreviewRevision((value) => value + 1);
+                }}
+                aria-label="Refresh TV preview"
+                className="flex h-11 w-11 flex-none items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-4 focus:ring-[#0b7f72]/10 dark:border-[#3d4951] dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
               >
-                <Tv className="w-4 h-4" />
-                <span>{device.name}</span>
-                {device.label && (
-                  <span className={`text-xs ${selectedTarget === device.name ? 'text-white/70' : 'text-gray-400 dark:text-[#b1a7a6]/60'}`}>
-                    ({device.label})
-                  </span>
-                )}
-              </motion.button>
-            ))}
+                <RefreshCw className="h-4 w-4" />
+              </button>
+            </div>
           </div>
-        </div>
-      </SpotlightCard>
+        </header>
 
-      {/* TV Preview area */}
-      {selectedTarget ? (
-        <div className="flex-1 min-h-0 rounded-2xl overflow-hidden border border-gray-200 dark:border-[#3d4951] shadow-xl">
-          <TVPreview key={selectedTarget} target={selectedTarget} showRoomSchedule={devices.find(d => d.name === selectedTarget)?.show_room_schedule ?? true} />
-        </div>
-      ) : (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <Tv className="w-16 h-16 text-gray-400 dark:text-[#b1a7a6]/40 mx-auto mb-4" />
-            <p className="text-gray-400 dark:text-[#b1a7a6]">No TV devices configured. Add devices in TV Display → TV Devices tab.</p>
+        {deviceError && (
+          <div role="alert" className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3.5 text-red-800 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
+            <WifiOff className="mt-0.5 h-5 w-5 flex-none" />
+            <p className="flex-1 text-sm font-medium">{deviceError}</p>
+            <button type="button" onClick={() => void loadDevices()} className="rounded-lg px-3 py-1.5 text-xs font-bold hover:bg-red-100 dark:hover:bg-white/10">
+              Try again
+            </button>
+          </div>
+        )}
+
+        {selectedTarget ? (
+          <TVPreviewStage
+            target={selectedTarget}
+            label={devices.find((device) => device.name === selectedTarget)?.label ?? null}
+          >
+            <TVPreview
+              key={`${selectedTarget}-${previewRevision}`}
+              target={selectedTarget}
+              showRoomSchedule={devices.find((device) => device.name === selectedTarget)?.show_room_schedule ?? true}
+            />
+          </TVPreviewStage>
+        ) : (
+          <div className="flex min-h-[520px] items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-slate-50/60 px-6 dark:border-[#3d4951] dark:bg-white/[0.02]">
+            <div className="max-w-md text-center">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-200 text-slate-500 dark:bg-white/10 dark:text-slate-300">
+                <Tv className="h-8 w-8" />
+              </div>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">No active TV screens</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-[#b1a7a6]">
+                Add or activate a device from TV Display Management, then return here to preview it.
+              </p>
+              <button
+                type="button"
+                onClick={() => onMenuChange?.('tv-display')}
+                className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#0f2947] px-4 text-sm font-bold text-white"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Manage TV devices
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+// ══════════════════════════════════════
+// Preview Stage — maintains a complete 16:9 canvas at every viewport size
+// ══════════════════════════════════════
+
+const PREVIEW_WIDTH = 1280;
+const PREVIEW_HEIGHT = 720;
+
+function TVPreviewStage({
+  target,
+  label,
+  children,
+}: {
+  target: string;
+  label: string | null;
+  children: ReactNode;
+}) {
+  const stageRef = useRef<HTMLElement | null>(null);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const [viewport, setViewport] = useState({ width: 0, height: 0 });
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const node = viewportRef.current;
+    if (!node) return;
+
+    const measure = () => {
+      const bounds = node.getBoundingClientRect();
+      setViewport({
+        width: Math.max(0, bounds.width - 32),
+        height: Math.max(0, bounds.height - 32),
+      });
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    window.addEventListener('resize', measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement === stageRef.current);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const scale = viewport.width && viewport.height
+    ? Math.min(viewport.width / PREVIEW_WIDTH, viewport.height / PREVIEW_HEIGHT)
+    : 0;
+  const fittedWidth = Math.round(PREVIEW_WIDTH * scale);
+  const fittedHeight = Math.round(PREVIEW_HEIGHT * scale);
+
+  const toggleFullscreen = async () => {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await stageRef.current?.requestFullscreen();
+      }
+    } catch (error) {
+      console.error('Unable to change preview fullscreen state:', error);
+    }
+  };
+
+  return (
+    <section
+      ref={stageRef}
+      className={`flex w-full flex-col overflow-hidden border bg-[#07111f] shadow-[0_24px_60px_-30px_rgba(9,20,40,0.85)] ${
+        isFullscreen
+          ? 'h-screen rounded-none border-0'
+          : 'rounded-3xl border-slate-300 dark:border-[#3d4951]'
+      }`}
+      style={isFullscreen ? undefined : { height: 'clamp(520px, calc(100dvh - 220px), 960px)' }}
+    >
+      <div className="flex min-h-14 flex-none items-center justify-between gap-3 border-b border-white/10 bg-[#0f2947] px-4 text-white sm:px-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-[#0b7f72]">
+            <Tv className="h-4 w-4" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h2 className="truncate text-sm font-bold">{target}</h2>
+              <span className="hidden rounded-md border border-[#d7a928]/40 bg-[#d7a928]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#f4d775] sm:inline">
+                HD 16:9 preview
+              </span>
+            </div>
+            <p className="truncate text-[11px] text-slate-400">{label || 'Department TV screen'}</p>
           </div>
         </div>
-      )}
-    </div>
+
+        <div className="flex items-center gap-2">
+          <span className="hidden items-center gap-1.5 rounded-full border border-emerald-300/15 bg-emerald-300/10 px-2.5 py-1 text-[10px] font-bold text-emerald-100 sm:inline-flex">
+            <ShieldCheck className="h-3 w-3" />
+            Fit to viewport
+          </span>
+          <span className="hidden font-mono text-[10px] tabular-nums text-slate-400 md:inline">
+            {fittedWidth || '—'} × {fittedHeight || '—'}
+          </span>
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            aria-label={isFullscreen ? 'Exit fullscreen preview' : 'Open fullscreen preview'}
+            className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-white/15 bg-white/[0.06] px-3 text-xs font-bold text-white transition-colors hover:bg-white/[0.12] focus:outline-none focus:ring-2 focus:ring-[#85d5cc]"
+          >
+            {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Expand className="h-4 w-4" />}
+            <span className="hidden sm:inline">{isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}</span>
+          </button>
+        </div>
+      </div>
+
+      <div ref={viewportRef} className="flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-[#050b13] p-4">
+        {scale > 0 && (
+          <div
+            className="relative flex-none overflow-hidden rounded-lg bg-[#091428] ring-1 ring-white/10"
+            style={{ width: `${fittedWidth}px`, height: `${fittedHeight}px` }}
+          >
+            <div
+              style={{
+                width: `${PREVIEW_WIDTH}px`,
+                height: `${PREVIEW_HEIGHT}px`,
+                transform: `scale(${scale})`,
+                transformOrigin: 'top left',
+              }}
+            >
+              {children}
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -200,7 +445,7 @@ function TVPreview({ target, showRoomSchedule }: { target: string; showRoomSched
   const autoRotateRef = useRef<NodeJS.Timeout | null>(null);
 
   const headlinePrefix = settings.headline_prefix || 'HEADLINES';
-  const eventRotationSec = parseInt(settings.event_rotation_sec || '8', 10);
+  const eventRotationSec = clampSetting(settings.event_rotation_sec, 8, 3, 120);
 
   // Layout flex ratios and heights from settings (falling back to global then defaults)
   const eventsFlex = parseInt(settings[`events_flex_${target}`] || settings.events_flex_all || '80', 10);
@@ -220,26 +465,49 @@ function TVPreview({ target, showRoomSchedule }: { target: string; showRoomSched
   // Fetch data filtered by target — always fetch everything independently of showRoomSchedule
   const fetchData = useCallback(async () => {
     try {
-      const todayStr = new Date().toISOString().split('T')[0];
-      const [tvData, slots] = await Promise.all([
-        fetchTvDisplayDataForTarget(target),
-        getRoutineSlots(undefined, undefined, undefined, todayStr),
-      ]);
+      const todayStr = getZonedDateKey(new Date(), TV_DISPLAY_TIME_ZONE);
+      const freshSnapshot = await fetchTvSnapshotForTarget(target);
+      const previous = freshSnapshot.errors
+        ? await loadTvSnapshotFromWebCache(target).catch(() => null)
+        : null;
+      const snapshot = mergeTvSnapshots(previous?.snapshot ?? null, freshSnapshot);
+      const content = snapshot.content;
+      const tvData = {
+        announcements: (content?.announcements ?? []) as CmsTvAnnouncement[],
+        ticker: (content?.ticker ?? []) as CmsTvTicker[],
+        events: (content?.events ?? []) as CmsTvEvent[],
+        settings: content?.settings ?? {},
+      };
       setAnnouncements(tvData.announcements);
       setTicker(tvData.ticker);
       setEvents(tvData.events);
       setSettings(tvData.settings);
-      setRoutineSlots(slots);
+      setRoutineSlots(
+        (snapshot.schedule?.days[todayStr] ?? []).map(routineDisplaySlotToDb),
+      );
       
       // Cache the fetched data
       cacheTvDisplayData(target, tvData);
+      void saveTvSnapshotToWebCache(snapshot);
+      void prefetchTvSnapshotMedia(snapshot);
       
-      // If we were offline, mark that we're online now
-      if (wasOffline) {
-        setWasOffline(false);
-      }
+      setWasOffline(false);
     } catch (err) {
       console.error('TV Viewer fetch error:', err);
+      const cachedSnapshot = await loadTvSnapshotFromWebCache(target).catch(() => null);
+      if (cachedSnapshot) {
+        const content = cachedSnapshot.snapshot.content;
+        const todayStr = getZonedDateKey(new Date(), TV_DISPLAY_TIME_ZONE);
+        setAnnouncements((content?.announcements ?? []) as CmsTvAnnouncement[]);
+        setTicker((content?.ticker ?? []) as CmsTvTicker[]);
+        setEvents((content?.events ?? []) as CmsTvEvent[]);
+        setSettings(content?.settings ?? {});
+        setRoutineSlots(
+          (cachedSnapshot.snapshot.schedule?.days[todayStr] ?? []).map(routineDisplaySlotToDb),
+        );
+        setWasOffline(true);
+        return;
+      }
       
       // Try to load from cache on error
       const cachedData = getCachedTvDisplayData(target);
@@ -255,7 +523,7 @@ function TVPreview({ target, showRoomSchedule }: { target: string; showRoomSched
     } finally {
       setLoading(false);
     }
-  }, [target, wasOffline]);
+  }, [target]);
 
   // Initial fetch + polling
   useEffect(() => {
@@ -292,11 +560,26 @@ function TVPreview({ target, showRoomSchedule }: { target: string; showRoomSched
     return () => { cmsSupabase.removeChannel(channel); };
   }, [target, fetchData]);
 
-  // Clock
+  // Minute-aligned clock; the display does not render seconds.
   useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(timer);
+    let interval: ReturnType<typeof setInterval> | null = null;
+    const timeout = setTimeout(() => {
+      setNow(new Date());
+      interval = setInterval(() => setNow(new Date()), 60_000);
+    }, 60_000 - (Date.now() % 60_000));
+    return () => {
+      clearTimeout(timeout);
+      if (interval) clearInterval(interval);
+    };
   }, []);
+
+  useEffect(() => {
+    if (eventPage >= events.length) setEventPage(0);
+  }, [eventPage, events.length]);
+
+  useEffect(() => {
+    if (tickerIndex >= ticker.length) setTickerIndex(0);
+  }, [tickerIndex, ticker.length]);
 
   // Auto-rotate events
   useEffect(() => {
@@ -305,7 +588,7 @@ function TVPreview({ target, showRoomSchedule }: { target: string; showRoomSched
     const maxPage = events.length - 1;
     autoRotateRef.current = setInterval(() => setEventPage(prev => (prev >= maxPage ? 0 : prev + 1)), eventRotationSec * 1000);
     return () => { if (autoRotateRef.current) clearInterval(autoRotateRef.current); };
-  }, [events.length, eventRotationSec]);
+  }, [events.map((event) => `${event.id}:${event.updated_at}`).join('|'), eventRotationSec]);
 
   // Slide upcoming periods
   useEffect(() => {
@@ -322,7 +605,7 @@ function TVPreview({ target, showRoomSchedule }: { target: string; showRoomSched
 
   // Schedule data
   const periods = useMemo(() => buildPeriods(routineSlots), [routineSlots]);
-  const nowMins = now.getHours() * 60 + now.getMinutes();
+  const nowMins = getZonedMinutes(now, TV_DISPLAY_TIME_ZONE);
   const currentPeriod = useMemo(
     () => periods.find(p => nowMins >= timeToMins(p.start_time) && nowMins < timeToMins(p.end_time)) ?? null,
     [periods, nowMins],
@@ -333,8 +616,8 @@ function TVPreview({ target, showRoomSchedule }: { target: string; showRoomSched
   );
 
   // Clock formatting
-  const timeStr = now.toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit' });
-  const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const timeStr = now.toLocaleTimeString('en-US', { timeZone: TV_DISPLAY_TIME_ZONE, hour12: true, hour: 'numeric', minute: '2-digit' });
+  const dateStr = now.toLocaleDateString('en-US', { timeZone: TV_DISPLAY_TIME_ZONE, weekday: 'long', month: 'long', day: 'numeric' });
 
   // Event pagination
   const maxPage = Math.max(0, events.length - 1);
@@ -342,11 +625,8 @@ function TVPreview({ target, showRoomSchedule }: { target: string; showRoomSched
   const prevEvents = () => setEventPage(p => (p <= 0 ? maxPage : p - 1));
   const nextEvents = () => setEventPage(p => (p >= maxPage ? 0 : p + 1));
 
-  // Breaking News (check device-specific first, then 'all', then offline status)
+  // Editorial breaking news remains separate from connectivity status.
   const breakingNewsActive = (() => {
-    // If offline (immediately detected via isOnline), show offline breaking news
-    if (!isOnline) return true;
-    
     const deviceExpires = settings[`breaking_news_expires_at_${target}`];
     if (deviceExpires && new Date(deviceExpires).getTime() > Date.now()) return true;
     const allExpires = settings.breaking_news_expires_at_all;
@@ -355,11 +635,6 @@ function TVPreview({ target, showRoomSchedule }: { target: string; showRoomSched
   })();
   
   const breakingNewsText = (() => {
-    // If offline (immediately detected via isOnline), show offline message
-    if (!isOnline) {
-      return 'Internet Connection Has been Lost. Please Connect To the Internet.';
-    }
-    
     const deviceExpires = settings[`breaking_news_expires_at_${target}`];
     if (deviceExpires && new Date(deviceExpires).getTime() > Date.now()) {
       return settings[`breaking_news_text_${target}`] || '';

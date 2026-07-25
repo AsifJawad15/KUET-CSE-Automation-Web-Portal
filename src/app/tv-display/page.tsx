@@ -6,11 +6,23 @@
 // Right (32%): Time-aware live room schedule
 //   - Current period - all rooms active NOW
 //   - Next 2 upcoming periods, auto-slides every 20 s
-// No auth required. Polls every 30 s.
+// No auth required. Revalidates the canonical snapshot every 60 s.
 // ==========================================
 
-import { getRoutineSlots } from '@/services/routineService';
-import { fetchTvDisplayData, DEFAULT_LAYOUT } from '@/services/tvDisplayService';
+import { fetchTvSnapshotForTarget, DEFAULT_LAYOUT } from '@/services/tvDisplayService';
+import { routineDisplaySlotToDb } from '@/lib/tvRoutineAdapter';
+import {
+  loadTvSnapshotFromWebCache,
+  prefetchTvSnapshotMedia,
+  saveTvSnapshotToWebCache,
+} from '@/lib/tvSnapshotCache';
+import {
+  TV_DISPLAY_TIME_ZONE,
+  clampSetting,
+  getZonedDateKey,
+  getZonedMinutes,
+  mergeTvSnapshots,
+} from '../../../shared/tv-display/domain';
 import type { CmsTvAnnouncement, CmsTvEvent, CmsTvTicker } from '@/types/cms';
 import type { DBRoutineSlotWithDetails } from '@/types/database';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -36,7 +48,7 @@ const C = {
   border:   'rgba(255,255,255,0.08)',
 } as const;
 
-const POLL_MS = 30_000;
+const POLL_MS = 60_000;
 
 // - Routine helpers -
 
@@ -92,7 +104,7 @@ export default function TvDisplayPublicPage() {
   }, []);
 
   const headlinePrefix = settings.headline_prefix || 'HEADLINES';
-  const eventRotationSec = parseInt(settings.event_rotation_sec || '8', 10);
+  const eventRotationSec = clampSetting(settings.event_rotation_sec, 8, 3, 120);
 
   // Layout flex ratios and heights from settings (falling back to global then defaults)
   const eventsFlex = parseInt(settings[`events_flex_${target}`] || settings.events_flex_all || String(DEFAULT_LAYOUT.events_flex), 10);
@@ -108,18 +120,41 @@ export default function TvDisplayPublicPage() {
     try {
       // Pass today's date so the API returns routine_slots valid today
       // (both permanent routines and date-scoped CR bookings)
-      const todayStr = new Date().toISOString().split('T')[0];
-      const [tvData, slots] = await Promise.all([
-        fetchTvDisplayData(),
-        getRoutineSlots(undefined, undefined, undefined, todayStr).catch(() => [] as DBRoutineSlotWithDetails[]),
-      ]);
+      const todayStr = getZonedDateKey(new Date(), TV_DISPLAY_TIME_ZONE);
+      const freshSnapshot = await fetchTvSnapshotForTarget('all');
+      const previous = freshSnapshot.errors
+        ? await loadTvSnapshotFromWebCache('all').catch(() => null)
+        : null;
+      const snapshot = mergeTvSnapshots(previous?.snapshot ?? null, freshSnapshot);
+      const content = snapshot.content;
+      const tvData = {
+        announcements: (content?.announcements ?? []) as CmsTvAnnouncement[],
+        ticker: (content?.ticker ?? []) as CmsTvTicker[],
+        events: (content?.events ?? []) as CmsTvEvent[],
+        settings: content?.settings ?? {},
+      };
+      const slots = (snapshot.schedule?.days[todayStr] ?? []).map(routineDisplaySlotToDb);
       setAnnouncements(tvData.announcements);
       setTicker(tvData.ticker);
       setEvents(tvData.events);
       setSettings(tvData.settings);
       setRoutineSlots(slots);
+      void saveTvSnapshotToWebCache(snapshot);
+      void prefetchTvSnapshotMedia(snapshot);
     } catch (err) {
       console.error('TV Display fetch error:', err);
+      const cached = await loadTvSnapshotFromWebCache('all').catch(() => null);
+      if (cached) {
+        const todayStr = getZonedDateKey(new Date(), TV_DISPLAY_TIME_ZONE);
+        const content = cached.snapshot.content;
+        setAnnouncements((content?.announcements ?? []) as CmsTvAnnouncement[]);
+        setTicker((content?.ticker ?? []) as CmsTvTicker[]);
+        setEvents((content?.events ?? []) as CmsTvEvent[]);
+        setSettings(content?.settings ?? {});
+        setRoutineSlots(
+          (cached.snapshot.schedule?.days[todayStr] ?? []).map(routineDisplaySlotToDb),
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -133,9 +168,24 @@ export default function TvDisplayPublicPage() {
 
   // Clock tick every second
   useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(timer);
+    let interval: ReturnType<typeof setInterval> | null = null;
+    const timeout = setTimeout(() => {
+      setNow(new Date());
+      interval = setInterval(() => setNow(new Date()), 60_000);
+    }, 60_000 - (Date.now() % 60_000));
+    return () => {
+      clearTimeout(timeout);
+      if (interval) clearInterval(interval);
+    };
   }, []);
+
+  useEffect(() => {
+    if (eventPage >= events.length) setEventPage(0);
+  }, [eventPage, events.length]);
+
+  useEffect(() => {
+    if (tickerIndex >= ticker.length) setTickerIndex(0);
+  }, [tickerIndex, ticker.length]);
 
   // Auto-rotate event carousel
   useEffect(() => {
@@ -144,7 +194,7 @@ export default function TvDisplayPublicPage() {
     const maxPage = events.length - 1;
     autoRotateRef.current = setInterval(() => setEventPage(prev => (prev >= maxPage ? 0 : prev + 1)), eventRotationSec * 1000);
     return () => { if (autoRotateRef.current) clearInterval(autoRotateRef.current); };
-  }, [events.length, eventRotationSec]);
+  }, [events.map((event) => `${event.id}:${event.updated_at}`).join('|'), eventRotationSec]);
 
   // Slide between upcoming periods every 20 s
   useEffect(() => {
@@ -161,7 +211,7 @@ export default function TvDisplayPublicPage() {
 
   // -- Schedule derived data ------------------------------
   const periods = useMemo(() => buildPeriods(routineSlots), [routineSlots]);
-  const nowMins = now.getHours() * 60 + now.getMinutes();
+  const nowMins = getZonedMinutes(now, TV_DISPLAY_TIME_ZONE);
 
   const currentPeriod = useMemo(
     () => periods.find(p => nowMins >= timeToMins(p.start_time) && nowMins < timeToMins(p.end_time)) ?? null,
@@ -173,8 +223,8 @@ export default function TvDisplayPublicPage() {
   );
 
   // -- Clock formatting --
-  const timeStr = now.toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit' });
-  const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const timeStr = now.toLocaleTimeString('en-US', { timeZone: TV_DISPLAY_TIME_ZONE, hour12: true, hour: 'numeric', minute: '2-digit' });
+  const dateStr = now.toLocaleDateString('en-US', { timeZone: TV_DISPLAY_TIME_ZONE, weekday: 'long', month: 'long', day: 'numeric' });
 
   // -- Event pagination --
   const maxPage = Math.max(0, events.length - 1);
