@@ -10,6 +10,7 @@ import { ROUTINE_SLOT_WITH_DETAILS } from '@/lib/queryConstants';
 import { requireServerSession } from '@/lib/serverAuth';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { requireField, requireFields } from '@/lib/validators';
+import { resolveTvScheduleRange } from '@/services/tvScheduleResolver';
 import { NextRequest, NextResponse } from 'next/server';
 
 // ── Helpers ────────────────────────────────────────────
@@ -189,6 +190,51 @@ export async function GET(request: NextRequest) {
     const term = searchParams.get('term');
     const section = searchParams.get('section');
     const forDate = searchParams.get('date'); // optional: filter slots valid on this date
+
+    // Date-scoped consumers (Schedule and all TV surfaces) share the canonical
+    // resolver so CR, teacher, and admin bookings cannot drift between clients.
+    if (forDate && /^\d{4}-\d{2}-\d{2}$/.test(forDate)) {
+      const resolved = await resolveTvScheduleRange(forDate, 1);
+      let slots = resolved.days[forDate].map((slot) => ({
+        id: slot.id,
+        offering_id: '',
+        room_number: slot.roomNumber,
+        day_of_week: new Date(`${forDate}T00:00:00Z`).getUTCDay(),
+        start_time: slot.startTime,
+        end_time: slot.endTime,
+        section: slot.section,
+        valid_from: slot.source === 'routine' ? null : slot.date,
+        valid_until: slot.source === 'routine' ? null : slot.date,
+        created_at: slot.date,
+        source: slot.source,
+        booking_type: slot.bookingType,
+        course_offerings: {
+          id: '',
+          term: slot.term || '',
+          session: slot.session || '',
+          batch: null,
+          courses: {
+            code: slot.courseCode,
+            title: slot.courseTitle,
+            credit: 0,
+            course_type: slot.bookingType || 'Theory',
+          },
+          teachers: {
+            full_name: slot.teacherName || '',
+            teacher_uid: '',
+          },
+        },
+        rooms: { room_number: slot.roomNumber, room_type: null },
+      }));
+
+      if (section) slots = slots.filter((slot) => slot.section === section);
+      if (term) {
+        slots = slots.filter(
+          (slot) => deriveTermFromCode(slot.course_offerings.courses.code) === term,
+        );
+      }
+      return NextResponse.json(slots);
+    }
 
     let query = supabase
       .from('routine_slots')

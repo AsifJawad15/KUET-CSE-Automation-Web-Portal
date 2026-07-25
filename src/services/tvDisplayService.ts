@@ -14,8 +14,34 @@ import type {
   TvDisplayData,
   TvTarget,
 } from '@/types/cms';
+import {
+  clampSetting,
+  isTvSnapshotV2,
+  type TvSnapshotSection,
+  type TvSnapshotV2,
+} from '../../shared/tv-display/domain';
 
 // ── Fetch (used by both admin + public TV page) ────────
+
+export async function fetchTvSnapshotForTarget(
+  target: string,
+  sections?: TvSnapshotSection[],
+  signal?: AbortSignal,
+): Promise<TvSnapshotV2> {
+  const params = new URLSearchParams({ target });
+  if (sections?.length) params.set('include', sections.join(','));
+  const response = await fetch(`/api/tv-display/snapshot?${params.toString()}`, {
+    signal,
+    cache: 'no-store',
+    headers: { Accept: 'application/json' },
+  });
+  if (!response.ok) throw new Error(`TV snapshot request failed (${response.status}).`);
+  const snapshot: unknown = await response.json();
+  if (!isTvSnapshotV2(snapshot) || snapshot.target !== target) {
+    throw new Error('TV snapshot response is invalid.');
+  }
+  return snapshot;
+}
 
 /**
  * Fetch all TV display data in a single parallel batch.
@@ -295,13 +321,13 @@ export const DEFAULT_LAYOUT: LayoutSettings = {
 export async function fetchLayoutSettings(target: string): Promise<LayoutSettings> {
   const settings = await fetchTvSettings();
   return {
-    events_flex: parseInt(settings[`events_flex_${target}`] || settings.events_flex_all || String(DEFAULT_LAYOUT.events_flex), 10),
-    schedule_flex: parseInt(settings[`schedule_flex_${target}`] || settings.schedule_flex_all || String(DEFAULT_LAYOUT.schedule_flex), 10),
-    current_flex: parseInt(settings[`current_flex_${target}`] || settings.current_flex_all || String(DEFAULT_LAYOUT.current_flex), 10),
-    upcoming_flex: parseInt(settings[`upcoming_flex_${target}`] || settings.upcoming_flex_all || String(DEFAULT_LAYOUT.upcoming_flex), 10),
-    ticker_height: parseInt(settings[`ticker_height_${target}`] || settings.ticker_height_all || String(DEFAULT_LAYOUT.ticker_height), 10),
-    headlines_height: parseInt(settings[`headlines_height_${target}`] || settings.headlines_height_all || String(DEFAULT_LAYOUT.headlines_height), 10),
-    breaking_height: parseInt(settings[`breaking_height_${target}`] || settings.breaking_height_all || String(DEFAULT_LAYOUT.breaking_height), 10),
+    events_flex: clampSetting(settings[`events_flex_${target}`] || settings.events_flex_all, DEFAULT_LAYOUT.events_flex, 20, 90),
+    schedule_flex: clampSetting(settings[`schedule_flex_${target}`] || settings.schedule_flex_all, DEFAULT_LAYOUT.schedule_flex, 10, 80),
+    current_flex: clampSetting(settings[`current_flex_${target}`] || settings.current_flex_all, DEFAULT_LAYOUT.current_flex, 20, 80),
+    upcoming_flex: clampSetting(settings[`upcoming_flex_${target}`] || settings.upcoming_flex_all, DEFAULT_LAYOUT.upcoming_flex, 20, 80),
+    ticker_height: clampSetting(settings[`ticker_height_${target}`] || settings.ticker_height_all, DEFAULT_LAYOUT.ticker_height, 20, 80),
+    headlines_height: clampSetting(settings[`headlines_height_${target}`] || settings.headlines_height_all, DEFAULT_LAYOUT.headlines_height, 20, 80),
+    breaking_height: clampSetting(settings[`breaking_height_${target}`] || settings.breaking_height_all, DEFAULT_LAYOUT.breaking_height, 30, 120),
   };
 }
 
@@ -312,14 +338,23 @@ export async function upsertLayoutSettings(
   target: string,
   layout: LayoutSettings
 ): Promise<{ success: boolean; error?: string }> {
+  const safeLayout: LayoutSettings = {
+    events_flex: clampSetting(layout.events_flex, DEFAULT_LAYOUT.events_flex, 20, 90),
+    schedule_flex: clampSetting(layout.schedule_flex, DEFAULT_LAYOUT.schedule_flex, 10, 80),
+    current_flex: clampSetting(layout.current_flex, DEFAULT_LAYOUT.current_flex, 20, 80),
+    upcoming_flex: clampSetting(layout.upcoming_flex, DEFAULT_LAYOUT.upcoming_flex, 20, 80),
+    ticker_height: clampSetting(layout.ticker_height, DEFAULT_LAYOUT.ticker_height, 20, 80),
+    headlines_height: clampSetting(layout.headlines_height, DEFAULT_LAYOUT.headlines_height, 20, 80),
+    breaking_height: clampSetting(layout.breaking_height, DEFAULT_LAYOUT.breaking_height, 30, 120),
+  };
   const entries = [
-    { key: `events_flex_${target}`, value: String(layout.events_flex) },
-    { key: `schedule_flex_${target}`, value: String(layout.schedule_flex) },
-    { key: `current_flex_${target}`, value: String(layout.current_flex) },
-    { key: `upcoming_flex_${target}`, value: String(layout.upcoming_flex) },
-    { key: `ticker_height_${target}`, value: String(layout.ticker_height) },
-    { key: `headlines_height_${target}`, value: String(layout.headlines_height) },
-    { key: `breaking_height_${target}`, value: String(layout.breaking_height) },
+    { key: `events_flex_${target}`, value: String(safeLayout.events_flex) },
+    { key: `schedule_flex_${target}`, value: String(safeLayout.schedule_flex) },
+    { key: `current_flex_${target}`, value: String(safeLayout.current_flex) },
+    { key: `upcoming_flex_${target}`, value: String(safeLayout.upcoming_flex) },
+    { key: `ticker_height_${target}`, value: String(safeLayout.ticker_height) },
+    { key: `headlines_height_${target}`, value: String(safeLayout.headlines_height) },
+    { key: `breaking_height_${target}`, value: String(safeLayout.breaking_height) },
   ];
 
   const { error } = await cmsSupabase
