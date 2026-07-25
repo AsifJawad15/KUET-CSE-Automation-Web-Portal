@@ -6,8 +6,7 @@
 // Subscribes to Supabase realtime for live updates.
 // ==========================================
 
-import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useEffect, useState, useCallback, useRef, useMemo, useLayoutEffect, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Calendar, ChevronLeft, ChevronRight, Clock,
@@ -18,6 +17,8 @@ import {
   fetchTvDisplayDataForTarget,
   fetchDeviceByName,
   fetchTodayRoutineSlots,
+  fetchTvSnapshotForTarget,
+  isTvSnapshotApiConfigured,
   type CmsTvAnnouncement,
   type CmsTvEvent,
   type CmsTvTicker,
@@ -25,6 +26,17 @@ import {
   type RoutineSlotWithDetails,
 } from '../lib/supabase';
 import { cacheTvDisplayData, getCachedTvDisplayData, getCachedTvDisplayEntry } from '../lib/tvDisplayCache';
+import {
+  TV_DISPLAY_TIME_ZONE,
+  clampSetting,
+  getZonedDateKey,
+  getZonedMinutes,
+  mergeTvSnapshots,
+  type RoutineDisplaySlot,
+  type TvSnapshotSection,
+  type TvSnapshotV2,
+} from '../../../shared/tv-display/domain';
+import TvStartupCurtain from '../components/TvStartupCurtain';
 
 // Color palette (matches the web TV display)
 const C = {
@@ -45,8 +57,6 @@ const C = {
   glassBg: 'rgba(255,255,255,0.03)',
 } as const;
 
-const POLL_MS = 30_000;
-
 // ── Layout defaults ──
 const DEFAULT_EVENTS_FLEX = 80;
 const DEFAULT_SCHEDULE_FLEX = 20;
@@ -54,7 +64,7 @@ const DEFAULT_CURRENT_FLEX = 55;
 const DEFAULT_UPCOMING_FLEX = 45;
 const DEFAULT_TICKER_HEIGHT = 38;
 const DEFAULT_HEADLINES_HEIGHT = 36;
-const DEFAULT_BREAKING_HEIGHT = 38;
+const DEFAULT_BREAKING_HEIGHT = 54;
 
 // ── Routine helpers ──
 
@@ -86,9 +96,43 @@ function formatTime12(time: string | null | undefined): string {
   return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${period}`;
 }
 
+function snapshotSlotToRoutine(slot: RoutineDisplaySlot): RoutineSlotWithDetails {
+  return {
+    id: slot.id,
+    offering_id: '',
+    room_number: slot.roomNumber,
+    day_of_week: 0,
+    start_time: slot.startTime,
+    end_time: slot.endTime,
+    section: slot.section,
+    valid_from: slot.date,
+    valid_until: slot.date,
+    created_at: slot.date,
+    course_offerings: {
+      id: '',
+      term: slot.term || '',
+      session: slot.session || '',
+      batch: null,
+      courses: {
+        code: slot.courseCode,
+        title: slot.courseTitle,
+        credit: 0,
+        course_type: slot.bookingType || 'Theory',
+      },
+      teachers: {
+        full_name: slot.teacherName || '',
+        teacher_uid: '',
+      },
+    },
+    rooms: { room_number: slot.roomNumber, room_type: null },
+  };
+}
+
 export default function PlayerPage() {
-  const [searchParams] = useSearchParams();
-  const target = (searchParams.get('target') || 'TV1') as TvTarget;
+  const target = useMemo(() => {
+    const query = window.location.hash.split('?')[1] || '';
+    return (new URLSearchParams(query).get('target') || 'TV1') as TvTarget;
+  }, []);
 
   // Data state
   const [announcements, setAnnouncements] = useState<CmsTvAnnouncement[]>([]);
@@ -99,8 +143,8 @@ export default function PlayerPage() {
   const [showRoomSchedule, setShowRoomSchedule] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [wasOffline, setWasOffline] = useState(false);
+  const [cachedAt, setCachedAt] = useState<string | null>(null);
 
   // UI state
   const [now, setNow] = useState(new Date());
@@ -108,18 +152,23 @@ export default function PlayerPage() {
   const [tickerIndex, setTickerIndex] = useState(0);
   const [upcomingIdx, setUpcomingIdx] = useState(0);
   const autoRotateRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const snapshotRef = useRef<TvSnapshotV2 | null>(null);
+  const requestGeneration = useRef(0);
+  const requestAbort = useRef<AbortController | null>(null);
+  const realtimeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingRealtimeSections = useRef(new Set<TvSnapshotSection>());
 
   const headlinePrefix = settings.headline_prefix || 'HEADLINES';
-  const eventRotationSec = parseInt(settings.event_rotation_sec || '8', 10);
+  const eventRotationSec = clampSetting(settings.event_rotation_sec, 8, 3, 120);
 
   // ── Layout flex ratios and heights from settings (falling back to global then defaults) ──
-  const eventsFlex = parseInt(settings[`events_flex_${target}`] || settings.events_flex_all || String(DEFAULT_EVENTS_FLEX), 10);
-  const scheduleFlex = parseInt(settings[`schedule_flex_${target}`] || settings.schedule_flex_all || String(DEFAULT_SCHEDULE_FLEX), 10);
-  const currentFlex = parseInt(settings[`current_flex_${target}`] || settings.current_flex_all || String(DEFAULT_CURRENT_FLEX), 10);
-  const upcomingFlex = parseInt(settings[`upcoming_flex_${target}`] || settings.upcoming_flex_all || String(DEFAULT_UPCOMING_FLEX), 10);
-  const tickerHeight = parseInt(settings[`ticker_height_${target}`] || settings.ticker_height_all || String(DEFAULT_TICKER_HEIGHT), 10);
-  const headlinesHeight = parseInt(settings[`headlines_height_${target}`] || settings.headlines_height_all || String(DEFAULT_HEADLINES_HEIGHT), 10);
-  const breakingHeight = parseInt(settings[`breaking_height_${target}`] || settings.breaking_height_all || String(DEFAULT_BREAKING_HEIGHT), 10);
+  const eventsFlex = clampSetting(settings[`events_flex_${target}`] || settings.events_flex_all, DEFAULT_EVENTS_FLEX, 20, 90);
+  const scheduleFlex = clampSetting(settings[`schedule_flex_${target}`] || settings.schedule_flex_all, DEFAULT_SCHEDULE_FLEX, 10, 80);
+  const currentFlex = clampSetting(settings[`current_flex_${target}`] || settings.current_flex_all, DEFAULT_CURRENT_FLEX, 20, 80);
+  const upcomingFlex = clampSetting(settings[`upcoming_flex_${target}`] || settings.upcoming_flex_all, DEFAULT_UPCOMING_FLEX, 20, 80);
+  const tickerHeight = clampSetting(settings[`ticker_height_${target}`] || settings.ticker_height_all, DEFAULT_TICKER_HEIGHT, 20, 80);
+  const headlinesHeight = clampSetting(settings[`headlines_height_${target}`] || settings.headlines_height_all, DEFAULT_HEADLINES_HEIGHT, 20, 80);
+  const breakingHeight = clampSetting(settings[`breaking_height_${target}`] || settings.breaking_height_all, DEFAULT_BREAKING_HEIGHT, 30, 120);
 
   const isTargetSectionEnabled = (section: 'events' | 'ticker' | 'headlines') => {
     const value = settings[`tv_show_${section}_${target}`];
@@ -132,10 +181,52 @@ export default function PlayerPage() {
   const showHeadlinesBar = isTargetSectionEnabled('headlines');
 
   // ── Fetch data ──
-  const fetchData = useCallback(async () => {
+  const applySnapshot = useCallback((snapshot: TvSnapshotV2, cached: boolean) => {
+    const content = snapshot.content;
+    if (content?.announcements) setAnnouncements(content.announcements as CmsTvAnnouncement[]);
+    if (content?.ticker) setTicker(content.ticker as CmsTvTicker[]);
+    if (content?.events) setEvents(content.events as CmsTvEvent[]);
+    if (content?.settings) setSettings(content.settings);
+    if (snapshot.device !== undefined) {
+      setShowRoomSchedule(snapshot.device?.showRoomSchedule ?? true);
+    }
+    if (snapshot.schedule) {
+      const dateKey = getZonedDateKey(new Date(), TV_DISPLAY_TIME_ZONE);
+      setRoutineSlots((snapshot.schedule.days[dateKey] ?? []).map(snapshotSlotToRoutine));
+    }
+    setCachedAt(cached ? snapshot.generatedAt : null);
+    setLoading(false);
+  }, []);
+
+  const fetchData = useCallback(async (sections?: TvSnapshotSection[]) => {
+    const generation = ++requestGeneration.current;
+    requestAbort.current?.abort();
+    const controller = new AbortController();
+    requestAbort.current = controller;
     try {
-      // Fetch content data (events, announcements, ticker)
+      if (isTvSnapshotApiConfigured) {
+        const patch = await fetchTvSnapshotForTarget(target, sections, controller.signal);
+        if (generation !== requestGeneration.current) return;
+        const merged = mergeTvSnapshots(snapshotRef.current, patch);
+        snapshotRef.current = merged;
+        applySnapshot(merged, false);
+        setError(null);
+        const degraded = Boolean(patch.errors && Object.keys(patch.errors).length > 0);
+        setWasOffline(degraded);
+        if (degraded) setCachedAt(snapshotRef.current?.generatedAt ?? null);
+        await window.electronAPI?.saveTvSnapshot(target, merged);
+        const mediaUrls = (merged.content?.events ?? [])
+          .flatMap((event) => {
+            const row = event as CmsTvEvent;
+            return [row.image_url, row.speaker_image_url];
+          })
+          .filter((url): url is string => Boolean(url));
+        void window.electronAPI?.syncMediaCache(mediaUrls);
+        return;
+      }
+
       const data = await fetchTvDisplayDataForTarget(target);
+      if (generation !== requestGeneration.current) return;
       setAnnouncements(data.announcements);
       setTicker(data.ticker);
       setEvents(data.events);
@@ -146,13 +237,25 @@ export default function PlayerPage() {
       cacheTvDisplayData(target, data);
       
       // If we were offline, mark that we're online now
-      if (wasOffline) {
-        setWasOffline(false);
-      }
+      setWasOffline(false);
     } catch (err) {
       console.error(`[${target}] Content fetch error:`, err);
       
       // Try to load from cache on error
+      if (controller.signal.aborted) return;
+      const diskSnapshot = await window.electronAPI?.loadTvSnapshot(target);
+      if (
+        diskSnapshot &&
+        typeof diskSnapshot === 'object' &&
+        (diskSnapshot as TvSnapshotV2).schemaVersion === 2
+      ) {
+        const snapshot = diskSnapshot as TvSnapshotV2;
+        snapshotRef.current = snapshot;
+        applySnapshot(snapshot, true);
+        setWasOffline(true);
+        setError(null);
+        return;
+      }
       const cachedData = getCachedTvDisplayData(target);
       if (cachedData) {
         console.log(`[${target}] Loading from cache due to fetch error`);
@@ -161,13 +264,19 @@ export default function PlayerPage() {
         setEvents(cachedData.events);
         setSettings(cachedData.settings);
         setWasOffline(true);
+        const entry = getCachedTvDisplayEntry(target);
+        setCachedAt(entry ? new Date(entry.timestamp).toISOString() : null);
         setError(null);
       } else {
         setError(err instanceof Error ? err.message : String(err));
       }
     }
 
-    // Fetch device settings independently — failure should not hide events
+    if (isTvSnapshotApiConfigured) {
+      setLoading(false);
+      return;
+    }
+
     try {
       const device = await fetchDeviceByName(target);
       setShowRoomSchedule(device?.show_room_schedule ?? true);
@@ -186,43 +295,67 @@ export default function PlayerPage() {
     }
 
     setLoading(false);
-  }, [target, wasOffline]);
+  }, [applySnapshot, target]);
+
+  const scheduleSectionRefresh = useCallback((section: TvSnapshotSection) => {
+    pendingRealtimeSections.current.add(section);
+    if (realtimeTimer.current) clearTimeout(realtimeTimer.current);
+    realtimeTimer.current = setTimeout(() => {
+      const sections = [...pendingRealtimeSections.current];
+      pendingRealtimeSections.current.clear();
+      realtimeTimer.current = null;
+      void fetchData(sections);
+    }, 350);
+  }, [fetchData]);
 
   // Initial fetch + polling + realtime
   useEffect(() => {
-    fetchData();
-    const pollInterval = setInterval(fetchData, POLL_MS);
+    let disposed = false;
+    void (async () => {
+      const diskSnapshot = await window.electronAPI?.loadTvSnapshot(target);
+      if (!disposed && diskSnapshot && typeof diskSnapshot === 'object') {
+        const snapshot = diskSnapshot as TvSnapshotV2;
+        if (snapshot.schemaVersion === 2 && snapshot.target === target) {
+          snapshotRef.current = snapshot;
+          applySnapshot(snapshot, true);
+          setWasOffline(true);
+        }
+      }
+      if (!disposed) void fetchData();
+    })();
+    const pollInterval = setInterval(() => void fetchData(), 60_000 + Math.round(Math.random() * 5_000));
 
     // Subscribe to realtime changes on all content tables + device settings
     const channel = supabase
       .channel(`tv-display-${target}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'cms_tv_announcements' }, () => fetchData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'cms_tv_ticker' }, () => fetchData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'cms_tv_events' }, () => fetchData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'cms_tv_settings' }, () => fetchData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'cms_tv_devices' }, () => fetchData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cms_tv_announcements' }, () => scheduleSectionRefresh('announcements'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cms_tv_ticker' }, () => scheduleSectionRefresh('ticker'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cms_tv_events' }, () => scheduleSectionRefresh('events'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cms_tv_settings' }, () => scheduleSectionRefresh('settings'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cms_tv_devices' }, () => scheduleSectionRefresh('device'))
       .subscribe((status) => {
         console.log(`[${target}] Realtime subscription:`, status);
       });
 
     return () => {
+      disposed = true;
       clearInterval(pollInterval);
+      requestAbort.current?.abort();
+      if (realtimeTimer.current) clearTimeout(realtimeTimer.current);
+      pendingRealtimeSections.current.clear();
       supabase.removeChannel(channel);
     };
-  }, [target, fetchData]);
+  }, [applySnapshot, target, fetchData, scheduleSectionRefresh]);
 
   // Handle online/offline transitions
   useEffect(() => {
     const handleOnline = () => {
       console.log('Internet connection restored');
-      setIsOnline(true);
-      setWasOffline(false);
-      fetchData();
+      void fetchData();
     };
 
     const handleOffline = () => {
       console.log('Internet connection lost');
-      setIsOnline(false);
       setWasOffline(true);
     };
 
@@ -235,10 +368,26 @@ export default function PlayerPage() {
     };
   }, [fetchData]);
 
-  // Clock tick
   useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(timer);
+    if (eventPage >= events.length) setEventPage(0);
+  }, [eventPage, events.length]);
+
+  useEffect(() => {
+    if (tickerIndex >= ticker.length) setTickerIndex(0);
+  }, [tickerIndex, ticker.length]);
+
+  // Minute-aligned clock tick: the UI only renders minute precision.
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = null;
+    const delay = 60_000 - (Date.now() % 60_000);
+    const timeout = setTimeout(() => {
+      setNow(new Date());
+      interval = setInterval(() => setNow(new Date()), 60_000);
+    }, delay);
+    return () => {
+      clearTimeout(timeout);
+      if (interval) clearInterval(interval);
+    };
   }, []);
 
   // Auto-rotate event carousel
@@ -253,7 +402,7 @@ export default function PlayerPage() {
     return () => {
       if (autoRotateRef.current) clearInterval(autoRotateRef.current);
     };
-  }, [events.length, eventRotationSec]);
+  }, [events.map((event) => `${event.id}:${event.updated_at}`).join('|'), eventRotationSec]);
 
   // Ticker rotation
   useEffect(() => {
@@ -263,7 +412,7 @@ export default function PlayerPage() {
       5000
     );
     return () => clearInterval(interval);
-  }, [ticker.length]);
+  }, [ticker.map((item) => `${item.id}:${item.text}`).join('|')]);
 
   // Slide upcoming periods every 20s
   useEffect(() => {
@@ -273,7 +422,7 @@ export default function PlayerPage() {
 
   // Schedule data
   const periods = useMemo(() => buildPeriods(routineSlots), [routineSlots]);
-  const nowMins = now.getHours() * 60 + now.getMinutes();
+  const nowMins = getZonedMinutes(now, TV_DISPLAY_TIME_ZONE);
   const currentPeriod = useMemo(
     () => periods.find(p => nowMins >= timeToMins(p.start_time) && nowMins < timeToMins(p.end_time)) ?? null,
     [periods, nowMins],
@@ -284,8 +433,8 @@ export default function PlayerPage() {
   );
 
   // Clock formatting
-  const timeStr = now.toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit' });
-  const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const timeStr = now.toLocaleTimeString('en-US', { timeZone: TV_DISPLAY_TIME_ZONE, hour12: true, hour: 'numeric', minute: '2-digit' });
+  const dateStr = now.toLocaleDateString('en-US', { timeZone: TV_DISPLAY_TIME_ZONE, weekday: 'long', month: 'long', day: 'numeric' });
 
   // Event pagination
   const maxPage = Math.max(0, events.length - 1);
@@ -295,9 +444,6 @@ export default function PlayerPage() {
 
   // Breaking News (check device-specific first, then 'all', then offline status)
   const breakingNewsActive = (() => {
-    // If offline (immediately detected via isOnline), show offline breaking news
-    if (!isOnline) return true;
-    
     const deviceExpires = settings[`breaking_news_expires_at_${target}`];
     if (deviceExpires && new Date(deviceExpires).getTime() > Date.now()) return true;
     const allExpires = settings.breaking_news_expires_at_all;
@@ -306,11 +452,6 @@ export default function PlayerPage() {
   })();
   
   const breakingNewsText = (() => {
-    // If offline (immediately detected via isOnline), show offline message
-    if (!isOnline) {
-      return 'Internet Connection Has been Lost. Please Connect To the Internet.';
-    }
-    
     const deviceExpires = settings[`breaking_news_expires_at_${target}`];
     if (deviceExpires && new Date(deviceExpires).getTime() > Date.now()) {
       return settings[`breaking_news_text_${target}`] || '';
@@ -323,47 +464,54 @@ export default function PlayerPage() {
   // ── Loading ──
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${C.navyDarkest} 0%, ${C.navyDark} 50%, ${C.navyDarkest} 100%)` }}>
-        <div className="flex flex-col items-center gap-5">
-          <div className="relative">
-            <div className="absolute inset-0 rounded-2xl animate-ping" style={{ background: 'rgba(0,121,107,0.15)' }} />
-            <div className="w-20 h-20 rounded-2xl flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${C.teal}, ${C.tealDark})`, boxShadow: '0 8px 32px rgba(0,121,107,0.3)' }}>
-              <Monitor className="w-10 h-10 text-white" />
+      <>
+        <div className="h-screen flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${C.navyDarkest} 0%, ${C.navyDark} 50%, ${C.navyDarkest} 100%)` }}>
+          <div className="flex flex-col items-center gap-5">
+            <div className="relative">
+              <div className="absolute inset-0 rounded-2xl animate-ping" style={{ background: 'rgba(0,121,107,0.15)' }} />
+              <div className="w-20 h-20 rounded-2xl flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${C.teal}, ${C.tealDark})`, boxShadow: '0 8px 32px rgba(0,121,107,0.3)' }}>
+                <Monitor className="w-10 h-10 text-white" />
+              </div>
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-semibold" style={{ color: C.white }}>Loading {target}</p>
+              <p className="text-sm mt-1" style={{ color: C.textDim }}>Connecting to display system…</p>
             </div>
           </div>
-          <div className="text-center">
-            <p className="text-lg font-semibold" style={{ color: C.white }}>Loading {target}</p>
-            <p className="text-sm mt-1" style={{ color: C.textDim }}>Connecting to display system…</p>
-          </div>
         </div>
-      </div>
+        <TvStartupCurtain ready={false} target={target} />
+      </>
     );
   }
 
   // ── Error ──
   if (error) {
     return (
-      <div className="h-screen flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${C.navyDarkest} 0%, ${C.navyDark} 50%, ${C.navyDarkest} 100%)` }}>
-        <div className="text-center p-8 rounded-2xl" style={{ background: C.glassBg, border: `1px solid ${C.border}`, backdropFilter: 'blur(16px)', boxShadow: '0 8px 40px rgba(0,0,0,0.4)' }}>
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(239,83,80,0.15)', border: '1px solid rgba(239,83,80,0.3)' }}>
-            <Monitor className="w-8 h-8" style={{ color: '#ef5350' }} />
+      <>
+        <div className="h-screen flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${C.navyDarkest} 0%, ${C.navyDark} 50%, ${C.navyDarkest} 100%)` }}>
+          <div className="text-center p-8 rounded-2xl" style={{ background: C.glassBg, border: `1px solid ${C.border}`, backdropFilter: 'blur(16px)', boxShadow: '0 8px 40px rgba(0,0,0,0.4)' }}>
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(239,83,80,0.15)', border: '1px solid rgba(239,83,80,0.3)' }}>
+              <Monitor className="w-8 h-8" style={{ color: '#ef5350' }} />
+            </div>
+            <h2 className="text-2xl font-bold mb-3" style={{ color: '#ef5350' }}>Connection Error</h2>
+            <p className="text-base mb-6 max-w-md" style={{ color: C.textMuted }}>{error}</p>
+            <button
+              onClick={() => void fetchData()}
+              className="px-8 py-3 rounded-xl text-base font-semibold text-white transition-all duration-300 hover:scale-105"
+              style={{ background: `linear-gradient(135deg, ${C.teal}, ${C.tealDark})`, boxShadow: '0 4px 20px rgba(0,121,107,0.3)' }}
+            >
+              Retry Connection
+            </button>
           </div>
-          <h2 className="text-2xl font-bold mb-3" style={{ color: '#ef5350' }}>Connection Error</h2>
-          <p className="text-base mb-6 max-w-md" style={{ color: C.textMuted }}>{error}</p>
-          <button
-            onClick={fetchData}
-            className="px-8 py-3 rounded-xl text-base font-semibold text-white transition-all duration-300 hover:scale-105"
-            style={{ background: `linear-gradient(135deg, ${C.teal}, ${C.tealDark})`, boxShadow: '0 4px 20px rgba(0,121,107,0.3)' }}
-          >
-            Retry Connection
-          </button>
         </div>
-      </div>
+        <TvStartupCurtain ready target={target} />
+      </>
     );
   }
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col select-none" style={{ background: C.navyDarkest, color: C.white }}>
+    <>
+      <div className="h-screen overflow-hidden flex flex-col select-none" style={{ background: C.navyDarkest, color: C.white }}>
 
       {/* =========== HEADER BAR =========== */}
       <header
@@ -445,8 +593,7 @@ export default function PlayerPage() {
           <WifiOff className="w-4 h-4 animate-pulse" />
           <span>OFFLINE MODE &mdash; Displaying cached screen as of {
             (() => {
-              const entry = getCachedTvDisplayEntry(target);
-              return entry ? new Date(entry.timestamp).toLocaleString() : 'recently';
+              return cachedAt ? new Date(cachedAt).toLocaleString() : 'recently';
             })()
           }</span>
         </div>
@@ -801,14 +948,14 @@ export default function PlayerPage() {
             className="flex-1 flex items-center overflow-hidden px-4"
             style={{ background: 'linear-gradient(135deg, #c62828 0%, #e53935 100%)' }}
           >
-            <div className="flex h-full items-center animate-marquee whitespace-nowrap">
+            <MeasuredMarquee>
               {[breakingNewsText, breakingNewsText].map((text, i) => (
                 <span key={i} className="mx-8 inline-flex items-center gap-3 text-sm font-bold text-white">
                   <span className="w-1.5 h-1.5 rounded-full bg-white/70 flex-shrink-0" />
                   {text}
                 </span>
               ))}
-            </div>
+            </MeasuredMarquee>
           </div>
         </div>
       ) : (
@@ -898,7 +1045,7 @@ export default function PlayerPage() {
             </span>
           </div>
           <div className="flex-1 overflow-hidden" style={{ background: C.navyDark, borderTop: `1px solid ${C.border}` }}>
-            <div className="flex h-full items-center animate-marquee whitespace-nowrap">
+            <MeasuredMarquee>
               {[...announcements, ...announcements].map((a, i) => (
                 <span key={`${a.id}-${i}`} className="mx-8 inline-flex items-center gap-3 text-sm">
                   <span
@@ -909,10 +1056,40 @@ export default function PlayerPage() {
                   <span style={{ color: C.textMuted }}>{a.content.slice(0, 80)}</span>
                 </span>
               ))}
-            </div>
+            </MeasuredMarquee>
           </div>
         </div>
       )}
+      </div>
+      <TvStartupCurtain ready target={target} />
+    </>
+  );
+}
+
+function MeasuredMarquee({ children }: { children: ReactNode }) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [durationSeconds, setDurationSeconds] = useState(40);
+
+  useLayoutEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    const updateDuration = () => {
+      const repeatedContentWidth = Math.max(1, track.scrollWidth / 2);
+      setDurationSeconds(Math.max(15, repeatedContentWidth / 70));
+    };
+    updateDuration();
+    const observer = new ResizeObserver(updateDuration);
+    observer.observe(track);
+    return () => observer.disconnect();
+  }, [children]);
+
+  return (
+    <div
+      ref={trackRef}
+      className="flex h-full items-center animate-marquee whitespace-nowrap"
+      style={{ animationDuration: `${durationSeconds}s` }}
+    >
+      {children}
     </div>
   );
 }
@@ -923,15 +1100,29 @@ export default function PlayerPage() {
 // ==============================================
 
 function EventCard({ event }: { event: CmsTvEvent }) {
-  const hasImage = Boolean(event.image_url);
+  const [imageFailed, setImageFailed] = useState(false);
+  const [speakerImageFailed, setSpeakerImageFailed] = useState(false);
+  const imageUrl = event.image_url
+    ? window.electronAPI?.resolveMediaUrl(event.image_url) ?? event.image_url
+    : null;
+  const speakerImageUrl = event.speaker_image_url
+    ? window.electronAPI?.resolveMediaUrl(event.speaker_image_url) ?? event.speaker_image_url
+    : null;
+  const hasImage = Boolean(imageUrl && !imageFailed);
+
+  useEffect(() => {
+    setImageFailed(false);
+    setSpeakerImageFailed(false);
+  }, [event.id, event.image_url, event.speaker_image_url]);
 
   return (
     <div className="h-full relative overflow-hidden rounded-2xl" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.4)' }}>
       {hasImage ? (
         <img
-          src={event.image_url!}
+          src={imageUrl!}
           alt={event.title}
           className="absolute inset-0 w-full h-full object-cover"
+          onError={() => setImageFailed(true)}
         />
       ) : (
         <div
@@ -972,7 +1163,7 @@ function EventCard({ event }: { event: CmsTvEvent }) {
               boxShadow: '0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.08)',
             }}
           >
-            {event.speaker_image_url ? (
+            {speakerImageUrl && !speakerImageFailed ? (
               <div
                 className="relative w-11 h-11 rounded-full overflow-hidden flex-shrink-0"
                 style={{
@@ -980,7 +1171,12 @@ function EventCard({ event }: { event: CmsTvEvent }) {
                   boxShadow: '0 0 12px rgba(255,193,7,0.25)',
                 }}
               >
-                <img src={event.speaker_image_url} alt={event.speaker_name} className="w-full h-full object-cover" />
+                <img
+                  src={speakerImageUrl}
+                  alt={event.speaker_name}
+                  className="w-full h-full object-cover"
+                  onError={() => setSpeakerImageFailed(true)}
+                />
               </div>
             ) : (
               <div

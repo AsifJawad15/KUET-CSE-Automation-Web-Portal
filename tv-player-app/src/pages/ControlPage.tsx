@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Monitor, Wifi, WifiOff, Settings2, Tv, RefreshCw,
   Layout, Save, X, Play, ChevronRight, Info,
@@ -16,10 +16,16 @@ import {
 
 export default function ControlPage() {
   const [displays, setDisplays] = useState<DisplayInfo[]>([]);
-  const [config, setConfig] = useState<DisplayConfig>({});
+  const [displayConfig, setDisplayConfig] = useState<DisplayConfigV2 | null>(null);
+  const [mapping, setMapping] = useState<Record<string, number | null>>({});
   const [status, setStatus] = useState<AppStatus>({
     tvStatus: {},
     displays: 0,
+    mappingIssues: {},
+    snapshotMeta: [],
+    mediaCache: { sizeBytes: 0, entries: 0, quotaBytes: 500 * 1024 * 1024 },
+    preventDisplaySleep: true,
+    launchAtLogin: false,
   });
   const [devices, setDevices] = useState<CmsTvDevice[]>([]);
   const [announcements, setAnnouncements] = useState<CmsTvAnnouncement[]>([]);
@@ -27,6 +33,7 @@ export default function ControlPage() {
   const [events, setEvents] = useState<CmsTvEvent[]>([]);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const messageTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isElectron = !!window.electronAPI;
 
@@ -35,6 +42,10 @@ export default function ControlPage() {
     try {
       const devs = await fetchActiveDevices();
       setDevices(devs);
+      if (window.electronAPI && devs.length > 0) {
+        const result = await window.electronAPI.syncActiveTargets(devs.map((device) => device.name));
+        if (!result.success) throw new Error(result.error || 'Failed to synchronize TV devices.');
+      }
     } catch (err) {
       console.error('Failed to fetch devices:', err);
     }
@@ -49,7 +60,13 @@ export default function ControlPage() {
       window.electronAPI.getAppStatus(),
     ]);
     setDisplays(dispList);
-    setConfig(dispConfig);
+    setDisplayConfig(dispConfig);
+    setMapping(Object.fromEntries(
+      Object.entries(dispConfig.assignments).map(([target, assignment]) => [
+        target,
+        assignment.displayId,
+      ]),
+    ));
     setStatus(appStatus);
   }, []);
 
@@ -79,7 +96,7 @@ export default function ControlPage() {
       .subscribe();
 
     if (window.electronAPI) {
-      window.electronAPI.onDisplaysChanged(() => refreshDisplays());
+      window.electronAPI.onDisplaysChanged(refreshDisplays);
     }
 
     const interval = setInterval(async () => {
@@ -92,47 +109,69 @@ export default function ControlPage() {
     return () => {
       supabase.removeChannel(channel);
       clearInterval(interval);
-      window.electronAPI?.removeDisplaysChanged();
+      window.electronAPI?.removeDisplaysChanged(refreshDisplays);
+      if (messageTimer.current) clearTimeout(messageTimer.current);
     };
   }, [refreshDisplays, refreshDevices, fetchTvContent]);
 
   // ── Actions ──
   const showMessage = (text: string) => {
     setMessage(text);
-    setTimeout(() => setMessage(''), 3000);
+    if (messageTimer.current) clearTimeout(messageTimer.current);
+    messageTimer.current = setTimeout(() => setMessage(''), 4000);
   };
 
   const handleSaveConfig = async () => {
     if (!window.electronAPI) return;
     setSaving(true);
     try {
-      await window.electronAPI.saveDisplayConfig(config);
-      showMessage('Display mapping saved successfully.');
-    } catch {
-      showMessage('Failed to save config.');
+      const assigned = Object.values(mapping).filter((value): value is number => value !== null);
+      if (new Set(assigned).size !== assigned.length) {
+        throw new Error('Each TV must use a different display.');
+      }
+      const result = await window.electronAPI.saveDisplayConfig(mapping);
+      if (!result.success) throw new Error(result.error || 'Failed to save display mapping.');
+      showMessage('Display mapping saved and applied successfully.');
+      await refreshDisplays();
+    } catch (error) {
+      showMessage(error instanceof Error ? error.message : 'Failed to save config.');
     }
     setSaving(false);
   };
 
   const handleOpenTvWindows = async () => {
     if (!window.electronAPI) return;
-    await window.electronAPI.openTvWindows();
-    showMessage('TV windows reopened on mapped displays.');
-    refreshDisplays();
+    const result = await window.electronAPI.openTvWindows();
+    showMessage(result.success ? 'TV windows reconciled with mapped displays.' : (result.error || 'Failed to open TV windows.'));
+    await refreshDisplays();
   };
 
   const handleCloseTvWindows = async () => {
     if (!window.electronAPI) return;
-    await window.electronAPI.closeTvWindows();
-    showMessage('TV windows closed.');
-    refreshDisplays();
+    const result = await window.electronAPI.closeTvWindows();
+    showMessage(result.success ? 'TV windows closed.' : (result.error || 'Failed to close TV windows.'));
+    await refreshDisplays();
+  };
+
+  const updatePreference = async (
+    key: 'preventDisplaySleep' | 'launchAtLogin',
+    value: boolean,
+  ) => {
+    if (!window.electronAPI) return;
+    const result = await window.electronAPI.updatePreferences({ [key]: value });
+    if (!result.success) {
+      showMessage(result.error || 'Failed to update preference.');
+      return;
+    }
+    await refreshDisplays();
+    showMessage('Operational preference updated.');
   };
 
   // ── Derive TV names from devices or config ──
   const tvNames = devices.length > 0
     ? devices.map((d) => d.name)
-    : Object.keys(config).length > 0
-      ? Object.keys(config)
+    : displayConfig?.activeTargets.length
+      ? displayConfig.activeTargets
       : ['TV1', 'TV2'];
 
   // ── Content preview helpers ──
@@ -221,6 +260,7 @@ export default function ControlPage() {
           <div className="ctrl-status-grid">
             {tvNames.map((name) => {
               const isRunning = status.tvStatus[name] === 'running';
+              const mappingIssue = status.mappingIssues[name];
               return (
                 <div
                   key={name}
@@ -241,7 +281,10 @@ export default function ControlPage() {
                     ) : (
                       <WifiOff className="w-3.5 h-3.5 opacity-70" />
                     )}
-                    <span>{name}: {status.tvStatus[name] || 'stopped'}</span>
+                    <span>
+                      {name}: {status.tvStatus[name] || 'stopped'}
+                      {mappingIssue ? ` · ${mappingIssue.replace(/-/g, ' ')}` : ''}
+                    </span>
                   </div>
                 </div>
               );
@@ -294,10 +337,10 @@ export default function ControlPage() {
                       {name} Display:
                     </label>
                     <select
-                      value={config[name] ?? ''}
+                      value={mapping[name] ?? ''}
                       onChange={(e) =>
-                        setConfig({
-                          ...config,
+                        setMapping({
+                          ...mapping,
                           [name]: e.target.value ? Number(e.target.value) : null,
                         })
                       }
@@ -305,7 +348,7 @@ export default function ControlPage() {
                       <option value="">Auto-detect</option>
                       {displays.map((d) => (
                         <option key={d.id} value={d.id}>
-                          {d.isPrimary ? 'Primary' : 'External'} —{' '}
+                          {d.isPrimary ? 'Primary (control display — use with caution)' : 'External'} —{' '}
                           {d.bounds.width}×{d.bounds.height} (ID: {d.id})
                         </option>
                       ))}
@@ -337,6 +380,49 @@ export default function ControlPage() {
               </div>
             </>
           )}
+        </section>
+
+        <section className="ctrl-section">
+          <h2>
+            <Settings2 className="w-3.5 h-3.5" />
+            Operations &amp; Offline Readiness
+          </h2>
+          <div className="ctrl-mapping-form">
+            <label className="ctrl-form-row">
+              <span>Prevent display sleep</span>
+              <input
+                type="checkbox"
+                checked={status.preventDisplaySleep}
+                onChange={(event) => updatePreference('preventDisplaySleep', event.target.checked)}
+              />
+            </label>
+            <label className="ctrl-form-row">
+              <span>Launch at Windows sign-in</span>
+              <input
+                type="checkbox"
+                checked={status.launchAtLogin}
+                onChange={(event) => updatePreference('launchAtLogin', event.target.checked)}
+              />
+            </label>
+            <div className="ctrl-content-grid">
+              <div className="ctrl-card">
+                <h3 className="ctrl-card-title">Offline snapshots</h3>
+                <p>{status.snapshotMeta.length} TV snapshot(s) available</p>
+                {status.snapshotMeta.map((entry) => (
+                  <p key={entry.target} className="ctrl-text-muted">
+                    {entry.target}: {new Date(entry.generatedAt).toLocaleString()}
+                  </p>
+                ))}
+              </div>
+              <div className="ctrl-card">
+                <h3 className="ctrl-card-title">Media cache</h3>
+                <p>{(status.mediaCache.sizeBytes / 1024 / 1024).toFixed(1)} MB · {status.mediaCache.entries} assets</p>
+                <p className="ctrl-text-muted">
+                  Quota: {(status.mediaCache.quotaBytes / 1024 / 1024).toFixed(0)} MB
+                </p>
+              </div>
+            </div>
+          </div>
         </section>
 
         {/* ── Current Content ── */}

@@ -7,8 +7,6 @@
 import type { TvDisplayData } from '../lib/supabase';
 
 const CACHE_PREFIX = 'tv_display_cache_';
-const CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
-
 interface CacheEntry {
   data: TvDisplayData;
   timestamp: number;
@@ -36,7 +34,8 @@ export function cacheTvDisplayData(target: string, data: TvDisplayData): void {
 /**
  * Retrieve cached TV display data from localStorage
  * @param target Device target (e.g., 'TV1', 'TV2', or 'all')
- * @returns Cached data or null if not found or expired
+ * Legacy fallback cache. Entries are retained indefinitely so the display never
+ * discards its last-known-good content solely because the network was down.
  */
 export function getCachedTvDisplayData(target: string): TvDisplayData | null {
   try {
@@ -49,13 +48,6 @@ export function getCachedTvDisplayData(target: string): TvDisplayData | null {
 
     const entry: CacheEntry = JSON.parse(stored);
     const age = Date.now() - entry.timestamp;
-
-    if (age > CACHE_EXPIRY_MS) {
-      console.log(`[Cache] Cached data for ${target} expired (${Math.round(age / 1000)}s old)`);
-      localStorage.removeItem(cacheKey);
-      return null;
-    }
-
     console.log(`[Cache] Using cached data for ${target} (${Math.round(age / 1000)}s old)`);
     return entry.data;
   } catch (err) {
@@ -112,8 +104,7 @@ export function hasCachedTvDisplayData(target: string): boolean {
     if (!stored) return false;
 
     const entry: CacheEntry = JSON.parse(stored);
-    const age = Date.now() - entry.timestamp;
-    return age <= CACHE_EXPIRY_MS;
+    return typeof entry.timestamp === 'number' && !!entry.data;
   } catch {
     return false;
   }

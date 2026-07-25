@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -757,10 +755,7 @@ body,
 
 /* Optimize fullscreen rendering and hardware acceleration on TV display */
 .player-screen,
-.player-screen *,
-.ctrl-page,
-.ctrl-page * {
-  backface-visibility: hidden;
+.ctrl-page {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -773,15 +768,15 @@ body,
 .animate-border-glow,
 .animate-breaking-pulse {
   transform: translate3d(0, 0, 0);
-  will-change: transform, opacity;
+  will-change: transform;
 }
 
-/* GPU promotion for glassmorphic elements and cards */
-.glass,
-.glass-strong,
-.ctrl-card,
-.ctrl-status-item {
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  will-change: transform;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
