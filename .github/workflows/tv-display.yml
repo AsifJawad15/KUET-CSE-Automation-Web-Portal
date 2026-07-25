@@ -1,0 +1,61 @@
+name: TV Display
+
+on:
+  pull_request:
+    paths:
+      - "shared/tv-display/**"
+      - "src/app/api/tv-display/**"
+      - "src/app/tv-display/**"
+      - "src/modules/TVDisplay/**"
+      - "src/lib/tv*.ts"
+      - "src/services/tvDisplayService.ts"
+      - "src/services/tvScheduleResolver.ts"
+      - "tv-player-app/**"
+      - ".github/workflows/tv-display.yml"
+  workflow_dispatch:
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+      NEXT_PUBLIC_CMS_SUPABASE_URL: https://placeholder.supabase.co
+      NEXT_PUBLIC_CMS_SUPABASE_ANON_KEY: placeholder-anon-key
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+  windows-player:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: tv-player-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: tv-player-app/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run package
+        env:
+          NEXT_PUBLIC_APP_URL: https://placeholder.example
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+          NEXT_PUBLIC_CMS_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_CMS_SUPABASE_ANON_KEY: placeholder-anon-key
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tv-player-windows
+          path: |
+            tv-player-app/release/*.exe
+            tv-player-app/release/*.blockmap

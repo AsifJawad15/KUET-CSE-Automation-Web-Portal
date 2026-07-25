@@ -693,7 +693,10 @@ npm run build
 
 ## 🖥 TV Player App
 
-A standalone **Electron** application that wraps the `/tv-display` route for dedicated department monitors.
+A standalone **Electron** signage application with its own hardened renderer,
+control panel, versioned offline snapshots, media cache, and dynamic monitor
+mapping. It consumes the canonical `/api/tv-display/snapshot` contract so its
+content and merged room schedule match the web portal.
 
 Windows users can download the packaged installer from the
 **[TV Player v1.0.0 GitHub Release](https://github.com/abdullahshahporan/KUET-CSE-Automation-Web-Portal/releases/tag/tv-player-v1.0.0)**.
