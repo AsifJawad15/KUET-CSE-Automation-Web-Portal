@@ -7,8 +7,10 @@
 import { badRequest, conflict, guardSupabase, internalError, noContent, notFound, ok } from '@/lib/apiResponse';
 import { buildStudentAudience, createNotification, notifyTeacherScheduleChanged } from '@/lib/notifications';
 import { ROUTINE_SLOT_WITH_DETAILS } from '@/lib/queryConstants';
+import { requireServerSession } from '@/lib/serverAuth';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { requireField, requireFields } from '@/lib/validators';
+import { resolveTvScheduleRange } from '@/services/tvScheduleResolver';
 import { NextRequest, NextResponse } from 'next/server';
 
 // ── Helpers ────────────────────────────────────────────
@@ -189,6 +191,51 @@ export async function GET(request: NextRequest) {
     const section = searchParams.get('section');
     const forDate = searchParams.get('date'); // optional: filter slots valid on this date
 
+    // Date-scoped consumers (Schedule and all TV surfaces) share the canonical
+    // resolver so CR, teacher, and admin bookings cannot drift between clients.
+    if (forDate && /^\d{4}-\d{2}-\d{2}$/.test(forDate)) {
+      const resolved = await resolveTvScheduleRange(forDate, 1);
+      let slots = resolved.days[forDate].map((slot) => ({
+        id: slot.id,
+        offering_id: '',
+        room_number: slot.roomNumber,
+        day_of_week: new Date(`${forDate}T00:00:00Z`).getUTCDay(),
+        start_time: slot.startTime,
+        end_time: slot.endTime,
+        section: slot.section,
+        valid_from: slot.source === 'routine' ? null : slot.date,
+        valid_until: slot.source === 'routine' ? null : slot.date,
+        created_at: slot.date,
+        source: slot.source,
+        booking_type: slot.bookingType,
+        course_offerings: {
+          id: '',
+          term: slot.term || '',
+          session: slot.session || '',
+          batch: null,
+          courses: {
+            code: slot.courseCode,
+            title: slot.courseTitle,
+            credit: 0,
+            course_type: slot.bookingType || 'Theory',
+          },
+          teachers: {
+            full_name: slot.teacherName || '',
+            teacher_uid: '',
+          },
+        },
+        rooms: { room_number: slot.roomNumber, room_type: null },
+      }));
+
+      if (section) slots = slots.filter((slot) => slot.section === section);
+      if (term) {
+        slots = slots.filter(
+          (slot) => deriveTermFromCode(slot.course_offerings.courses.code) === term,
+        );
+      }
+      return NextResponse.json(slots);
+    }
+
     let query = supabase
       .from('routine_slots')
       .select(ROUTINE_SLOT_WITH_DETAILS)
@@ -337,6 +384,59 @@ export async function GET(request: NextRequest) {
       } catch (mergeErr) {
         console.error('Merge teacher bookings into schedule failed:', mergeErr);
       }
+
+      // ── Merge admin direct bookings (admin_direct_bookings table) ──
+      try {
+        const { data: adminBookings } = await supabase
+          .from('admin_direct_bookings')
+          .select('id, room_number, day_of_week, start_time, end_time, label, booking_type, booking_date')
+          .eq('booking_date', forDate)
+          .eq('status', 'approved');
+
+        if (adminBookings && adminBookings.length > 0) {
+          for (const ab of adminBookings) {
+            // Skip if already covered by another synced slot
+            const alreadySynced = filtered.some((s: Record<string, unknown>) =>
+              s.room_number === ab.room_number &&
+              s.start_time === ab.start_time &&
+              s.end_time === ab.end_time &&
+              s.valid_from != null
+            );
+            if (alreadySynced) continue;
+
+            filtered.push({
+              id: `ab-${ab.id}`,
+              offering_id: '',
+              room_number: ab.room_number,
+              day_of_week: dow,
+              start_time: ab.start_time,
+              end_time: ab.end_time,
+              section: null,
+              valid_from: ab.booking_date,
+              valid_until: ab.booking_date,
+              created_at: ab.booking_date,
+              rrule: null,
+              booking_type: ab.booking_type,
+              course_offerings: {
+                id: '',
+                term: '',
+                session: '',
+                batch: null,
+                courses: {
+                  code: ab.label || 'Reserved',
+                  title: ab.label || 'Admin Booking',
+                  credit: 0,
+                  course_type: 'Reserved',
+                },
+                teachers: null,
+              },
+              rooms: { room_type: null, room_number: ab.room_number },
+            });
+          }
+        }
+      } catch (mergeErr) {
+        console.error('Merge admin direct bookings into schedule failed:', mergeErr);
+      }
     } else {
       // No date given: return only permanent slots (exclude date-scoped bookings)
       filtered = filtered.filter((slot: Record<string, unknown>) => !slot.valid_from);
@@ -359,6 +459,10 @@ export async function GET(request: NextRequest) {
 // ── POST /api/routine-slots ────────────────────────────
 
 export async function POST(request: NextRequest) {
+  // ── Auth guard: admin/head only ──
+  const auth = requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
+
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
@@ -410,6 +514,10 @@ export async function POST(request: NextRequest) {
 // ── PATCH /api/routine-slots ───────────────────────────
 
 export async function PATCH(request: NextRequest) {
+  // ── Auth guard: admin/head only ──
+  const auth = requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
+
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
@@ -485,6 +593,10 @@ export async function PATCH(request: NextRequest) {
 // ── DELETE /api/routine-slots ──────────────────────────
 
 export async function DELETE(request: NextRequest) {
+  // ── Auth guard: admin/head only ──
+  const auth = requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
+
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 

@@ -128,11 +128,22 @@ async function sendOneFcmMessage(input: {
             ...input.data,
           }),
           android: {
+            // 'high' priority wakes the device even in Doze/battery-saver mode.
+            // Required for Nothing OS, OnePlus, Xiaomi, and other aggressive OEMs.
             priority: 'high',
+            // Retry for up to 24 hours if the device is offline/asleep.
+            ttl: '86400s',
             notification: {
               channel_id: 'kuet_notifications',
               sound: 'default',
               click_action: 'FLUTTER_NOTIFICATION_CLICK',
+              // PRIORITY_HIGH forces a heads-up notification on Android 8+
+              // even when the app is in the background.
+              notification_priority: 'PRIORITY_HIGH',
+              // Show on lock screen without redacting content.
+              visibility: 'PUBLIC',
+              // Use the system default vibration pattern.
+              default_vibrate_timings: true,
             },
           },
         },

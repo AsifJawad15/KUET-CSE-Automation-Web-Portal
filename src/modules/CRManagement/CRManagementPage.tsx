@@ -12,6 +12,7 @@ import {
   CheckCircle, Building2, User,
   BookOpen, ChevronDown, ChevronUp, Clock
 } from 'lucide-react';
+import { Select } from '@/components/ui/FormPicker';
 
 // ── Days / Periods ─────────────────────────────────────
 
@@ -169,16 +170,22 @@ export default function CRManagementPage() {
                   value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-white dark:bg-[#0b090a] border border-gray-200 dark:border-[#3d4951] text-gray-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400/30 dark:focus:ring-red-400/30" />
               </div>
-              <select value={filterTerm} onChange={e => setFilterTerm(e.target.value)}
-                className="px-3 py-2.5 rounded-lg bg-white dark:bg-[#0b090a] border border-gray-200 dark:border-[#3d4951] text-gray-700 dark:text-white text-sm focus:outline-none">
+              <Select
+                value={filterTerm}
+                onChange={e => setFilterTerm(e.target.value)}
+                wrapperClassName="w-48"
+              >
                 <option value="all">All Terms</option>
                 {uniqueTerms.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-              <select value={filterSession} onChange={e => setFilterSession(e.target.value)}
-                className="px-3 py-2.5 rounded-lg bg-white dark:bg-[#0b090a] border border-gray-200 dark:border-[#3d4951] text-gray-700 dark:text-white text-sm focus:outline-none">
+              </Select>
+              <Select
+                value={filterSession}
+                onChange={e => setFilterSession(e.target.value)}
+                wrapperClassName="w-48"
+              >
                 <option value="all">All Sessions</option>
                 {uniqueSessions.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
+              </Select>
             </div>
           </SpotlightCard>
 

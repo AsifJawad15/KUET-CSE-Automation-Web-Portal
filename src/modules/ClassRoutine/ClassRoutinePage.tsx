@@ -17,6 +17,8 @@ import { FileUploadModal, createRoutineUploadConfig } from '@/components/upload'
 import { TERMS } from './constants';
 import { groupSlotsForDisplay } from './helpers';
 import ClassRoutinePrintView, { RoutineCoordinator, RoutinePrintInfo } from './ClassRoutinePrintView';
+import SmartRoutineGenerator from './SmartRoutineGenerator';
+
 
 
 // ==========================================
@@ -24,6 +26,7 @@ import ClassRoutinePrintView, { RoutineCoordinator, RoutinePrintInfo } from './C
 // Orchestrator Component
 // ==========================================
 export default function ClassRoutinePage() {
+  const [activeTab, setActiveTab] = useState<'manual' | 'smart'>('manual');
   const [selectedTerm, setSelectedTerm] = useState('3-2');
   const [selectedSession, setSelectedSession] = useState('2023-2024');
   const [selectedSection, setSelectedSection] = useState('A');
@@ -35,6 +38,7 @@ export default function ClassRoutinePage() {
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [teachers, setTeachers] = useState<TeacherWithAuth[]>([]);
   const [teachersLoading, setTeachersLoading] = useState(false);
+  const [deleteSlotIds, setDeleteSlotIds] = useState<string[] | null>(null);
   const [printInfo, setPrintInfo] = useState<RoutinePrintInfo>({
     revision: '',
     classStartingDate: '',
@@ -89,18 +93,8 @@ export default function ClassRoutinePage() {
    * Delete all slot IDs in a combined group.
    * For a normal slot this is just 1 ID; for combined it deletes both.
    */
-  const handleDeleteSlot = async (slotIds: string[]) => {
-    if (!confirm('Remove this slot?')) return;
-    let hasError = false;
-    for (const id of slotIds) {
-      const result = await deleteRoutineSlot(id);
-      if (!result.success) {
-        setError(result.error || 'Failed to delete');
-        hasError = true;
-        break;
-      }
-    }
-    if (!hasError) await loadRoutine();
+  const handleDeleteSlot = (slotIds: string[]) => {
+    setDeleteSlotIds(slotIds);
   };
 
   const handlePrintRoutine = (info: RoutinePrintInfo) => {
@@ -134,123 +128,203 @@ export default function ClassRoutinePage() {
           <h1 className="text-2xl font-bold text-gray-700 dark:text-white">Class Routine</h1>
           <p className="text-gray-400 dark:text-[#b1a7a6] mt-1">Manage weekly class schedules for all semesters</p>
         </div>
-        <div className="flex gap-2 self-start">
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setShowPrintModal(true)}
-            disabled={loading || displaySlots.length === 0}
-            className="px-4 py-2 border border-gray-200 dark:border-[#3d4951] text-gray-700 dark:text-[#b1a7a6] rounded-lg transition-all flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-[#3d4951]/30 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Printer className="w-5 h-5" />
-            Print
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setShowUploadModal(true)}
-            className="px-4 py-2 border border-gray-200 dark:border-[#3d4951] text-gray-700 dark:text-[#b1a7a6] rounded-lg transition-all flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-[#3d4951]/30"
-          >
-            <Upload className="w-5 h-5" />
-            Upload Routine
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setShowAddModal(true)}
-            className="px-4 py-2 bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#ba181b] dark:to-[#e5383b] text-white rounded-lg transition-all flex items-center gap-2 shadow-lg shadow-[#D9A299]/25 dark:shadow-red-600/25"
-          >
-            <Plus className="w-5 h-5" />
-            Add Slot
-          </motion.button>
-        </div>
+        {activeTab === 'manual' && (
+          <div className="flex gap-2 self-start">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowPrintModal(true)}
+              disabled={loading || displaySlots.length === 0}
+              className="px-4 py-2 border border-gray-200 dark:border-[#3d4951] text-gray-700 dark:text-[#b1a7a6] rounded-lg transition-all flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-[#3d4951]/30 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Printer className="w-5 h-5" />
+              Print
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowUploadModal(true)}
+              className="px-4 py-2 border border-gray-200 dark:border-[#3d4951] text-gray-700 dark:text-[#b1a7a6] rounded-lg transition-all flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-[#3d4951]/30"
+            >
+              <Upload className="w-5 h-5" />
+              Upload Routine
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowAddModal(true)}
+              className="px-4 py-2 bg-gradient-to-r from-[#D9A299] to-[#DCC5B2] dark:from-[#ba181b] dark:to-[#e5383b] text-white rounded-lg transition-all flex items-center gap-2 shadow-lg shadow-[#D9A299]/25 dark:shadow-red-600/25"
+            >
+              <Plus className="w-5 h-5" />
+              Add Slot
+            </motion.button>
+          </div>
+        )}
       </div>
 
-      {/* Filters: Term, Session, Section */}
-      <RoutineFilters
-        selectedTerm={selectedTerm}
-        selectedSession={selectedSession}
-        selectedSection={selectedSection}
-        onTermChange={setSelectedTerm}
-        onSessionChange={setSelectedSession}
-        onSectionChange={setSelectedSection}
-      />
+      {/* Tab Switcher */}
+      <div className="flex border-b border-gray-200 dark:border-[#3d4951] gap-6">
+        <button
+          onClick={() => setActiveTab('manual')}
+          className={`pb-2 text-sm font-bold transition-all border-b-2 outline-none ${
+            activeTab === 'manual'
+              ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+              : 'border-transparent text-gray-400 hover:text-gray-600'
+          }`}
+        >
+          Manual Builder
+        </button>
+        <button
+          onClick={() => setActiveTab('smart')}
+          className={`pb-2 text-sm font-bold transition-all border-b-2 outline-none ${
+            activeTab === 'smart'
+              ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+              : 'border-transparent text-gray-400 hover:text-gray-600'
+          }`}
+        >
+          Smart Generate
+        </button>
+      </div>
 
-      {/* Error */}
-      {error && (
-        <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-500 text-sm flex justify-between">
-          {error}
-          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-300">×</button>
-        </div>
-      )}
-
-      {/* Routine Title Banner */}
-      <SpotlightCard className="rounded-xl p-4 border border-gray-200 dark:border-[#3d4951] text-center" spotlightColor="rgba(217, 162, 153, 0.2)">
-        <h2 className="text-lg font-bold text-gray-700 dark:text-white">
-          Class Routine – {TERMS.find(t => t.value === selectedTerm)?.label}
-        </h2>
-        <p className="text-sm text-gray-400 dark:text-[#b1a7a6] mt-1">
-          Session: {selectedSession} &nbsp;•&nbsp; Section: {selectedSection}
-        </p>
-      </SpotlightCard>
-
-      {/* Loading */}
-      {loading ? (
-        <div className="flex items-center justify-center h-48">
-          <Loader2 className="w-8 h-8 animate-spin text-indigo-500 dark:text-red-600" />
-        </div>
+      {activeTab === 'smart' ? (
+        <SmartRoutineGenerator />
       ) : (
-        <RoutineGrid displaySlots={displaySlots} onDeleteSlot={handleDeleteSlot} />
+        <>
+          {/* Filters: Term, Session, Section */}
+          <RoutineFilters
+            selectedTerm={selectedTerm}
+            selectedSession={selectedSession}
+            selectedSection={selectedSection}
+            onTermChange={setSelectedTerm}
+            onSessionChange={setSelectedSession}
+            onSectionChange={setSelectedSection}
+          />
+
+          {/* Error */}
+          {error && (
+            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-500 text-sm flex justify-between">
+              {error}
+              <button onClick={() => setError(null)} className="text-red-400 hover:text-red-300">×</button>
+            </div>
+          )}
+
+          {/* Routine Title Banner */}
+          <SpotlightCard className="rounded-xl p-4 border border-gray-200 dark:border-[#3d4951] text-center" spotlightColor="rgba(217, 162, 153, 0.2)">
+            <h2 className="text-lg font-bold text-gray-700 dark:text-white">
+              Class Routine – {TERMS.find(t => t.value === selectedTerm)?.label}
+            </h2>
+            <p className="text-sm text-gray-400 dark:text-[#b1a7a6] mt-1">
+              Session: {selectedSession} &nbsp;•&nbsp; Section: {selectedSection}
+            </p>
+          </SpotlightCard>
+
+          {/* Loading */}
+          {loading ? (
+            <div className="flex items-center justify-center h-48">
+              <Loader2 className="w-8 h-8 animate-spin text-indigo-500 dark:text-red-600" />
+            </div>
+          ) : (
+            <RoutineGrid displaySlots={displaySlots} onDeleteSlot={handleDeleteSlot} />
+          )}
+
+          {/* Empty state */}
+          {!loading && displaySlots.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-gray-400 dark:text-[#b1a7a6]">No routine slots found for this selection.</p>
+              <p className="text-sm text-gray-400 dark:text-[#b1a7a6]/70 mt-1">Click &quot;Add Slot&quot; to create the first entry.</p>
+            </div>
+          )}
+
+          {/* Stats */}
+          {!loading && displaySlots.length > 0 && <RoutineStats displaySlots={displaySlots} />}
+
+          {/* Add Slot Modal */}
+          <AddRoutineSlot
+            show={showAddModal}
+            onClose={() => setShowAddModal(false)}
+            onSave={handleAddSlot}
+            term={selectedTerm}
+            session={selectedSession}
+            section={selectedSection}
+          />
+
+          {/* Upload Routine Modal */}
+          <FileUploadModal
+            show={showUploadModal}
+            onClose={() => setShowUploadModal(false)}
+            onImportComplete={() => {
+              setShowUploadModal(false);
+              loadRoutine(); // Refresh DB slots
+            }}
+            config={createRoutineUploadConfig(selectedTerm, selectedSession, selectedSection)}
+          />
+
+          <PrintRoutineModal
+            show={showPrintModal}
+            initialInfo={printInfo}
+            teachers={teachers}
+            teachersLoading={teachersLoading}
+            onClose={() => setShowPrintModal(false)}
+            onPrint={handlePrintRoutine}
+          />
+
+          <ClassRoutinePrintView
+            displaySlots={displaySlots}
+            selectedTerm={selectedTerm}
+            selectedSession={selectedSession}
+            selectedSection={selectedSection}
+            printInfo={printInfo}
+          />
+
+          {/* Delete Slot Confirmation Modal */}
+          {deleteSlotIds && (
+            <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setDeleteSlotIds(null)}>
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-white dark:bg-[#161a1d] border border-gray-200 dark:border-[#3d4951] rounded-2xl p-6 w-full max-w-md mx-4"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="text-center">
+                  <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Trash2 className="w-6 h-6 text-red-600 dark:text-red-400" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Remove Routine Slot</h3>
+                  <p className="text-sm text-gray-500 dark:text-zinc-400 mb-6">Are you sure you want to remove this slot from the class routine?</p>
+                  
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setDeleteSlotIds(null)}
+                      className="flex-1 py-2.5 border border-gray-200 dark:border-[#3d4951] rounded-full text-gray-700 dark:text-[#d3d3d3] hover:bg-gray-50 dark:hover:bg-[#0b090a]"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={async () => {
+                        const ids = deleteSlotIds;
+                        setDeleteSlotIds(null);
+                        let hasError = false;
+                        for (const id of ids) {
+                          const result = await deleteRoutineSlot(id);
+                          if (!result.success) {
+                            setError(result.error || 'Failed to delete');
+                            hasError = true;
+                            break;
+                          }
+                        }
+                        if (!hasError) await loadRoutine();
+                      }}
+                      className="flex-1 py-2.5 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </>
       )}
-
-      {/* Empty state */}
-      {!loading && displaySlots.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-gray-400 dark:text-[#b1a7a6]">No routine slots found for this selection.</p>
-          <p className="text-sm text-gray-400 dark:text-[#b1a7a6]/70 mt-1">Click &quot;Add Slot&quot; to create the first entry.</p>
-        </div>
-      )}
-
-      {/* Stats */}
-      {!loading && displaySlots.length > 0 && <RoutineStats displaySlots={displaySlots} />}
-
-      {/* Add Slot Modal */}
-      <AddRoutineSlot
-        show={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        onSave={handleAddSlot}
-        term={selectedTerm}
-        session={selectedSession}
-        section={selectedSection}
-      />
-
-      {/* Upload Routine Modal */}
-      <FileUploadModal
-        show={showUploadModal}
-        onClose={() => setShowUploadModal(false)}
-        onImportComplete={() => {
-          setShowUploadModal(false);
-          loadRoutine(); // Refresh DB slots
-        }}
-        config={createRoutineUploadConfig(selectedTerm, selectedSession, selectedSection)}
-      />
-
-      <PrintRoutineModal
-        show={showPrintModal}
-        initialInfo={printInfo}
-        teachers={teachers}
-        teachersLoading={teachersLoading}
-        onClose={() => setShowPrintModal(false)}
-        onPrint={handlePrintRoutine}
-      />
-
-      <ClassRoutinePrintView
-        displaySlots={displaySlots}
-        selectedTerm={selectedTerm}
-        selectedSession={selectedSession}
-        selectedSection={selectedSection}
-        printInfo={printInfo}
-      />
     </div>
   );
 }

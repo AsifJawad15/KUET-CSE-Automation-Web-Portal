@@ -5,6 +5,7 @@ import { generateSecurePassword, hashPassword } from '@/lib/passwordUtils';
 import { requireField, requireFields, runValidations, validateEmail } from '@/lib/validators';
 import { getSupabaseAdmin, isSupabaseAdminConfigured } from '@/lib/supabaseAdmin';
 import { requireServerSession } from '@/lib/serverAuth';
+import { withAdminRateLimit } from '@/lib/withRateLimit';
 
 interface AdminPermissions {
   all?: boolean;
@@ -59,7 +60,7 @@ function serviceGuard() {
   return null;
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withAdminRateLimit(async function GET(request: NextRequest) {
   const auth = requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
   const guard = serviceGuard();
@@ -86,9 +87,9 @@ export async function GET(request: NextRequest) {
   } catch (error: unknown) {
     return internalError(extractErrorMessage(error, 'Failed to fetch staff'));
   }
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = withAdminRateLimit(async function POST(request: NextRequest) {
   const auth = requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
   const guard = serviceGuard();
@@ -183,9 +184,9 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     return internalError(extractErrorMessage(error, 'Failed to add staff'));
   }
-}
+});
 
-export async function PATCH(request: NextRequest) {
+export const PATCH = withAdminRateLimit(async function PATCH(request: NextRequest) {
   const auth = requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
   const guard = serviceGuard();
@@ -256,9 +257,9 @@ export async function PATCH(request: NextRequest) {
   } catch (error: unknown) {
     return internalError(extractErrorMessage(error, 'Failed to update staff'));
   }
-}
+});
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAdminRateLimit(async function DELETE(request: NextRequest) {
   const auth = requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
   const guard = serviceGuard();
@@ -309,4 +310,4 @@ export async function DELETE(request: NextRequest) {
   } catch (error: unknown) {
     return internalError(extractErrorMessage(error, 'Failed to deactivate staff'));
   }
-}
+});

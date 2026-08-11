@@ -7,6 +7,7 @@
 import { badRequest, conflict, created, guardSupabase, internalError, noContent, notFound, ok } from '@/lib/apiResponse';
 import { notifyTermUpgrade } from '@/lib/notifications';
 import { TERM_UPGRADE_WITH_STUDENT } from '@/lib/queryConstants';
+import { requireServerSession } from '@/lib/serverAuth';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { requireFields, validateUUID } from '@/lib/validators';
 import { NextRequest, NextResponse } from 'next/server';
@@ -31,12 +32,15 @@ const VALID_REVIEW_STATUSES = ['approved', 'rejected'] as const;
 // ── GET /api/term-upgrades ─────────────────────────────
 
 export async function GET(request: NextRequest) {
+  // ── Auth guard ──
+  const auth = requireServerSession(request);
+  if (auth.response) return auth.response;
+
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
   try {
     const { searchParams } = new URL(request.url);
-    const studentUserId = searchParams.get('studentUserId');
     const status = searchParams.get('status');
 
     let query = supabase
@@ -44,7 +48,14 @@ export async function GET(request: NextRequest) {
       .select(TERM_UPGRADE_WITH_STUDENT)
       .order('requested_at', { ascending: false });
 
-    if (studentUserId) query = query.eq('student_user_id', studentUserId);
+    // Students can only see their own requests
+    if (auth.user.role === 'student') {
+      query = query.eq('student_user_id', auth.user.id);
+    } else {
+      // Admin/head can filter by studentUserId
+      const studentUserId = searchParams.get('studentUserId');
+      if (studentUserId) query = query.eq('student_user_id', studentUserId);
+    }
     if (status) query = query.eq('status', status);
 
     const { data, error } = await query;
@@ -59,12 +70,19 @@ export async function GET(request: NextRequest) {
 // ── POST /api/term-upgrades ────────────────────────────
 
 export async function POST(request: NextRequest) {
+  // ── Auth guard ──
+  const auth = requireServerSession(request);
+  if (auth.response) return auth.response;
+
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
   try {
     const body = await request.json();
-    const { student_user_id, current_term, requested_term, reason } = body;
+    const { current_term, requested_term, reason } = body;
+
+    // Force student_user_id from verified session
+    const student_user_id = auth.user.id;
 
     const fieldCheck = requireFields({ student_user_id, current_term, requested_term });
     if (!fieldCheck.valid) return badRequest(fieldCheck.error!);
@@ -103,12 +121,19 @@ export async function POST(request: NextRequest) {
 // ── PATCH /api/term-upgrades (approve/reject) ──────────
 
 export async function PATCH(request: NextRequest) {
+  // ── Auth guard: admin/head only ──
+  const auth = requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
+
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
   try {
     const body = await request.json();
-    const { id, status, admin_user_id, admin_remarks } = body;
+    const { id, status, admin_remarks } = body;
+
+    // Force admin_user_id from verified session
+    const admin_user_id = auth.user.id;
 
     const fieldCheck = requireFields({ id, status });
     if (!fieldCheck.valid) return badRequest(fieldCheck.error!);
@@ -117,10 +142,8 @@ export async function PATCH(request: NextRequest) {
       return badRequest(`status must be "approved" or "rejected"`);
     }
 
-    // Validate admin_user_id is a valid UUID, otherwise set to null
-    const validAdminId = admin_user_id
-      ? (validateUUID(admin_user_id).valid ? admin_user_id : null)
-      : null;
+    // Validate admin_user_id is a valid UUID (should always be valid from session)
+    const validAdminId = validateUUID(admin_user_id).valid ? admin_user_id : null;
 
     // Fetch the request
     const { data: upgradeRequest, error: fetchError } = await supabase
@@ -186,6 +209,10 @@ export async function PATCH(request: NextRequest) {
 // ── DELETE /api/term-upgrades ──────────────────────────
 
 export async function DELETE(request: NextRequest) {
+  // ── Auth guard ──
+  const auth = requireServerSession(request);
+  if (auth.response) return auth.response;
+
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
@@ -195,12 +222,18 @@ export async function DELETE(request: NextRequest) {
 
     if (!id) return badRequest('id is required');
 
-    const { error } = await supabase
+    // Build delete query — students can only delete their own pending requests
+    let query = supabase
       .from('term_upgrade_requests')
       .delete()
       .eq('id', id)
-      .eq('status', 'pending'); // Only allow deleting pending requests
+      .eq('status', 'pending');
 
+    if (auth.user.role === 'student') {
+      query = query.eq('student_user_id', auth.user.id);
+    }
+
+    const { error } = await query;
     if (error) throw error;
     return noContent();
   } catch (error: unknown) {

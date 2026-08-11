@@ -26,6 +26,7 @@ const MatrixGrid: React.FC<{
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mouseRef = useRef({ x: -1000, y: -1000 });
   const rafRef = useRef<number>(0);
+  const drawPending = useRef(false);
   const [dims, setDims] = useState({ w: 0, h: 0 });
 
   const handleResize = useCallback(() => {
@@ -54,7 +55,7 @@ const MatrixGrid: React.FC<{
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const dpr = window.devicePixelRatio;
+    const dpr = window.devicePixelRatio || 1;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.scale(dpr, dpr);
 
@@ -77,23 +78,38 @@ const MatrixGrid: React.FC<{
 
     // Reset scale
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    rafRef.current = requestAnimationFrame(draw);
   }, [dims, dotColor, glowColor, dotSize, gap, baseOpacity, hoverRadius]);
 
-  useEffect(() => {
-    rafRef.current = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(rafRef.current);
+  const requestDraw = useCallback(() => {
+    if (drawPending.current) return;
+    drawPending.current = true;
+    rafRef.current = requestAnimationFrame(() => {
+      drawPending.current = false;
+      draw();
+    });
   }, [draw]);
+
+  useEffect(() => {
+    requestDraw();
+  }, [dims, requestDraw]);
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
 
   const handleMove = useCallback((e: React.MouseEvent) => {
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
     mouseRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-  }, []);
+    requestDraw();
+  }, [requestDraw]);
 
   const handleLeave = useCallback(() => {
     mouseRef.current = { x: -1000, y: -1000 };
-  }, []);
+    requestDraw();
+  }, [requestDraw]);
 
   return (
     <canvas

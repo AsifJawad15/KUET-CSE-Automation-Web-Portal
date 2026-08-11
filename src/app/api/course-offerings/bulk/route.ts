@@ -1,14 +1,14 @@
 // ==========================================
 // API: /api/course-offerings/bulk
 // Bulk import course-teacher allocations
-// Resolves course by code, teacher by name
-// Auto-creates offerings with duplicate detection
-// Standardized BulkImportResult response
+// Batch lookups + batch insert (N+1 eliminated)
+// Auth: requireServerSession({ adminLike: true })
 // ==========================================
 
 import { NextRequest } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { badRequest, guardSupabase, internalError } from '@/lib/apiResponse';
+import { requireServerSession } from '@/lib/serverAuth';
+import { getSupabaseAdmin, isSupabaseAdminConfigured } from '@/lib/supabaseAdmin';
 
 interface BulkAllocationItem {
   course_code: string;
@@ -18,51 +18,18 @@ interface BulkAllocationItem {
   section?: string;
 }
 
-// ── Helpers ────────────────────────────────────────────
-
-async function findCourseByCode(code: string) {
-  const { data } = await supabase
-    .from('courses')
-    .select('id')
-    .eq('code', code.trim().toUpperCase())
-    .maybeSingle();
-  return data;
-}
-
-async function findTeacherByName(name: string) {
-  const trimmed = name.trim();
-
-  // 1. Exact match (case-insensitive)
-  const { data: exact } = await supabase
-    .from('teachers')
-    .select('user_id')
-    .ilike('full_name', trimmed)
-    .limit(1)
-    .maybeSingle();
-  if (exact) return exact;
-
-  // 2. Partial match
-  const { data: partial } = await supabase
-    .from('teachers')
-    .select('user_id')
-    .ilike('full_name', `%${trimmed}%`)
-    .limit(1)
-    .maybeSingle();
-  if (partial) return partial;
-
-  return null;
-}
-
 function resolveSession(provided?: string): string {
   if (provided) return provided;
   const currentYear = new Date().getFullYear();
   return `${currentYear - 1}-${currentYear}`;
 }
 
-// ── POST Handler ───────────────────────────────────────
-
 export async function POST(request: NextRequest) {
-  const guard = guardSupabase(isSupabaseConfigured());
+  // ── Auth guard ──
+  const auth = requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
+
+  const guard = guardSupabase(isSupabaseAdminConfigured());
   if (guard) return guard;
 
   try {
@@ -73,87 +40,130 @@ export async function POST(request: NextRequest) {
       return badRequest('No items provided');
     }
 
-    let inserted = 0;
-    let skipped = 0;
+    const db = getSupabaseAdmin();
     const errors: string[] = [];
+    let skipped = 0;
 
+    // Pre-validate
+    const validItems: (BulkAllocationItem & { _code: string; _teacherName: string })[] = [];
     for (const item of items) {
-      try {
-        if (!item.course_code || !item.teacher_name) {
-          errors.push('Skipping: missing course code or teacher name');
-          skipped++;
-          continue;
+      if (!item.course_code || !item.teacher_name) {
+        errors.push('Skipping: missing course code or teacher name');
+        skipped++;
+        continue;
+      }
+      validItems.push({
+        ...item,
+        _code: item.course_code.trim().toUpperCase(),
+        _teacherName: item.teacher_name.trim(),
+      });
+    }
+
+    if (validItems.length === 0) {
+      return Response.json({ inserted: 0, skipped, errors });
+    }
+
+    // Batch lookup: courses by code
+    const uniqueCodes = [...new Set(validItems.map(v => v._code))];
+    const { data: courseRows } = await db
+      .from('courses')
+      .select('id, code')
+      .in('code', uniqueCodes);
+
+    const courseMap = new Map((courseRows || []).map(c => [c.code, c.id]));
+
+    // Batch lookup: all teachers (needed for name matching)
+    const { data: teacherRows } = await db
+      .from('teachers')
+      .select('user_id, full_name')
+      .eq('is_active', true);
+
+    // Build a teacher name → user_id lookup
+    const teacherByExactName = new Map<string, string>();
+    const allTeachers = teacherRows || [];
+    for (const t of allTeachers) {
+      teacherByExactName.set(t.full_name.toLowerCase(), t.user_id);
+    }
+
+    function findTeacher(name: string): string | null {
+      const lower = name.toLowerCase();
+      // 1. Exact
+      const exact = teacherByExactName.get(lower);
+      if (exact) return exact;
+      // 2. Partial
+      for (const t of allTeachers) {
+        if (t.full_name.toLowerCase().includes(lower) || lower.includes(t.full_name.toLowerCase())) {
+          return t.user_id;
         }
+      }
+      return null;
+    }
 
-        // Find course
-        const course = await findCourseByCode(item.course_code);
-        if (!course) {
-          errors.push(`Course "${item.course_code}" not found in database`);
-          skipped++;
-          continue;
+    // Batch lookup: existing offerings
+    const { data: existingOfferings } = await db
+      .from('course_offerings')
+      .select('id, course_id, teacher_user_id');
+
+    const offeringSet = new Set(
+      (existingOfferings || []).map(o => `${o.course_id}:${o.teacher_user_id}`),
+    );
+
+    // Resolve & filter
+    const newOfferings: Record<string, unknown>[] = [];
+    for (const item of validItems) {
+      const courseId = courseMap.get(item._code);
+      if (!courseId) {
+        errors.push(`Course "${item._code}" not found in database`);
+        skipped++;
+        continue;
+      }
+
+      const teacherUserId = findTeacher(item._teacherName);
+      if (!teacherUserId) {
+        errors.push(`Teacher "${item._teacherName}" not found in database`);
+        skipped++;
+        continue;
+      }
+
+      const key = `${courseId}:${teacherUserId}`;
+      if (offeringSet.has(key)) {
+        skipped++;
+        continue;
+      }
+      offeringSet.add(key);
+
+      // Resolve term from course code if not provided
+      let resolvedTerm = item.term;
+      if (!resolvedTerm) {
+        const match = item._code.match(/\d/);
+        if (match) {
+          const year = Math.min(parseInt(match[0]), 4);
+          resolvedTerm = `${year}-1`;
         }
+        resolvedTerm = resolvedTerm || '1-1';
+      }
 
-        // Find teacher
-        const teacher = await findTeacherByName(item.teacher_name);
-        if (!teacher) {
-          errors.push(`Teacher "${item.teacher_name}" not found in database`);
-          skipped++;
-          continue;
-        }
+      const insertData: Record<string, unknown> = {
+        course_id: courseId,
+        teacher_user_id: teacherUserId,
+        term: resolvedTerm,
+        session: resolveSession(item.session),
+      };
+      if (item.section) insertData.section = item.section;
 
-        const resolvedSession = resolveSession(item.session);
+      newOfferings.push(insertData);
+    }
 
-        // Check duplicate assignment
-        const { data: existing } = await supabase
-          .from('course_offerings')
-          .select('id')
-          .eq('course_id', course.id)
-          .eq('teacher_user_id', teacher.user_id)
-          .maybeSingle();
+    let inserted = 0;
+    if (newOfferings.length > 0) {
+      const { error, count } = await db
+        .from('course_offerings')
+        .insert(newOfferings, { count: 'exact' });
 
-        if (existing) {
-          skipped++;
-          continue;
-        }
-
-        // Resolve term from course code if not provided
-        let resolvedTerm = item.term;
-        if (!resolvedTerm) {
-          const { data: courseData } = await supabase
-            .from('courses')
-            .select('code')
-            .eq('id', course.id)
-            .single();
-          if (courseData?.code) {
-            const match = courseData.code.match(/\d/);
-            if (match) {
-              const year = Math.min(parseInt(match[0]), 4);
-              resolvedTerm = `${year}-1`;
-            }
-          }
-          resolvedTerm = resolvedTerm || '1-1';
-        }
-
-        // Insert offering
-        const insertData: Record<string, unknown> = {
-          course_id: course.id,
-          teacher_user_id: teacher.user_id,
-          term: resolvedTerm,
-          session: resolvedSession,
-        };
-        if (item.section) insertData.section = item.section;
-
-        const { error } = await supabase
-          .from('course_offerings')
-          .insert(insertData);
-
-        if (error) {
-          errors.push(`"${item.course_code}" → "${item.teacher_name}": ${error.message}`);
-        } else {
-          inserted++;
-        }
-      } catch (err) {
-        errors.push(`"${item.course_code}": ${err instanceof Error ? err.message : 'Unknown error'}`);
+      if (error) {
+        errors.push(`Batch insert failed: ${error.message}`);
+      } else {
+        inserted = count ?? newOfferings.length;
       }
     }
 

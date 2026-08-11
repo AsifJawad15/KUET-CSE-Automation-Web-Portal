@@ -26,12 +26,14 @@ const DEFAULT_THEME: Theme = 'light';
 
 function loadTheme(): Theme {
   try {
-    // Force light mode - clear any stale dark mode preference
-    localStorage.setItem(STORAGE_KEY, 'light');
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved === 'dark' || saved === 'light') {
+      return saved as Theme;
+    }
   } catch {
     // ignore
   }
-  return 'light';
+  return DEFAULT_THEME;
 }
 
 function applyTheme(theme: Theme): void {

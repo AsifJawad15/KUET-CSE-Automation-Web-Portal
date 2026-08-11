@@ -12,6 +12,7 @@ import {
   StudentWithAuth 
 } from '@/services/studentService';
 import { FileUploadModal, studentUploadConfig } from '@/components/upload';
+import { Select } from '@/components/ui/FormPicker';
 
 export default function AddStudentPage() {
   const [students, setStudents] = useState<StudentWithAuth[]>([]);
@@ -242,41 +243,38 @@ export default function AddStudentPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-[#d3d3d3] mb-1">Batch</label>
-                  <select
+                  <Select
+                    label="Batch"
                     value={formData.batch}
                     onChange={(e) => setFormData({ ...formData, batch: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-200 dark:border-[#3d4951] rounded-lg bg-white dark:bg-[#0b090a] text-gray-700 dark:text-white focus:border-indigo-400 dark:focus:border-red-400 focus:outline-none focus:ring-1 focus:ring-indigo-300 dark:focus:ring-red-400"
                   >
                     <option value="21">2k21</option>
                     <option value="22">2k22</option>
                     <option value="23">2k23</option>
                     <option value="24">2k24</option>
-                  </select>
+                  </Select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-[#d3d3d3] mb-1">Current Year</label>
-                  <select
+                  <Select
+                    label="Current Year"
                     value={formData.currentYear}
                     onChange={(e) => setFormData({ ...formData, currentYear: parseInt(e.target.value) as 1 | 2 | 3 | 4 })}
-                    className="w-full px-4 py-2 border border-gray-200 dark:border-[#3d4951] rounded-lg bg-white dark:bg-[#0b090a] text-gray-700 dark:text-white focus:border-indigo-400 dark:focus:border-red-400 focus:outline-none focus:ring-1 focus:ring-indigo-300 dark:focus:ring-red-400"
                   >
                     <option value={1}>1st Year</option>
                     <option value={2}>2nd Year</option>
                     <option value={3}>3rd Year</option>
                     <option value={4}>4th Year</option>
-                  </select>
+                  </Select>
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-[#d3d3d3] mb-1">Current Term</label>
-                  <select
+                  <Select
+                    label="Current Term"
                     value={formData.currentTerm}
                     onChange={(e) => setFormData({ ...formData, currentTerm: parseInt(e.target.value) as 1 | 2 })}
-                    className="w-full px-4 py-2 border border-gray-200 dark:border-[#3d4951] rounded-lg bg-white dark:bg-[#0b090a] text-gray-700 dark:text-white focus:border-indigo-400 dark:focus:border-red-400 focus:outline-none focus:ring-1 focus:ring-indigo-300 dark:focus:ring-red-400"
                   >
                     <option value={1}>1st Term</option>
                     <option value={2}>2nd Term</option>
-                  </select>
+                  </Select>
                 </div>
               </div>
               <div className="flex gap-3 pt-4">

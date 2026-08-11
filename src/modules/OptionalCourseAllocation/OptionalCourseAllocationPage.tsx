@@ -37,6 +37,7 @@ import {
     X,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Select } from '@/components/ui/FormPicker';
 
 // ── Types ──────────────────────────────────────────────
 
@@ -1081,11 +1082,11 @@ export default function OptionalCourseAllocationPage() {
 
               <div className="space-y-4">
                 <div>
-                  <label className={`block text-sm font-medium mb-1.5 ${textPrimary}`}>Teacher *</label>
-                  <select
+                  <Select
+                    label="Teacher *"
+                    labelClassName={`text-sm font-medium normal-case mb-1.5 ${textPrimary}`}
                     value={selectedTeacher}
                     onChange={(e) => setSelectedTeacher(e.target.value)}
-                    className={`${inputClass} cursor-pointer`}
                   >
                     <option value="">Select a teacher...</option>
                     {teachers.map((t) => (
@@ -1093,7 +1094,7 @@ export default function OptionalCourseAllocationPage() {
                         {t.full_name} ({t.teacher_uid})
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
 
                 <div>
@@ -1159,11 +1160,11 @@ export default function OptionalCourseAllocationPage() {
 
               <div className="space-y-4">
                 <div>
-                  <label className={`block text-sm font-medium mb-1.5 ${textPrimary}`}>Teacher</label>
-                  <select
+                  <Select
+                    label="Teacher"
+                    labelClassName={`text-sm font-medium normal-case mb-1.5 ${textPrimary}`}
                     value={selectedTeacher}
                     onChange={(e) => setSelectedTeacher(e.target.value)}
-                    className={`${inputClass} cursor-pointer`}
                   >
                     <option value="">Select a teacher...</option>
                     {teachers.map((t) => (
@@ -1171,7 +1172,7 @@ export default function OptionalCourseAllocationPage() {
                         {t.full_name} ({t.teacher_uid})
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
 
                 <div>

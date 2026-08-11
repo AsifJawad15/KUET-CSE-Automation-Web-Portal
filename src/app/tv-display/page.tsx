@@ -6,11 +6,23 @@
 // Right (32%): Time-aware live room schedule
 //   - Current period - all rooms active NOW
 //   - Next 2 upcoming periods, auto-slides every 20 s
-// No auth required. Polls every 30 s.
+// No auth required. Revalidates the canonical snapshot every 60 s.
 // ==========================================
 
-import { getRoutineSlots } from '@/services/routineService';
-import { fetchTvDisplayData } from '@/services/tvDisplayService';
+import { fetchTvSnapshotForTarget, DEFAULT_LAYOUT } from '@/services/tvDisplayService';
+import { routineDisplaySlotToDb } from '@/lib/tvRoutineAdapter';
+import {
+  loadTvSnapshotFromWebCache,
+  prefetchTvSnapshotMedia,
+  saveTvSnapshotToWebCache,
+} from '@/lib/tvSnapshotCache';
+import {
+  TV_DISPLAY_TIME_ZONE,
+  clampSetting,
+  getZonedDateKey,
+  getZonedMinutes,
+  mergeTvSnapshots,
+} from '../../../shared/tv-display/domain';
 import type { CmsTvAnnouncement, CmsTvEvent, CmsTvTicker } from '@/types/cms';
 import type { DBRoutineSlotWithDetails } from '@/types/database';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -36,7 +48,7 @@ const C = {
   border:   'rgba(255,255,255,0.08)',
 } as const;
 
-const POLL_MS = 30_000;
+const POLL_MS = 60_000;
 
 // - Routine helpers -
 
@@ -81,27 +93,68 @@ export default function TvDisplayPublicPage() {
   const [tickerIndex, setTickerIndex] = useState(0);
   const [upcomingIdx, setUpcomingIdx] = useState(0); // which upcoming period is shown (0 or 1)
   const autoRotateRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Safe Client-side URL param parsing
+  const [target, setTarget] = useState<string>('all');
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const t = new URLSearchParams(window.location.search).get('target');
+      if (t) setTarget(t);
+    }
+  }, []);
 
   const headlinePrefix = settings.headline_prefix || 'HEADLINES';
-  const eventRotationSec = parseInt(settings.event_rotation_sec || '8', 10);
+  const eventRotationSec = clampSetting(settings.event_rotation_sec, 8, 3, 120);
+
+  // Layout flex ratios and heights from settings (falling back to global then defaults)
+  const eventsFlex = parseInt(settings[`events_flex_${target}`] || settings.events_flex_all || String(DEFAULT_LAYOUT.events_flex), 10);
+  const scheduleFlex = parseInt(settings[`schedule_flex_${target}`] || settings.schedule_flex_all || String(DEFAULT_LAYOUT.schedule_flex), 10);
+  const currentFlex = parseInt(settings[`current_flex_${target}`] || settings.current_flex_all || String(DEFAULT_LAYOUT.current_flex), 10);
+  const upcomingFlex = parseInt(settings[`upcoming_flex_${target}`] || settings.upcoming_flex_all || String(DEFAULT_LAYOUT.upcoming_flex), 10);
+  const tickerHeight = parseInt(settings[`ticker_height_${target}`] || settings.ticker_height_all || String(DEFAULT_LAYOUT.ticker_height), 10);
+  const headlinesHeight = parseInt(settings[`headlines_height_${target}`] || settings.headlines_height_all || String(DEFAULT_LAYOUT.headlines_height), 10);
+  const breakingHeight = parseInt(settings[`breaking_height_${target}`] || settings.breaking_height_all || String(DEFAULT_LAYOUT.breaking_height), 10);
 
   // -- Fetch all data --
   const fetchData = useCallback(async () => {
     try {
       // Pass today's date so the API returns routine_slots valid today
       // (both permanent routines and date-scoped CR bookings)
-      const todayStr = new Date().toISOString().split('T')[0];
-      const [tvData, slots] = await Promise.all([
-        fetchTvDisplayData(),
-        getRoutineSlots(undefined, undefined, undefined, todayStr).catch(() => [] as DBRoutineSlotWithDetails[]),
-      ]);
+      const todayStr = getZonedDateKey(new Date(), TV_DISPLAY_TIME_ZONE);
+      const freshSnapshot = await fetchTvSnapshotForTarget('all');
+      const previous = freshSnapshot.errors
+        ? await loadTvSnapshotFromWebCache('all').catch(() => null)
+        : null;
+      const snapshot = mergeTvSnapshots(previous?.snapshot ?? null, freshSnapshot);
+      const content = snapshot.content;
+      const tvData = {
+        announcements: (content?.announcements ?? []) as CmsTvAnnouncement[],
+        ticker: (content?.ticker ?? []) as CmsTvTicker[],
+        events: (content?.events ?? []) as CmsTvEvent[],
+        settings: content?.settings ?? {},
+      };
+      const slots = (snapshot.schedule?.days[todayStr] ?? []).map(routineDisplaySlotToDb);
       setAnnouncements(tvData.announcements);
       setTicker(tvData.ticker);
       setEvents(tvData.events);
       setSettings(tvData.settings);
       setRoutineSlots(slots);
+      void saveTvSnapshotToWebCache(snapshot);
+      void prefetchTvSnapshotMedia(snapshot);
     } catch (err) {
       console.error('TV Display fetch error:', err);
+      const cached = await loadTvSnapshotFromWebCache('all').catch(() => null);
+      if (cached) {
+        const todayStr = getZonedDateKey(new Date(), TV_DISPLAY_TIME_ZONE);
+        const content = cached.snapshot.content;
+        setAnnouncements((content?.announcements ?? []) as CmsTvAnnouncement[]);
+        setTicker((content?.ticker ?? []) as CmsTvTicker[]);
+        setEvents((content?.events ?? []) as CmsTvEvent[]);
+        setSettings(content?.settings ?? {});
+        setRoutineSlots(
+          (cached.snapshot.schedule?.days[todayStr] ?? []).map(routineDisplaySlotToDb),
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -115,9 +168,24 @@ export default function TvDisplayPublicPage() {
 
   // Clock tick every second
   useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(timer);
+    let interval: ReturnType<typeof setInterval> | null = null;
+    const timeout = setTimeout(() => {
+      setNow(new Date());
+      interval = setInterval(() => setNow(new Date()), 60_000);
+    }, 60_000 - (Date.now() % 60_000));
+    return () => {
+      clearTimeout(timeout);
+      if (interval) clearInterval(interval);
+    };
   }, []);
+
+  useEffect(() => {
+    if (eventPage >= events.length) setEventPage(0);
+  }, [eventPage, events.length]);
+
+  useEffect(() => {
+    if (tickerIndex >= ticker.length) setTickerIndex(0);
+  }, [tickerIndex, ticker.length]);
 
   // Auto-rotate event carousel
   useEffect(() => {
@@ -126,7 +194,7 @@ export default function TvDisplayPublicPage() {
     const maxPage = events.length - 1;
     autoRotateRef.current = setInterval(() => setEventPage(prev => (prev >= maxPage ? 0 : prev + 1)), eventRotationSec * 1000);
     return () => { if (autoRotateRef.current) clearInterval(autoRotateRef.current); };
-  }, [events.length, eventRotationSec]);
+  }, [events.map((event) => `${event.id}:${event.updated_at}`).join('|'), eventRotationSec]);
 
   // Slide between upcoming periods every 20 s
   useEffect(() => {
@@ -143,7 +211,7 @@ export default function TvDisplayPublicPage() {
 
   // -- Schedule derived data ------------------------------
   const periods = useMemo(() => buildPeriods(routineSlots), [routineSlots]);
-  const nowMins = now.getHours() * 60 + now.getMinutes();
+  const nowMins = getZonedMinutes(now, TV_DISPLAY_TIME_ZONE);
 
   const currentPeriod = useMemo(
     () => periods.find(p => nowMins >= timeToMins(p.start_time) && nowMins < timeToMins(p.end_time)) ?? null,
@@ -155,8 +223,8 @@ export default function TvDisplayPublicPage() {
   );
 
   // -- Clock formatting --
-  const timeStr = now.toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit' });
-  const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const timeStr = now.toLocaleTimeString('en-US', { timeZone: TV_DISPLAY_TIME_ZONE, hour12: true, hour: 'numeric', minute: '2-digit' });
+  const dateStr = now.toLocaleDateString('en-US', { timeZone: TV_DISPLAY_TIME_ZONE, weekday: 'long', month: 'long', day: 'numeric' });
 
   // -- Event pagination --
   const maxPage = Math.max(0, events.length - 1);
@@ -212,7 +280,10 @@ export default function TvDisplayPublicPage() {
       <main className="flex-1 min-h-0 flex overflow-hidden">
 
         {/* ----- LEFT PANEL: News & Events (58%) ----- */}
-        <section className="flex-[80] min-w-0 flex flex-col p-4 pr-2 overflow-hidden">
+        <section
+          className="min-w-0 flex flex-col p-4 overflow-hidden"
+          style={{ flex: eventsFlex, paddingRight: '8px' }}
+        >
           <div className="flex-shrink-0 flex items-center justify-between mb-2">
             <h2 className="text-sm font-black tracking-[0.2em] uppercase" style={{ color: C.gold }}>
               Department News &amp; Events
@@ -258,14 +329,18 @@ export default function TvDisplayPublicPage() {
         </section>
 
         {/* - RIGHT PANEL: Live Room Schedule (42%) - */}
-        <section className="flex-[20] min-w-0 flex flex-col p-4 pl-2 overflow-hidden gap-2">
+        <section
+          className="min-w-0 flex flex-col p-4 overflow-hidden gap-2"
+          style={{ flex: scheduleFlex, paddingLeft: '8px' }}
+        >
           <h2 className="flex-shrink-0 text-xs font-black tracking-[0.18em] uppercase" style={{ color: C.gold }}>
             Live Room Schedule
           </h2>
 
           {/* - CURRENT PERIOD (top ~55%) - */}
-          <div className="flex-[55] min-h-0 rounded-2xl overflow-hidden flex flex-col"
+          <div className="min-h-0 rounded-2xl overflow-hidden flex flex-col"
             style={{
+              flex: currentFlex,
               background: currentPeriod
                 ? 'linear-gradient(135deg, #004d40 0%, #00695c 60%, #00796b 100%)'
                 : `linear-gradient(135deg, ${C.navy} 0%, ${C.navyDark} 100%)`,
@@ -332,8 +407,12 @@ export default function TvDisplayPublicPage() {
           </div>
 
           {/* -- UPCOMING PERIODS (bottom ~45%, slides every 20 s) -- */}
-          <div className="flex-[45] min-h-0 rounded-2xl overflow-hidden flex flex-col"
-            style={{ background: C.navyLight, border: `1px solid rgba(0,121,107,0.25)` }}>
+          <div className="min-h-0 rounded-2xl overflow-hidden flex flex-col"
+            style={{
+              flex: upcomingFlex,
+              background: C.navyLight,
+              border: `1px solid rgba(0,121,107,0.25)`,
+            }}>
             <div className="flex-shrink-0 px-3 py-2 flex items-center justify-between"
               style={{ borderBottom: `1px solid ${C.border}` }}>
               <span className="text-[10px] font-black tracking-[0.18em] uppercase" style={{ color: C.tealLight }}>
@@ -401,7 +480,7 @@ export default function TvDisplayPublicPage() {
 
       {/* =========== BREAKING NEWS or TICKER + HEADLINES =========== */}
       {breakingNewsActive ? (
-        <div className="flex-shrink-0 flex items-stretch overflow-hidden" style={{ height: '70px' }}>
+        <div className="flex-shrink-0 flex items-stretch overflow-hidden" style={{ height: `${breakingHeight}px` }}>
           <div className="flex-shrink-0 px-5 flex items-center gap-3"
             style={{ background: 'linear-gradient(135deg, #b71c1c 0%, #d32f2f 100%)' }}>
             <div className="w-2.5 h-2.5 rounded-full bg-white animate-pulse" />
@@ -425,7 +504,7 @@ export default function TvDisplayPublicPage() {
         <>
           {/* =========== TICKER BAR =========== */}
           {ticker.length > 0 && (
-            <div className="flex-shrink-0 flex items-stretch overflow-hidden" style={{ height: '36px' }}>
+            <div className="flex-shrink-0 flex items-stretch overflow-hidden" style={{ height: `${tickerHeight}px` }}>
               <div className="flex-shrink-0 px-4 flex items-center gap-2"
                 style={{ background: `linear-gradient(135deg, ${C.teal}, ${C.tealDark})` }}>
                 <Zap className="w-3.5 h-3.5 text-white" />
@@ -467,7 +546,7 @@ export default function TvDisplayPublicPage() {
 
           {/* =========== HEADLINES MARQUEE =========== */}
           {announcements.length > 0 && (
-            <div className="flex-shrink-0 flex items-stretch overflow-hidden" style={{ height: '34px' }}>
+            <div className="flex-shrink-0 flex items-stretch overflow-hidden" style={{ height: `${headlinesHeight}px` }}>
               <div className="flex-shrink-0 px-4 flex items-center gap-2" style={{ background: C.gold }}>
                 <Radio className="w-3 h-3 animate-pulse" style={{ color: C.navyDark }} />
                 <span className="font-black text-[11px] tracking-[0.2em] uppercase whitespace-nowrap" style={{ color: C.navyDark }}>

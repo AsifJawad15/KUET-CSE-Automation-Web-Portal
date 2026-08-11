@@ -1,16 +1,34 @@
 import { createClient } from '@supabase/supabase-js';
+import {
+  TV_DISPLAY_TIME_ZONE,
+  getZonedDateKey,
+  getDateKeyWeekday,
+  isTvSnapshotV2,
+  type TvSnapshotSection,
+  type TvSnapshotV2,
+} from '../../../shared/tv-display/domain';
 
 // CMS Supabase — TV content, announcements, events, devices
-const supabaseUrl = import.meta.env.NEXT_PUBLIC_CMS_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.NEXT_PUBLIC_CMS_SUPABASE_ANON_KEY || '';
+const supabaseUrl =
+  import.meta.env.NEXT_PUBLIC_CMS_SUPABASE_URL ||
+  import.meta.env.NEXT_PUBLIC_SUPABASE_URL ||
+  '';
+const supabaseAnonKey =
+  import.meta.env.NEXT_PUBLIC_CMS_SUPABASE_ANON_KEY ||
+  import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  '';
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn(
-    '⚠️ CMS Supabase not configured. Ensure NEXT_PUBLIC_CMS_SUPABASE_URL and NEXT_PUBLIC_CMS_SUPABASE_ANON_KEY are set in the root .env.local'
+    '⚠️ CMS Supabase not configured. Set NEXT_PUBLIC_CMS_SUPABASE_URL and NEXT_PUBLIC_CMS_SUPABASE_ANON_KEY in tv-player-app/.env.local or the root fallback environment.'
   );
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const isCmsSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+export const supabase = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseAnonKey || 'placeholder-anon-key',
+);
 
 // Main Supabase — routine_slots, rooms, courses, teachers (academic data)
 const mainSupabaseUrl = import.meta.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -22,7 +40,43 @@ if (!mainSupabaseUrl || !mainSupabaseAnonKey) {
   );
 }
 
-export const mainSupabase = createClient(mainSupabaseUrl, mainSupabaseAnonKey);
+export const isMainSupabaseConfigured = Boolean(mainSupabaseUrl && mainSupabaseAnonKey);
+export const mainSupabase = createClient(
+  mainSupabaseUrl || 'https://placeholder.supabase.co',
+  mainSupabaseAnonKey || 'placeholder-anon-key',
+);
+
+const tvAppBaseUrl = (
+  import.meta.env.VITE_TV_APP_URL ||
+  import.meta.env.NEXT_PUBLIC_APP_URL ||
+  ''
+).replace(/\/+$/, '');
+
+export const isTvSnapshotApiConfigured = Boolean(tvAppBaseUrl);
+
+export async function fetchTvSnapshotForTarget(
+  target: string,
+  sections?: TvSnapshotSection[],
+  signal?: AbortSignal,
+): Promise<TvSnapshotV2> {
+  if (!tvAppBaseUrl) throw new Error('TV snapshot API URL is not configured.');
+  const url = new URL('/api/tv-display/snapshot', `${tvAppBaseUrl}/`);
+  url.searchParams.set('target', target);
+  if (sections?.length) url.searchParams.set('include', sections.join(','));
+  const response = await fetch(url, {
+    signal,
+    cache: 'no-store',
+    headers: { Accept: 'application/json' },
+  });
+  if (!response.ok) {
+    throw new Error(`TV snapshot request failed (${response.status}).`);
+  }
+  const value: unknown = await response.json();
+  if (!isTvSnapshotV2(value) || value.target !== target) {
+    throw new Error('TV snapshot response is invalid.');
+  }
+  return value;
+}
 
 // ── CMS TV Display Types (matching the existing tables) ──
 
@@ -107,6 +161,7 @@ export interface TvDisplayData {
  * Returns content where target matches the given value OR 'all'.
  */
 export async function fetchTvDisplayDataForTarget(target: TvTarget): Promise<TvDisplayData> {
+  if (!isCmsSupabaseConfigured) throw new Error('CMS Supabase is not configured.');
   const [announcementsRes, tickerRes, settingsRes, eventsRes] = await Promise.all([
     supabase
       .from('cms_tv_announcements')
@@ -159,6 +214,7 @@ export async function fetchTvDisplayDataForTarget(target: TvTarget): Promise<TvD
  * Fetch all TV display data (for control page overview).
  */
 export async function fetchAllTvDisplayData(): Promise<TvDisplayData> {
+  if (!isCmsSupabaseConfigured) throw new Error('CMS Supabase is not configured.');
   const [announcementsRes, tickerRes, settingsRes, eventsRes] = await Promise.all([
     supabase
       .from('cms_tv_announcements')
@@ -208,11 +264,13 @@ export async function fetchAllTvDisplayData(): Promise<TvDisplayData> {
  * Fetch all active TV devices from the database.
  */
 export async function fetchActiveDevices(): Promise<CmsTvDevice[]> {
-  const { data } = await supabase
+  if (!isCmsSupabaseConfigured) throw new Error('CMS Supabase is not configured.');
+  const { data, error } = await supabase
     .from('cms_tv_devices')
     .select('*')
     .eq('is_active', true)
     .order('name', { ascending: true });
+  if (error) throw new Error(error.message || 'Failed to fetch active TV devices');
   return (data as CmsTvDevice[]) || [];
 }
 
@@ -220,6 +278,7 @@ export async function fetchActiveDevices(): Promise<CmsTvDevice[]> {
  * Fetch device settings for a specific TV target.
  */
 export async function fetchDeviceByName(name: string): Promise<CmsTvDevice | null> {
+  if (!isCmsSupabaseConfigured) throw new Error('CMS Supabase is not configured.');
   const { data, error } = await supabase
     .from('cms_tv_devices')
     .select('*')
@@ -262,11 +321,10 @@ export interface RoutineSlotWithDetails {
  * Filters by day_of_week and valid_from/valid_until date range.
  */
 export async function fetchTodayRoutineSlots(): Promise<RoutineSlotWithDetails[]> {
-  if (!mainSupabaseUrl || !mainSupabaseAnonKey) return [];
+  if (!isMainSupabaseConfigured) return [];
 
-  const now = new Date();
-  const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon, ...
-  const todayStr = now.toISOString().split('T')[0];
+  const todayStr = getZonedDateKey(new Date(), TV_DISPLAY_TIME_ZONE);
+  const dayOfWeek = getDateKeyWeekday(todayStr);
 
   const { data, error } = await mainSupabase
     .from('routine_slots')

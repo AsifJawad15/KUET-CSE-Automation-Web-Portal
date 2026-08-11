@@ -26,19 +26,19 @@
 }
 
 .dark {
-  --background: #FFFFFF;
-  --foreground: #111827;
-  --card: #FFFFFF;
-  --card-foreground: #111827;
-  --primary: #1E293B;
-  --primary-foreground: #FFFFFF;
-  --secondary: #4B5563;
-  --secondary-foreground: #FFFFFF;
+  --background: #09090b;
+  --foreground: #fafafa;
+  --card: #18181b;
+  --card-foreground: #fafafa;
+  --primary: #f4f4f5;
+  --primary-foreground: #18181b;
+  --secondary: #27272a;
+  --secondary-foreground: #fafafa;
   --accent: #6366F1;
-  --muted: #F9FAFB;
-  --muted-foreground: #4B5563;
-  --border: #E5E7EB;
-  --input: #FFFFFF;
+  --muted: #27272a;
+  --muted-foreground: #a1a1aa;
+  --border: #27272a;
+  --input: #18181b;
   --ring: #6366F1;
 }
 
@@ -183,35 +183,24 @@ table tbody tr:last-child td:last-child {
   border-bottom-right-radius: 0.5rem;
 }
 
-/* Dark mode overrides — force light */
+/* Dark mode table styles */
 .dark table thead th {
-  background: #1E293B !important;
-  color: #FFFFFF !important;
-  border-bottom-color: #334155;
+  background: #27272a !important;
+  color: #fafafa !important;
+  border-bottom-color: #3f3f46;
 }
 
 .dark table tbody tr:nth-child(even) {
-  background-color: #F9FAFB;
+  background-color: #18181b;
 }
 
 .dark table tbody tr:nth-child(odd) {
-  background-color: #FFFFFF;
+  background-color: #09090b;
 }
 
 .dark table tbody td {
-  color: #1F2937;
-  border-bottom-color: #E5E7EB;
-}
-
-.dark .bg-\[\#161a1d\],
-.dark .bg-\[\#0b090a\],
-.dark .bg-\[\#1a1a2e\] {
-  background-color: #FFFFFF !important;
-}
-
-.dark .border-\[\#3d4951\],
-.dark .border-white\/10 {
-  border-color: #E5E7EB !important;
+  color: #e4e4e7;
+  border-bottom-color: #27272a;
 }
 
 /* ==========================================
@@ -256,4 +245,37 @@ table tbody tr:last-child td:last-child {
   background: #EFF6FF;
   color: #1E40AF;
   border: 1px solid #BFDBFE;
+}
+
+/* ==========================================
+   UX & Smooth Rendering Optimizations
+   ========================================== */
+
+html {
+  scroll-behavior: smooth;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* GPU Hardware Acceleration for Smooth Animations & Hover Transitions */
+.transition-all,
+.transition-transform,
+.transition-opacity,
+.transition-colors,
+.transition-shadow,
+.dashboard-card,
+.ctrl-card,
+.btn-primary,
+.btn-secondary,
+.btn-ghost {
+  backface-visibility: hidden;
+  transform: translate3d(0, 0, 0);
+  perspective: 1000px;
+}
+
+/* Defer rendering of off-screen components */
+.content-visibility-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 600px;
 }

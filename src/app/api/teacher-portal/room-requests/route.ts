@@ -4,9 +4,10 @@
 // ==========================================
 
 import { badRequest, guardSupabase, internalError, ok } from '@/lib/apiResponse';
-import { notifyAdminRoomRequestPending, notifyTeacherRoomApproved, notifyTeacherRoomRejected } from '@/lib/notifications';
+import { requireServerSession } from '@/lib/serverAuth';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { requireFields, runValidations } from '@/lib/validators';
+import { notificationBroker } from '@/lib/notificationBroker';
 import { NextRequest, NextResponse } from 'next/server';
 
 const PERIODS = [
@@ -228,7 +229,7 @@ export async function POST(request: NextRequest) {
     if (error) throw error;
 
     // Notify admin so they can review and approve the request
-    await notifyAdminRoomRequestPending({
+    await notificationBroker.publish('teacher_room_request.submitted', {
       teacherUserId: teacher_user_id || null,
       teacherName: teacher_name || null,
       roomNumber: room_number,
@@ -248,6 +249,10 @@ export async function POST(request: NextRequest) {
 // ── PATCH /api/teacher-portal/room-requests ────────────
 
 export async function PATCH(request: NextRequest) {
+  // ── Auth guard: admin/head only ──
+  const auth = requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
+
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
@@ -270,6 +275,8 @@ export async function PATCH(request: NextRequest) {
         *,
         course_offerings!rbr_offering_fkey(
           id,
+          term,
+          batch,
           courses(code, title)
         )
       `)
@@ -296,6 +303,9 @@ export async function PATCH(request: NextRequest) {
     if (teacherUserId) {
       const period = `${existingRequest.start_time as string}–${existingRequest.end_time as string}`;
       const offering = existingRequest.course_offerings as {
+        id?: string;
+        term?: string;
+        batch?: string | null;
         courses?: { code?: string; title?: string } | { code?: string; title?: string }[] | null;
       } | null;
       const courseRecord = Array.isArray(offering?.courses) ? offering?.courses[0] : offering?.courses;
@@ -304,7 +314,44 @@ export async function PATCH(request: NextRequest) {
       const resolvedRoom = (room_number as string | undefined) || (existingRequest.room_number as string | null) || 'TBA';
 
       if (status === 'approved') {
-        await notifyTeacherRoomApproved({
+        // Sync to routine_slots
+        try {
+          const { data: existingSlots } = await supabase
+            .from('routine_slots')
+            .select('id')
+            .eq('offering_id', existingRequest.offering_id)
+            .eq('day_of_week', existingRequest.day_of_week)
+            .eq('start_time', existingRequest.start_time)
+            .eq('end_time', existingRequest.end_time)
+            .eq('valid_from', existingRequest.booking_date)
+            .eq('valid_until', existingRequest.booking_date)
+            .limit(1);
+
+          if (existingSlots && existingSlots.length > 0) {
+            await supabase
+              .from('routine_slots')
+              .update({ room_number: resolvedRoom, section: existingRequest.section || null })
+              .eq('id', existingSlots[0].id);
+          } else {
+            await supabase
+              .from('routine_slots')
+              .insert({
+                offering_id: existingRequest.offering_id,
+                room_number: resolvedRoom,
+                day_of_week: existingRequest.day_of_week,
+                start_time: existingRequest.start_time,
+                end_time: existingRequest.end_time,
+                section: existingRequest.section || null,
+                valid_from: existingRequest.booking_date,
+                valid_until: existingRequest.booking_date,
+              });
+          }
+        } catch (syncErr) {
+          console.error('Teacher sync PATCH: routine_slots sync failed:', syncErr);
+        }
+
+        // Notify teacher
+        await notificationBroker.publish('teacher_room_request.approved', {
           teacherUserId,
           courseCode,
           roomNumber: resolvedRoom,
@@ -313,8 +360,20 @@ export async function PATCH(request: NextRequest) {
           remarks: remarks ?? null,
           requestId: id,
         });
+
+        // Notify students
+        await notificationBroker.publish('cr_room_request.allocated', {
+          createdBy: existingRequest.teacher_user_id,
+          courseCode,
+          roomNumber: resolvedRoom,
+          dayName,
+          startTime: existingRequest.start_time,
+          endTime: existingRequest.end_time,
+          term: offering?.term || '',
+          section: offering?.batch || existingRequest.section || null,
+        });
       } else {
-        await notifyTeacherRoomRejected({
+        await notificationBroker.publish('teacher_room_request.rejected', {
           teacherUserId,
           courseCode,
           roomNumber: resolvedRoom,

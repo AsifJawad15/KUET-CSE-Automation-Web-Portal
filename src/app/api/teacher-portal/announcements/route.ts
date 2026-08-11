@@ -1,4 +1,5 @@
 // ==========================================
+// ==========================================
 // API: /api/teacher-portal/announcements
 // Handles teacher announcements CRUD
 // ==========================================
@@ -7,7 +8,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { badRequest, guardSupabase, internalError, noContent, ok } from '@/lib/apiResponse';
 import { requireFields, runValidations } from '@/lib/validators';
-import { notifyAnnouncement } from '@/lib/notifications';
 
 function extractError(error: unknown, fallback: string): string {
   if (error instanceof Error) return error.message;
@@ -77,7 +77,8 @@ export async function POST(request: NextRequest) {
 
     // Notification failure should not block announcement creation.
     try {
-      await notifyAnnouncement({
+      const { notificationBroker } = await import('@/lib/notificationBroker');
+      await notificationBroker.publish('announcement.created', {
         createdBy: createdBy || '',
         createdByRole: 'TEACHER',
         title: safeTitle,

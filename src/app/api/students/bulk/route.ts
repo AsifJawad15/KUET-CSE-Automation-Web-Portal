@@ -1,14 +1,15 @@
 // ==========================================
 // API: /api/students/bulk
 // Bulk import students with profile creation
-// Password = roll_no, detects duplicates by email & roll
-// Standardized BulkImportResult response
+// Secure random passwords, batch operations
+// Auth: requireServerSession({ adminLike: true })
 // ==========================================
 
 import { NextRequest } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { badRequest, guardSupabase, internalError } from '@/lib/apiResponse';
 import { hashPassword, getStudentInitialPassword } from '@/lib/passwordUtils';
+import { requireServerSession } from '@/lib/serverAuth';
+import { getSupabaseAdmin, isSupabaseAdminConfigured } from '@/lib/supabaseAdmin';
 
 interface BulkStudentItem {
   full_name: string;
@@ -20,7 +21,11 @@ interface BulkStudentItem {
 }
 
 export async function POST(request: NextRequest) {
-  const guard = guardSupabase(isSupabaseConfigured());
+  // ── Auth guard ──
+  const auth = requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
+
+  const guard = guardSupabase(isSupabaseAdminConfigured());
   if (guard) return guard;
 
   try {
@@ -31,104 +36,122 @@ export async function POST(request: NextRequest) {
       return badRequest('No items provided');
     }
 
-    let inserted = 0;
-    let skipped = 0;
+    const db = getSupabaseAdmin();
     const errors: string[] = [];
+    let skipped = 0;
+
+    // Validate & normalize
+    type ValidStudent = BulkStudentItem & { _email: string; _rollNo: string };
+    const validItems: ValidStudent[] = [];
 
     for (const item of items) {
-      try {
-        if (!item.full_name || !item.email || !item.roll_no || !item.term || !item.session) {
-          errors.push(`Skipping: missing required fields for "${item.roll_no || 'unknown'}"`);
-          skipped++;
-          continue;
-        }
-
-        const email = item.email.toLowerCase().trim();
-
-        // Validate email
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-          errors.push(`Skipping "${item.roll_no}": invalid email "${email}"`);
-          skipped++;
-          continue;
-        }
-
-        // Validate term format
-        if (!/^[1-4]-[1-2]$/.test(item.term)) {
-          errors.push(`Skipping "${item.roll_no}": invalid term "${item.term}"`);
-          skipped++;
-          continue;
-        }
-
-        // Check duplicate by email
-        const { data: existingEmail } = await supabase
-          .from('profiles')
-          .select('user_id')
-          .eq('email', email)
-          .maybeSingle();
-
-        if (existingEmail) {
-          skipped++;
-          continue;
-        }
-
-        // Check duplicate by roll_no
-        const { data: existingRoll } = await supabase
-          .from('students')
-          .select('user_id')
-          .eq('roll_no', item.roll_no.trim())
-          .maybeSingle();
-
-        if (existingRoll) {
-          skipped++;
-          continue;
-        }
-
-        // Generate UUID & password (password = roll_no)
-        const userId = crypto.randomUUID();
-        const initialPassword = getStudentInitialPassword(item.roll_no);
-        const passwordHash = await hashPassword(initialPassword);
-
-        // Create profile
-        const { error: profileError } = await supabase.from('profiles').insert({
-          user_id: userId,
-          role: 'STUDENT',
-          email,
-          password_hash: passwordHash,
-          is_active: true,
-        });
-
-        if (profileError) {
-          if (profileError.message.includes('duplicate') || profileError.message.includes('unique')) {
-            skipped++;
-            continue;
-          }
-          throw profileError;
-        }
-
-        // Create student record
-        const { error: studentError } = await supabase.from('students').insert({
-          user_id: userId,
-          roll_no: item.roll_no.trim(),
-          full_name: item.full_name.trim(),
-          phone: item.phone || '',
-          term: item.term,
-          session: item.session,
-        });
-
-        if (studentError) {
-          errors.push(`"${item.roll_no}": ${studentError.message}`);
-          // Rollback profile
-          await supabase.from('profiles').delete().eq('user_id', userId);
-          continue;
-        }
-
-        inserted++;
-      } catch (err) {
-        errors.push(`"${item.roll_no}": ${err instanceof Error ? err.message : 'Unknown error'}`);
+      if (!item.full_name || !item.email || !item.roll_no || !item.term || !item.session) {
+        errors.push(`Skipping: missing required fields for "${item.roll_no || 'unknown'}"`);
+        skipped++;
+        continue;
       }
+      const email = item.email.toLowerCase().trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        errors.push(`Skipping "${item.roll_no}": invalid email "${email}"`);
+        skipped++;
+        continue;
+      }
+      if (!/^[1-4]-[1-2]$/.test(item.term)) {
+        errors.push(`Skipping "${item.roll_no}": invalid term "${item.term}"`);
+        skipped++;
+        continue;
+      }
+      validItems.push({ ...item, _email: email, _rollNo: item.roll_no.trim() });
     }
 
-    return Response.json({ inserted, skipped, errors });
+    if (validItems.length === 0) {
+      return Response.json({ inserted: 0, skipped, errors, created: { passwords: [] } });
+    }
+
+    // Batch lookup: emails + roll numbers in parallel
+    const emails = [...new Set(validItems.map(v => v._email))];
+    const rollNos = [...new Set(validItems.map(v => v._rollNo))];
+
+    const [{ data: existingEmails }, { data: existingRolls }] = await Promise.all([
+      db.from('profiles').select('email').in('email', emails),
+      db.from('students').select('roll_no').in('roll_no', rollNos),
+    ]);
+
+    const emailSet = new Set((existingEmails || []).map(p => p.email));
+    const rollSet = new Set((existingRolls || []).map(s => s.roll_no));
+
+    // Filter to new students only
+    const newStudents = validItems.filter(item => {
+      if (emailSet.has(item._email) || rollSet.has(item._rollNo)) {
+        skipped++;
+        return false;
+      }
+      emailSet.add(item._email);
+      rollSet.add(item._rollNo);
+      return true;
+    });
+
+    if (newStudents.length === 0) {
+      return Response.json({ inserted: 0, skipped, errors, created: { passwords: [] } });
+    }
+
+    // Generate secure random passwords + hash in parallel
+    const prepared = await Promise.all(
+      newStudents.map(async (item) => {
+        const userId = crypto.randomUUID();
+        const plainPassword = getStudentInitialPassword();
+        const passwordHash = await hashPassword(plainPassword);
+        return { userId, plainPassword, passwordHash, item };
+      }),
+    );
+
+    // Batch insert profiles
+    const profileRows = prepared.map(p => ({
+      user_id: p.userId,
+      role: 'STUDENT',
+      email: p.item._email,
+      password_hash: p.passwordHash,
+      is_active: true,
+    }));
+
+    const { error: profileError } = await db.from('profiles').insert(profileRows);
+    if (profileError) {
+      errors.push(`Profile batch insert failed: ${profileError.message}`);
+      return Response.json({ inserted: 0, skipped, errors, created: { passwords: [] } });
+    }
+
+    // Batch insert student records
+    const studentRows = prepared.map(p => ({
+      user_id: p.userId,
+      roll_no: p.item._rollNo,
+      full_name: p.item.full_name.trim(),
+      phone: p.item.phone || '',
+      term: p.item.term,
+      session: p.item.session,
+    }));
+
+    const { error: studentError } = await db.from('students').insert(studentRows);
+    if (studentError) {
+      errors.push(`Student batch insert failed: ${studentError.message}`);
+      // Rollback profiles
+      const userIds = prepared.map(p => p.userId);
+      await db.from('profiles').delete().in('user_id', userIds);
+      return Response.json({ inserted: 0, skipped, errors, created: { passwords: [] } });
+    }
+
+    // Return generated passwords so admin can distribute them
+    const generatedPasswords = prepared.map(
+      p => `${p.item.full_name.trim()} (${p.item._email}) [${p.item._rollNo}]: ${p.plainPassword}`,
+    );
+
+    return Response.json({
+      inserted: prepared.length,
+      skipped,
+      errors,
+      created: {
+        passwords: generatedPasswords,
+      },
+    });
   } catch (error: unknown) {
     return internalError(error instanceof Error ? error.message : 'Bulk import failed');
   }

@@ -4,10 +4,11 @@ import { DBRoutineSlotWithDetails } from '@/lib/supabase';
 import { getRoutineSlots, deleteRoutineSlot } from '@/services/routineService';
 import { groupSlotsForDisplay } from '@/modules/ClassRoutine/helpers';
 import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Loader2, RefreshCw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, Plus, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import ScheduleTableView from './ScheduleTableView';
 import ScheduleGridView from './ScheduleGridView';
+import ScheduleRoomModal from './ScheduleRoomModal';
 
 const JS_DAY_TO_NAME: Record<number, string> = { 0: 'Sunday', 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday' };
 function getTodayDateStr(): string {
@@ -49,6 +50,7 @@ export default function SchedulePage() {
   const [term, setTerm] = useState('all');
   const [selectedDate, setSelectedDate] = useState(getTodayDateStr);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [showBookingModal, setShowBookingModal] = useState(false);
 
   // Calendar month navigation state
   const selParts = selectedDate.split('-').map(Number);
@@ -144,6 +146,16 @@ export default function SchedulePage() {
               Grid
             </button>
           </div>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setShowBookingModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-indigo-600 dark:from-red-600 dark:to-red-700 text-white rounded-lg font-medium text-sm hover:opacity-90 transition-all shadow-sm"
+            title="Schedule a room booking"
+          >
+            <Plus className="w-4 h-4" />
+            Schedule Room
+          </motion.button>
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -271,6 +283,14 @@ export default function SchedulePage() {
           )}
         </div>
       </div>
+
+      {/* ── Room Booking Modal ── */}
+      <ScheduleRoomModal
+        show={showBookingModal}
+        onClose={() => setShowBookingModal(false)}
+        selectedDate={selectedDate}
+        onSuccess={fetchSlots}
+      />
     </div>
   );
 }

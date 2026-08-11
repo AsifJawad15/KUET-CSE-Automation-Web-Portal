@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { badRequest, guardSupabase, internalError } from '@/lib/apiResponse';
 import { GEO_ATTENDANCE_DEFAULTS } from '@/lib/geoAttendanceConfig';
+import { requireServerSession } from '@/lib/serverAuth';
 
 // KUET CSE Building coordinates (fallback when room has no stored coordinates)
 const BUILDING_LAT = 22.8993;
@@ -38,15 +39,22 @@ function haversineDistance(
 // ── POST: Student submits geo-attendance ──────────────
 
 export async function POST(request: NextRequest) {
+  // ── Auth guard ──
+  const auth = requireServerSession(request);
+  if (auth.response) return auth.response;
+
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
   try {
     const body = await request.json();
-    const { geo_room_id, student_user_id, latitude, longitude } = body;
+    const { geo_room_id, latitude, longitude } = body;
 
-    if (!geo_room_id || !student_user_id || latitude == null || longitude == null) {
-      return badRequest('Missing required fields: geo_room_id, student_user_id, latitude, longitude');
+    // Force student_user_id from verified session
+    const student_user_id = auth.user.id;
+
+    if (!geo_room_id || latitude == null || longitude == null) {
+      return badRequest('Missing required fields: geo_room_id, latitude, longitude');
     }
 
     // Validate coordinates are reasonable numbers
@@ -261,14 +269,16 @@ export async function POST(request: NextRequest) {
 // ── GET: Get open rooms for a student ─────────────────
 
 export async function GET(request: NextRequest) {
+  // ── Auth guard ──
+  const auth = requireServerSession(request);
+  if (auth.response) return auth.response;
+
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
   try {
-    const { searchParams } = new URL(request.url);
-    const studentUserId = searchParams.get('student_user_id');
-
-    if (!studentUserId) return badRequest('student_user_id is required');
+    // Force student_user_id from verified session
+    const studentUserId = auth.user.id;
 
     // Get student's term and roll number for section filtering
     const { data: student, error: studentError } = await supabase

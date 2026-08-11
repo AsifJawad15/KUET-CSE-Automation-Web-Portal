@@ -38,6 +38,7 @@ export type NotificationType =
   | 'makeup_class'
   | 'geo_attendance_open'
   | 'optional_course'
+  | 'course_assigned'
   | 'cr_room_request_submitted'
   | 'room_request_submitted'
   | 'attendance_marking_reminder'
@@ -340,6 +341,36 @@ export function notifyTeacherRoomRejected(opts: {
       ...(opts.requestId ? { request_id: opts.requestId } : {}),
     },
     dedupeKey: opts.requestId ? `room-request:${opts.requestId}:rejected` : undefined,
+  });
+}
+
+export function notifyCRRoomRejected(opts: {
+  studentUserId: string;
+  courseCode: string;
+  roomNumber: string;
+  period: string;
+  dayName: string;
+  reason: string;
+  requestId?: string | null;
+}): Promise<string | null> {
+  const reason = cleanText(opts.reason) ?? 'No remarks provided.';
+  return createNotification({
+    type: 'room_request_rejected',
+    title: `Room Request Rejected — ${opts.courseCode}`,
+    body: `Your room booking request for ${opts.courseCode} in Room ${opts.roomNumber} on ${opts.dayName} (${opts.period}) was rejected. Reason: ${reason}`,
+    target_type: 'USER',
+    target_value: opts.studentUserId,
+    created_by: null,
+    created_by_role: 'ADMIN',
+    metadata: {
+      course_code: opts.courseCode,
+      room: opts.roomNumber,
+      period: opts.period,
+      day: opts.dayName,
+      reason,
+      ...(opts.requestId ? { request_id: opts.requestId } : {}),
+    },
+    dedupeKey: opts.requestId ? `cr-room-request:${opts.requestId}:rejected` : undefined,
   });
 }
 
@@ -655,8 +686,11 @@ export function notifyTeacherCourseAssigned(opts: {
   assignedBy?: string | null;
 }): Promise<string | null> {
   const sectionLabel = opts.section?.trim() ? ` (Section ${opts.section.trim()})` : '';
+  // Use 'course_assigned' type so the mobile app can apply a distinct icon.
+  // Include section in the dedupeKey so re-assigning with a new section
+  // always fires a fresh notification instead of being silently deduplicated.
   return createNotification({
-    type: 'announcement',
+    type: 'course_assigned',
     title: `New Course Assigned — ${opts.courseCode}`,
     body: `You have been assigned to teach ${opts.courseCode}: ${opts.courseTitle} for Term ${opts.term}${sectionLabel}.`,
     target_type: 'USER',
@@ -669,7 +703,7 @@ export function notifyTeacherCourseAssigned(opts: {
       term: opts.term,
       ...(opts.section?.trim() ? { section: opts.section.trim() } : {}),
     },
-    dedupeKey: `course-assigned:${opts.teacherUserId}:${opts.courseCode}:${opts.term}`,
+    dedupeKey: `course-assigned:${opts.teacherUserId}:${opts.courseCode}:${opts.term}:${opts.section?.trim() ?? 'all'}`,
   });
 }
 
@@ -749,8 +783,9 @@ export function notifyStudentCourseAssigned(opts: {
     section: opts.section,
   });
   const teacherPart = opts.teacherName?.trim() ? ` — taught by ${opts.teacherName.trim()}` : '';
+  // Include section in dedupeKey so re-assigning a section always fires a fresh notification.
   return createNotification({
-    type: 'announcement',
+    type: 'course_assigned',
     title: `Course Available — ${opts.courseCode}`,
     body: `${opts.courseTitle}${teacherPart} has been added to your curriculum for Term ${opts.term}.`,
     target_type: audience.targetType,

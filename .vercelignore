@@ -1,0 +1,22 @@
+# Large files not needed for deployment
+eng.traineddata
+*.docx
+*.pdf
+*.zip
+
+# Documentation
+*.md
+!README.md
+
+# Database scripts
+database/
+supabase/
+*.sql
+
+# TV player app
+tv-player-app/
+
+# Development
+.github/
+.env*.local
+.env*.example

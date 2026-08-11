@@ -1,85 +1,130 @@
 import {
   app,
   BrowserWindow,
-  screen,
   ipcMain,
-  Tray,
   Menu,
   nativeImage,
+  powerSaveBlocker,
+  protocol,
+  screen,
+  Tray,
 } from 'electron';
-import * as path from 'path';
 import * as fs from 'fs';
-import { DisplayConfigManager, DisplayMapping } from './displayConfig';
+import * as path from 'path';
 
-// ── Globals ──────────────────────────────────────────
+import {
+  DisplayConfigManager,
+  type DisplayAssignment,
+  type DisplayConfigV2,
+  type DisplayFingerprint,
+} from './displayConfig';
+import { MediaCache } from './mediaCache';
+import { SnapshotStore } from './snapshotStore';
+
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'tv-media',
+    privileges: {
+      secure: true,
+      standard: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+    },
+  },
+]);
+
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) app.quit();
 
 const isDev = !app.isPackaged;
-const VITE_DEV_URL = 'http://localhost:5173';
+const rendererUrl = process.env.TV_PLAYER_DEV_URL || 'http://127.0.0.1:5173';
+const configManager = new DisplayConfigManager();
+const snapshotStore = new SnapshotStore();
+const mediaCache = new MediaCache();
 
 let controlWindow: BrowserWindow | null = null;
-// Dynamic map of TV name → BrowserWindow
 const tvWindows = new Map<string, BrowserWindow>();
+const restartAttempts = new Map<string, number>();
 let tray: Tray | null = null;
 let appQuitting = false;
+let closingTvWindows = false;
+let tvWindowsEnabled = true;
+let displayChangeTimer: ReturnType<typeof setTimeout> | null = null;
+let powerSaveBlockerId: number | null = null;
+let lastMappingIssues: Record<string, string | null> = {};
 
-const configManager = new DisplayConfigManager();
-
-// ── Window Content Loading ───────────────────────────
-
-function loadWindowContent(win: BrowserWindow, hashPath: string) {
-  if (isDev) {
-    win.loadURL(`${VITE_DEV_URL}/#${hashPath}`);
-  } else {
-    win.loadFile(path.join(__dirname, '../dist/index.html'), {
-      hash: hashPath,
-    });
-  }
+function loadWindowContent(win: BrowserWindow, hashPath: string): Promise<void> {
+  if (isDev) return win.loadURL(`${rendererUrl}/#${hashPath}`);
+  return win.loadFile(path.join(__dirname, '../dist/index.html'), { hash: hashPath });
 }
 
-// ── Control Window ───────────────────────────────────
+function secureWindow(win: BrowserWindow): void {
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  win.webContents.on('will-navigate', (event, url) => {
+    const allowed = isDev ? url.startsWith(rendererUrl) : url.startsWith('file:');
+    if (!allowed) event.preventDefault();
+  });
+}
 
-function createControlWindow() {
-  const primaryDisplay = screen.getPrimaryDisplay();
+function baseWebPreferences(): Electron.WebPreferences {
+  return {
+    preload: path.join(__dirname, 'preload.js'),
+    contextIsolation: true,
+    nodeIntegration: false,
+    sandbox: true,
+  };
+}
 
-  controlWindow = new BrowserWindow({
-    width: 960,
-    height: 720,
-    x: primaryDisplay.bounds.x + 50,
-    y: primaryDisplay.bounds.y + 50,
+function createControlWindow(): void {
+  if (controlWindow && !controlWindow.isDestroyed()) return;
+  const primary = screen.getPrimaryDisplay();
+  const win = new BrowserWindow({
+    width: 1040,
+    height: 780,
+    minWidth: 760,
+    minHeight: 600,
+    x: primary.workArea.x + 40,
+    y: primary.workArea.y + 40,
     title: 'TV Player — Control Panel',
     autoHideMenuBar: true,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
+    show: false,
+    backgroundColor: '#060e1c',
+    webPreferences: baseWebPreferences(),
   });
-
-  loadWindowContent(controlWindow, '/');
-
-  // Hide instead of close (accessible from tray)
-  controlWindow.on('close', (e) => {
+  controlWindow = win;
+  secureWindow(win);
+  win.once('ready-to-show', () => win.show());
+  win.on('close', (event) => {
     if (!appQuitting) {
-      e.preventDefault();
-      controlWindow?.hide();
+      event.preventDefault();
+      win.hide();
     }
   });
-
-  controlWindow.on('closed', () => {
-    controlWindow = null;
+  win.on('closed', () => {
+    if (controlWindow === win) controlWindow = null;
   });
-
-  if (isDev) {
-    controlWindow.webContents.openDevTools({ mode: 'detach' });
-  }
+  void loadWindowContent(win, '/').catch((error) => {
+    console.error('Failed to load control window:', error);
+  });
 }
 
-// ── TV Window ────────────────────────────────────────
+function scheduleTvRestart(target: string): void {
+  if (
+    appQuitting ||
+    !tvWindowsEnabled ||
+    closingTvWindows ||
+    !configManager.load().activeTargets.includes(target)
+  ) return;
+  const attempts = (restartAttempts.get(target) ?? 0) + 1;
+  restartAttempts.set(target, attempts);
+  const delay = Math.min(30_000, 1_000 * 2 ** Math.min(attempts - 1, 5));
+  setTimeout(() => {
+    if (appQuitting) return;
+    reconcileTvWindows();
+  }, delay);
+}
 
-function createTvWindow(
-  target: string,
-  display: Electron.Display
-): BrowserWindow {
+function createTvWindow(target: string, display: Electron.Display): BrowserWindow {
   const win = new BrowserWindow({
     x: display.bounds.x,
     y: display.bounds.y,
@@ -92,172 +137,262 @@ function createTvWindow(
     resizable: false,
     movable: false,
     minimizable: false,
+    show: false,
+    backgroundColor: '#060e1c',
     title: `TV Player — ${target}`,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
+    webPreferences: baseWebPreferences(),
   });
 
-  loadWindowContent(win, `/player?target=${target}`);
-
-  // Prevent accidental closing — only quit can close TV windows
-  win.on('close', (e) => {
-    if (!appQuitting) {
-      e.preventDefault();
-    }
+  secureWindow(win);
+  win.once('ready-to-show', () => {
+    restartAttempts.set(target, 0);
+    win.show();
   });
-
-  // Re-enter fullscreen if somehow exited
+  win.on('close', (event) => {
+    if (!appQuitting && !closingTvWindows) event.preventDefault();
+  });
   win.on('leave-full-screen', () => {
-    if (!appQuitting) {
-      win.setFullScreen(true);
-    }
+    if (!appQuitting) win.setFullScreen(true);
+  });
+  win.webContents.on('render-process-gone', (_event, details) => {
+    console.error(`${target} renderer exited:`, details.reason);
+    tvWindows.delete(target);
+    scheduleTvRestart(target);
+  });
+  win.webContents.on('unresponsive', () => {
+    console.error(`${target} renderer became unresponsive.`);
+    win.webContents.reloadIgnoringCache();
+  });
+  win.webContents.on('did-fail-load', (_event, code, description) => {
+    if (code === -3) return;
+    console.error(`${target} failed to load: ${code} ${description}`);
+    scheduleTvRestart(target);
   });
 
+  void loadWindowContent(win, `/player?target=${encodeURIComponent(target)}`).catch((error) => {
+    console.error(`Failed to load ${target}:`, error);
+    scheduleTvRestart(target);
+  });
   return win;
 }
 
-// ── Display Mapping ──────────────────────────────────
-
-function getDisplayMapping(): Map<string, Electron.Display | null> {
-  const displays = screen.getAllDisplays();
-  const config = configManager.load();
+function fingerprintFor(display: Electron.Display): DisplayFingerprint {
   const primary = screen.getPrimaryDisplay();
-  const externals = displays.filter((d) => d.id !== primary.id);
+  return {
+    label: display.label || `Display ${display.id}`,
+    width: display.bounds.width,
+    height: display.bounds.height,
+    scaleFactor: display.scaleFactor,
+    wasPrimary: display.id === primary.id,
+    lastBounds: { ...display.bounds },
+  };
+}
 
+function exactFingerprintMatch(
+  fingerprint: DisplayFingerprint | null,
+  display: Electron.Display,
+): boolean {
+  if (!fingerprint) return true;
+  const current = fingerprintFor(display);
+  return (
+    current.label === fingerprint.label &&
+    current.width === fingerprint.width &&
+    current.height === fingerprint.height &&
+    Math.abs(current.scaleFactor - fingerprint.scaleFactor) < 0.01
+  );
+}
+
+function geometryScore(fingerprint: DisplayFingerprint, display: Electron.Display): number {
+  const current = fingerprintFor(display);
+  const labelPenalty = current.label === fingerprint.label ? 0 : 10_000;
+  return (
+    labelPenalty +
+    Math.abs(current.width - fingerprint.width) +
+    Math.abs(current.height - fingerprint.height) +
+    Math.abs(current.scaleFactor - fingerprint.scaleFactor) * 100 +
+    Math.abs(current.lastBounds.x - fingerprint.lastBounds.x) / 10 +
+    Math.abs(current.lastBounds.y - fingerprint.lastBounds.y) / 10
+  );
+}
+
+function resolveDisplayMapping(): Map<string, Electron.Display | null> {
+  const displays = screen.getAllDisplays();
+  const primary = screen.getPrimaryDisplay();
+  const config = configManager.load();
+  const usedIds = new Set<number>();
   const result = new Map<string, Electron.Display | null>();
-  const tvNames = Object.keys(config);
+  const issues: Record<string, string | null> = {};
+  let changed = false;
 
-  // If no config saved, default to TV1/TV2
-  if (tvNames.length === 0) {
-    tvNames.push('TV1', 'TV2');
-  }
+  for (const target of config.activeTargets) {
+    const assignment = config.assignments[target] ?? { displayId: null, fingerprint: null };
+    let matched: Electron.Display | undefined;
 
-  const usedDisplayIds = new Set<number>();
+    if (assignment.displayId !== null) {
+      const exact = displays.find((display) => display.id === assignment.displayId);
+      if (exact && exactFingerprintMatch(assignment.fingerprint, exact) && !usedIds.has(exact.id)) {
+        matched = exact;
+      }
+    }
 
-  // First pass: resolve configured display IDs
-  for (const name of tvNames) {
-    const savedId = config[name];
-    if (savedId != null) {
-      const found = displays.find((d) => d.id === savedId);
-      if (found) {
-        result.set(name, found);
-        usedDisplayIds.add(found.id);
-      } else {
-        result.set(name, null);
+    if (!matched && assignment.fingerprint) {
+      const candidates = displays.filter((display) => !usedIds.has(display.id));
+      const strong = candidates.filter((display) => {
+        const current = fingerprintFor(display);
+        return (
+          current.label === assignment.fingerprint?.label &&
+          current.width === assignment.fingerprint.width &&
+          current.height === assignment.fingerprint.height &&
+          Math.abs(current.scaleFactor - assignment.fingerprint.scaleFactor) < 0.01
+        );
+      });
+      if (strong.length === 1) {
+        matched = strong[0];
+      } else if (strong.length === 0 && candidates.length > 0) {
+        const ranked = candidates
+          .map((display) => ({ display, score: geometryScore(assignment.fingerprint!, display) }))
+          .sort((a, b) => a.score - b.score);
+        if (ranked[0].score < 12_000 && (!ranked[1] || ranked[1].score - ranked[0].score > 50)) {
+          matched = ranked[0].display;
+        }
+      }
+    }
+
+    if (matched) {
+      usedIds.add(matched.id);
+      result.set(target, matched);
+      issues[target] = null;
+      const nextFingerprint = fingerprintFor(matched);
+      if (
+        assignment.displayId !== matched.id ||
+        JSON.stringify(assignment.fingerprint) !== JSON.stringify(nextFingerprint)
+      ) {
+        config.assignments[target] = { displayId: matched.id, fingerprint: nextFingerprint };
+        changed = true;
       }
     } else {
-      result.set(name, null);
+      result.set(target, null);
+      issues[target] = assignment.displayId === null ? 'unmapped' : 'saved-display-unavailable';
     }
   }
 
-  // Second pass: auto-assign unresolved TVs to available externals
-  const availableExternals = externals.filter(
-    (d) => !usedDisplayIds.has(d.id)
-  );
-  let extIdx = 0;
-  for (const name of tvNames) {
-    if (result.get(name) === null && extIdx < availableExternals.length) {
-      const ext = availableExternals[extIdx++];
-      result.set(name, ext);
-      console.log(
-        `Auto-assigned ${name} to external display ${ext.id} (${ext.bounds.width}×${ext.bounds.height})`
-      );
+  const availableExternal = displays
+    .filter((display) => display.id !== primary.id && !usedIds.has(display.id))
+    .sort((a, b) => a.bounds.x - b.bounds.x || a.bounds.y - b.bounds.y || a.id - b.id);
+  for (const target of config.activeTargets) {
+    if (result.get(target) || availableExternal.length === 0) continue;
+    const assignment = config.assignments[target];
+    if (assignment?.displayId !== null && assignment?.fingerprint) continue;
+    const display = availableExternal.shift()!;
+    usedIds.add(display.id);
+    result.set(target, display);
+    issues[target] = 'auto-assigned';
+    config.assignments[target] = {
+      displayId: display.id,
+      fingerprint: fingerprintFor(display),
+    };
+    changed = true;
+  }
+
+  lastMappingIssues = issues;
+  if (changed) {
+    try {
+      configManager.save(config);
+    } catch (error) {
+      console.error('Failed to persist resolved display mapping:', error);
     }
   }
-
-  if (externals.length === 0) {
-    console.warn(
-      'No external displays detected. Ensure Windows is in EXTEND display mode.'
-    );
-  }
-
   return result;
 }
 
-// ── Open / Close TV Windows ──────────────────────────
-
-function closeTvWindow(name: string): void {
-  const win = tvWindows.get(name);
+function closeTvWindow(target: string): void {
+  const win = tvWindows.get(target);
   if (win && !win.isDestroyed()) {
-    appQuitting = true;
+    closingTvWindows = true;
     win.close();
-    appQuitting = false;
+    closingTvWindows = false;
   }
-  tvWindows.delete(name);
+  tvWindows.delete(target);
 }
 
 function closeAllTvWindows(): void {
-  for (const name of Array.from(tvWindows.keys())) {
-    closeTvWindow(name);
-  }
+  for (const target of [...tvWindows.keys()]) closeTvWindow(target);
 }
 
-function openTvWindows() {
-  closeAllTvWindows();
+function reconcileTvWindows(): void {
+  if (!tvWindowsEnabled) {
+    closeAllTvWindows();
+    return;
+  }
+  const mapping = resolveDisplayMapping();
+  for (const target of [...tvWindows.keys()]) {
+    if (!mapping.get(target)) closeTvWindow(target);
+  }
 
-  const mapping = getDisplayMapping();
-
-  for (const [name, display] of mapping) {
-    if (display) {
-      const win = createTvWindow(name, display);
-      tvWindows.set(name, win);
-      console.log(
-        `${name} window opened on display ${display.id} — ${display.bounds.width}×${display.bounds.height} at (${display.bounds.x}, ${display.bounds.y})`
-      );
+  for (const [target, display] of mapping) {
+    if (!display) continue;
+    const existing = tvWindows.get(target);
+    if (existing && !existing.isDestroyed()) {
+      const bounds = existing.getBounds();
+      if (
+        bounds.x !== display.bounds.x ||
+        bounds.y !== display.bounds.y ||
+        bounds.width !== display.bounds.width ||
+        bounds.height !== display.bounds.height
+      ) {
+        existing.setBounds(display.bounds);
+        existing.setFullScreen(true);
+      }
+      continue;
     }
+    tvWindows.set(target, createTvWindow(target, display));
   }
+  updatePowerPreferences();
+  controlWindow?.webContents.send('displays-changed');
 }
 
-// ── System Tray ──────────────────────────────────────
+function updatePowerPreferences(): void {
+  const config = configManager.load();
+  if (config.preventDisplaySleep && tvWindows.size > 0) {
+    if (powerSaveBlockerId === null || !powerSaveBlocker.isStarted(powerSaveBlockerId)) {
+      powerSaveBlockerId = powerSaveBlocker.start('prevent-display-sleep');
+    }
+  } else if (powerSaveBlockerId !== null && powerSaveBlocker.isStarted(powerSaveBlockerId)) {
+    powerSaveBlocker.stop(powerSaveBlockerId);
+    powerSaveBlockerId = null;
+  }
+  app.setLoginItemSettings({ openAtLogin: config.launchAtLogin });
+}
 
-function createTray() {
-  let icon: Electron.NativeImage;
+function scheduleDisplayReconcile(): void {
+  if (displayChangeTimer) clearTimeout(displayChangeTimer);
+  displayChangeTimer = setTimeout(reconcileTvWindows, 750);
+}
 
-  // Try loading a custom tray icon
+function createTray(): void {
   const iconPath = isDev
     ? path.join(app.getAppPath(), 'public', 'tray-icon.png')
     : path.join(process.resourcesPath, 'tray-icon.png');
-
-  if (fs.existsSync(iconPath)) {
-    icon = nativeImage
-      .createFromPath(iconPath)
-      .resize({ width: 16, height: 16 });
-  } else {
-    // Fallback: extract icon from the Electron executable
-    try {
-      icon = nativeImage
-        .createFromPath(app.getPath('exe'))
-        .resize({ width: 16, height: 16 });
-    } catch {
-      // Last resort: minimal 1×1 white pixel resized
-      icon = nativeImage
-        .createFromDataURL(
-          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMBAQApDs4AAAAASUVORK5CYII='
-        )
-        .resize({ width: 16, height: 16 });
-    }
+  let icon = fs.existsSync(iconPath)
+    ? nativeImage.createFromPath(iconPath)
+    : nativeImage.createFromPath(app.getPath('exe'));
+  if (icon.isEmpty()) {
+    icon = nativeImage.createFromDataURL(
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMBAQApDs4AAAAASUVORK5CYII=',
+    );
   }
-
-  tray = new Tray(icon);
+  tray = new Tray(icon.resize({ width: 16, height: 16 }));
   tray.setToolTip('TV Player');
-
-  const contextMenu = Menu.buildFromTemplate([
+  tray.setContextMenu(Menu.buildFromTemplate([
     {
       label: 'Show Control Panel',
       click: () => {
-        if (controlWindow) {
-          controlWindow.show();
-          controlWindow.focus();
-        }
+        createControlWindow();
+        controlWindow?.show();
+        controlWindow?.focus();
       },
     },
-    {
-      label: 'Reopen TV Windows',
-      click: () => openTvWindows(),
-    },
+    { label: 'Reconcile TV Windows', click: reconcileTvWindows },
     { type: 'separator' },
     {
       label: 'Quit TV Player',
@@ -266,109 +401,205 @@ function createTray() {
         app.quit();
       },
     },
-  ]);
-
-  tray.setContextMenu(contextMenu);
-
+  ]));
   tray.on('double-click', () => {
-    if (controlWindow) {
-      controlWindow.show();
-      controlWindow.focus();
-    }
+    createControlWindow();
+    controlWindow?.show();
+    controlWindow?.focus();
   });
 }
 
-// ── IPC Handlers ─────────────────────────────────────
+function assertTrustedSender(event: Electron.IpcMainInvokeEvent): void {
+  const url = event.senderFrame?.url ?? event.sender.getURL();
+  const trusted = isDev ? url.startsWith(rendererUrl) : url.startsWith('file:');
+  if (!trusted) throw new Error('Untrusted IPC sender.');
+}
 
-function setupIPC() {
-  ipcMain.handle('get-displays', () => {
+function mappingFromRenderer(value: unknown): DisplayConfigV2 {
+  const current = configManager.load();
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('Invalid display mapping.');
+  }
+  const raw = value as Record<string, unknown>;
+  const assignments: Record<string, DisplayAssignment> = {};
+  for (const target of current.activeTargets) {
+    const id = raw[target];
+    if (id !== null && id !== undefined && (!Number.isInteger(id) || Number(id) < 0)) {
+      throw new Error(`Invalid display ID for ${target}.`);
+    }
+    const displayId = id === null || id === undefined ? null : Number(id);
+    const display = displayId === null
+      ? null
+      : screen.getAllDisplays().find((candidate) => candidate.id === displayId);
+    assignments[target] = {
+      displayId,
+      fingerprint: display ? fingerprintFor(display) : null,
+    };
+  }
+  return { ...current, assignments };
+}
+
+function setupIPC(): void {
+  ipcMain.handle('get-displays', (event) => {
+    assertTrustedSender(event);
     const primary = screen.getPrimaryDisplay();
-    return screen.getAllDisplays().map((d) => ({
-      id: d.id,
-      label: `Display ${d.id}`,
-      bounds: d.bounds,
-      isPrimary: d.id === primary.id,
-      scaleFactor: d.scaleFactor,
+    return screen.getAllDisplays().map((display) => ({
+      id: display.id,
+      label: display.label || `Display ${display.id}`,
+      bounds: display.bounds,
+      isPrimary: display.id === primary.id,
+      scaleFactor: display.scaleFactor,
     }));
   });
 
-  ipcMain.handle('get-display-config', () => {
+  ipcMain.handle('get-display-config', (event) => {
+    assertTrustedSender(event);
     return configManager.load();
   });
 
-  ipcMain.handle(
-    'save-display-config',
-    (_event: Electron.IpcMainInvokeEvent, config: DisplayMapping) => {
-      configManager.save(config);
-      return { success: true };
+  ipcMain.handle('save-display-config', (event, mapping: unknown) => {
+    try {
+      assertTrustedSender(event);
+      const config = configManager.save(mappingFromRenderer(mapping));
+      updatePowerPreferences();
+      reconcileTvWindows();
+      return { success: true, config };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
-  );
-
-  ipcMain.handle('open-tv-windows', () => {
-    openTvWindows();
-    return { success: true };
   });
 
-  ipcMain.handle('close-tv-windows', () => {
+  ipcMain.handle('sync-active-targets', (event, targets: unknown) => {
+    try {
+      assertTrustedSender(event);
+      if (!Array.isArray(targets)) throw new Error('Targets must be an array.');
+      const current = configManager.load();
+      const activeTargets = [...new Set(targets)]
+        .filter((target): target is string =>
+          typeof target === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$/.test(target),
+        )
+        .slice(0, 16);
+      if (activeTargets.length === 0) throw new Error('At least one active TV target is required.');
+      const assignments = Object.fromEntries(
+        activeTargets.map((target) => [
+          target,
+          current.assignments[target] ?? { displayId: null, fingerprint: null },
+        ]),
+      );
+      const config = configManager.save({ ...current, activeTargets, assignments });
+      reconcileTvWindows();
+      return { success: true, config };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  ipcMain.handle('update-preferences', (event, preferences: unknown) => {
+    try {
+      assertTrustedSender(event);
+      if (!preferences || typeof preferences !== 'object') throw new Error('Invalid preferences.');
+      const raw = preferences as Record<string, unknown>;
+      const current = configManager.load();
+      const config = configManager.save({
+        ...current,
+        preventDisplaySleep:
+          typeof raw.preventDisplaySleep === 'boolean'
+            ? raw.preventDisplaySleep
+            : current.preventDisplaySleep,
+        launchAtLogin:
+          typeof raw.launchAtLogin === 'boolean' ? raw.launchAtLogin : current.launchAtLogin,
+      });
+      updatePowerPreferences();
+      return { success: true, config };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  ipcMain.handle('open-tv-windows', (event) => {
+    assertTrustedSender(event);
+    tvWindowsEnabled = true;
+    reconcileTvWindows();
+    return { success: true };
+  });
+  ipcMain.handle('close-tv-windows', (event) => {
+    assertTrustedSender(event);
+    tvWindowsEnabled = false;
     closeAllTvWindows();
+    updatePowerPreferences();
     return { success: true };
   });
 
-  ipcMain.handle('get-app-status', () => {
-    const tvStatus: Record<string, 'running' | 'stopped'> = {};
+  ipcMain.handle('load-tv-snapshot', (event, target: string) => {
+    assertTrustedSender(event);
+    return snapshotStore.load(target);
+  });
+  ipcMain.handle('save-tv-snapshot', (event, target: string, snapshot: unknown) => {
+    try {
+      assertTrustedSender(event);
+      return { success: true, meta: snapshotStore.save(target, snapshot) };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+  ipcMain.handle('sync-media-cache', async (event, urls: unknown) => {
+    try {
+      assertTrustedSender(event);
+      if (!Array.isArray(urls)) throw new Error('Media URLs must be an array.');
+      await mediaCache.retainAndPrefetch(
+        urls.filter((url): url is string => typeof url === 'string'),
+      );
+      return { success: true, stats: mediaCache.getStats() };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  ipcMain.handle('get-app-status', (event) => {
+    assertTrustedSender(event);
     const config = configManager.load();
-    const names = Object.keys(config).length > 0 ? Object.keys(config) : ['TV1', 'TV2'];
-    for (const name of names) {
-      const win = tvWindows.get(name);
-      tvStatus[name] = win && !win.isDestroyed() ? 'running' : 'stopped';
+    const tvStatus: Record<string, 'running' | 'stopped'> = {};
+    for (const target of config.activeTargets) {
+      const win = tvWindows.get(target);
+      tvStatus[target] = win && !win.isDestroyed() ? 'running' : 'stopped';
     }
     return {
       tvStatus,
       displays: screen.getAllDisplays().length,
+      mappingIssues: lastMappingIssues,
+      snapshotMeta: snapshotStore.listMeta(),
+      mediaCache: mediaCache.getStats(),
+      preventDisplaySleep: config.preventDisplaySleep,
+      launchAtLogin: config.launchAtLogin,
     };
   });
 }
 
-// ── App Lifecycle ────────────────────────────────────
-
-app.whenReady().then(() => {
-  console.log('═══════════════════════════════════════');
-  console.log('  TV Player — Starting');
-  console.log('  Dev mode:', isDev);
-  console.log('  Displays:', screen.getAllDisplays().length);
-  console.log('═══════════════════════════════════════');
-
-  setupIPC();
-  createControlWindow();
-  openTvWindows();
-  createTray();
-
-  // React to display changes (hot-plug HDMI)
-  screen.on('display-added', (_event, newDisplay) => {
-    console.log(
-      `📺 Display added: ${newDisplay.id} (${newDisplay.bounds.width}×${newDisplay.bounds.height})`
-    );
-    controlWindow?.webContents.send('displays-changed');
+if (gotSingleInstanceLock) {
+  app.on('second-instance', () => {
+    createControlWindow();
+    controlWindow?.show();
+    controlWindow?.focus();
   });
 
-  screen.on('display-removed', (_event, oldDisplay) => {
-    console.log(`📺 Display removed: ${oldDisplay.id}`);
-    controlWindow?.webContents.send('displays-changed');
+  app.whenReady().then(() => {
+    mediaCache.registerProtocol();
+    setupIPC();
+    createControlWindow();
+    reconcileTvWindows();
+    createTray();
+    updatePowerPreferences();
+
+    screen.on('display-added', scheduleDisplayReconcile);
+    screen.on('display-removed', scheduleDisplayReconcile);
+    screen.on('display-metrics-changed', scheduleDisplayReconcile);
   });
-});
+}
 
 app.on('before-quit', () => {
   appQuitting = true;
 });
-
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  if (process.platform !== 'darwin') app.quit();
 });
-
-app.on('activate', () => {
-  if (!controlWindow) {
-    createControlWindow();
-  }
-});
+app.on('activate', createControlWindow);

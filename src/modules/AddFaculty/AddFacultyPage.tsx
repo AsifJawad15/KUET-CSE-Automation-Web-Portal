@@ -6,6 +6,7 @@ import { addTeacher, deleteTeacher, getAllTeachers, setTeacherHead } from '@/ser
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { Loader2, AlertCircle, Crown } from 'lucide-react';
+import { Select } from '@/components/ui/FormPicker';
 
 export default function AddFacultyPage() {
   const [teachers, setTeachers] = useState<TeacherWithAuth[]>([]);
@@ -238,18 +239,17 @@ export default function AddFacultyPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-[#d3d3d3] mb-1">Designation</label>
-                  <select
+                  <Select
+                    label="Designation"
                     value={formData.designation}
                     onChange={(e) => setFormData({ ...formData, designation: e.target.value as TeacherDesignation })}
-                    className="w-full px-4 py-2 border border-gray-200 dark:border-[#3d4951] rounded-lg bg-white dark:bg-[#0b090a] text-gray-700 dark:text-white focus:border-indigo-400 dark:focus:border-red-400 focus:outline-none focus:ring-1 focus:ring-indigo-300 dark:focus:ring-red-400"
                     disabled={loading}
                   >
                     <option value="PROFESSOR">Professor</option>
                     <option value="ASSOCIATE_PROFESSOR">Associate Professor</option>
                     <option value="ASSISTANT_PROFESSOR">Assistant Professor</option>
                     <option value="LECTURER">Lecturer</option>
-                  </select>
+                  </Select>
                 </div>
               </div>
               <div className="flex gap-3 pt-4">

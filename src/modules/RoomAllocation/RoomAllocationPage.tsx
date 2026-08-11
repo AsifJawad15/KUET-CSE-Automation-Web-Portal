@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, X, Loader2, Trash2, Edit, Upload, MapPin, Building2, Users, FlaskConical, School, Search } from 'lucide-react';
 import { FileUploadModal, roomUploadConfig } from '@/components/upload';
+import { Select } from '@/components/ui/FormPicker';
 
 export default function RoomAllocationPage() {
   const [rooms, setRooms] = useState<DBRoom[]>([]);
@@ -241,17 +242,17 @@ export default function RoomAllocationPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-gray-700">Room Type</label>
-                      <select
+                      <Select
+                        label="Room Type"
+                        labelClassName="text-sm font-medium text-gray-700 normal-case mb-1.5"
                         value={formData.room_type}
                         onChange={(e) => setFormData({ ...formData, room_type: e.target.value as DBRoomType })}
-                        className="w-full px-4 py-2.5 mt-1.5 border border-gray-200 rounded-xl bg-[#FEFCFA] text-[#3E2723] focus:ring-2 focus:ring-indigo-300 focus:border-transparent outline-none transition-all"
                       >
                         <option value="classroom">Classroom</option>
                         <option value="lab">Lab</option>
                         <option value="seminar">Seminar</option>
                         <option value="research">Research</option>
-                      </select>
+                      </Select>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-700">Floor</label>
@@ -414,17 +415,17 @@ export default function RoomAllocationPage() {
                 className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl bg-white text-[#3E2723] focus:ring-2 focus:ring-indigo-300 focus:border-transparent outline-none transition-all text-sm placeholder:text-[#BCAAA4]"
               />
             </div>
-            <select
+            <Select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-[#3E2723] focus:ring-2 focus:ring-indigo-300 focus:border-transparent outline-none text-sm"
+              wrapperClassName="w-full sm:w-48"
             >
               <option value="all">All Types</option>
               <option value="classroom">Classrooms</option>
               <option value="lab">Labs</option>
               <option value="seminar">Seminar Halls</option>
               <option value="research">Research Labs</option>
-            </select>
+            </Select>
           </div>
 
           {/* Empty State */}

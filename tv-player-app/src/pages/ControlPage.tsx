@@ -1,4 +1,9 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import {
+  Monitor, Wifi, WifiOff, Settings2, Tv, RefreshCw,
+  Layout, Save, X, Play, ChevronRight, Info,
+  GraduationCap,
+} from 'lucide-react';
 import {
   supabase,
   fetchAllTvDisplayData,
@@ -11,10 +16,16 @@ import {
 
 export default function ControlPage() {
   const [displays, setDisplays] = useState<DisplayInfo[]>([]);
-  const [config, setConfig] = useState<DisplayConfig>({});
+  const [displayConfig, setDisplayConfig] = useState<DisplayConfigV2 | null>(null);
+  const [mapping, setMapping] = useState<Record<string, number | null>>({});
   const [status, setStatus] = useState<AppStatus>({
     tvStatus: {},
     displays: 0,
+    mappingIssues: {},
+    snapshotMeta: [],
+    mediaCache: { sizeBytes: 0, entries: 0, quotaBytes: 500 * 1024 * 1024 },
+    preventDisplaySleep: true,
+    launchAtLogin: false,
   });
   const [devices, setDevices] = useState<CmsTvDevice[]>([]);
   const [announcements, setAnnouncements] = useState<CmsTvAnnouncement[]>([]);
@@ -22,6 +33,7 @@ export default function ControlPage() {
   const [events, setEvents] = useState<CmsTvEvent[]>([]);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const messageTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isElectron = !!window.electronAPI;
 
@@ -30,6 +42,10 @@ export default function ControlPage() {
     try {
       const devs = await fetchActiveDevices();
       setDevices(devs);
+      if (window.electronAPI && devs.length > 0) {
+        const result = await window.electronAPI.syncActiveTargets(devs.map((device) => device.name));
+        if (!result.success) throw new Error(result.error || 'Failed to synchronize TV devices.');
+      }
     } catch (err) {
       console.error('Failed to fetch devices:', err);
     }
@@ -44,7 +60,13 @@ export default function ControlPage() {
       window.electronAPI.getAppStatus(),
     ]);
     setDisplays(dispList);
-    setConfig(dispConfig);
+    setDisplayConfig(dispConfig);
+    setMapping(Object.fromEntries(
+      Object.entries(dispConfig.assignments).map(([target, assignment]) => [
+        target,
+        assignment.displayId,
+      ]),
+    ));
     setStatus(appStatus);
   }, []);
 
@@ -74,7 +96,7 @@ export default function ControlPage() {
       .subscribe();
 
     if (window.electronAPI) {
-      window.electronAPI.onDisplaysChanged(() => refreshDisplays());
+      window.electronAPI.onDisplaysChanged(refreshDisplays);
     }
 
     const interval = setInterval(async () => {
@@ -87,47 +109,69 @@ export default function ControlPage() {
     return () => {
       supabase.removeChannel(channel);
       clearInterval(interval);
-      window.electronAPI?.removeDisplaysChanged();
+      window.electronAPI?.removeDisplaysChanged(refreshDisplays);
+      if (messageTimer.current) clearTimeout(messageTimer.current);
     };
   }, [refreshDisplays, refreshDevices, fetchTvContent]);
 
   // ── Actions ──
   const showMessage = (text: string) => {
     setMessage(text);
-    setTimeout(() => setMessage(''), 3000);
+    if (messageTimer.current) clearTimeout(messageTimer.current);
+    messageTimer.current = setTimeout(() => setMessage(''), 4000);
   };
 
   const handleSaveConfig = async () => {
     if (!window.electronAPI) return;
     setSaving(true);
     try {
-      await window.electronAPI.saveDisplayConfig(config);
-      showMessage('Display mapping saved successfully.');
-    } catch {
-      showMessage('Failed to save config.');
+      const assigned = Object.values(mapping).filter((value): value is number => value !== null);
+      if (new Set(assigned).size !== assigned.length) {
+        throw new Error('Each TV must use a different display.');
+      }
+      const result = await window.electronAPI.saveDisplayConfig(mapping);
+      if (!result.success) throw new Error(result.error || 'Failed to save display mapping.');
+      showMessage('Display mapping saved and applied successfully.');
+      await refreshDisplays();
+    } catch (error) {
+      showMessage(error instanceof Error ? error.message : 'Failed to save config.');
     }
     setSaving(false);
   };
 
   const handleOpenTvWindows = async () => {
     if (!window.electronAPI) return;
-    await window.electronAPI.openTvWindows();
-    showMessage('TV windows reopened on mapped displays.');
-    refreshDisplays();
+    const result = await window.electronAPI.openTvWindows();
+    showMessage(result.success ? 'TV windows reconciled with mapped displays.' : (result.error || 'Failed to open TV windows.'));
+    await refreshDisplays();
   };
 
   const handleCloseTvWindows = async () => {
     if (!window.electronAPI) return;
-    await window.electronAPI.closeTvWindows();
-    showMessage('TV windows closed.');
-    refreshDisplays();
+    const result = await window.electronAPI.closeTvWindows();
+    showMessage(result.success ? 'TV windows closed.' : (result.error || 'Failed to close TV windows.'));
+    await refreshDisplays();
+  };
+
+  const updatePreference = async (
+    key: 'preventDisplaySleep' | 'launchAtLogin',
+    value: boolean,
+  ) => {
+    if (!window.electronAPI) return;
+    const result = await window.electronAPI.updatePreferences({ [key]: value });
+    if (!result.success) {
+      showMessage(result.error || 'Failed to update preference.');
+      return;
+    }
+    await refreshDisplays();
+    showMessage('Operational preference updated.');
   };
 
   // ── Derive TV names from devices or config ──
   const tvNames = devices.length > 0
     ? devices.map((d) => d.name)
-    : Object.keys(config).length > 0
-      ? Object.keys(config)
+    : displayConfig?.activeTargets.length
+      ? displayConfig.activeTargets
       : ['TV1', 'TV2'];
 
   // ── Content preview helpers ──
@@ -140,21 +184,35 @@ export default function ControlPage() {
 
   const renderContentPreview = (tv: string) => {
     const c = countForTarget(tv);
+    const isRunning = status.tvStatus[tv] === 'running';
     return (
-      <div key={tv} className="ctrl-card">
-        <h3 className="ctrl-card-title">{tv} Content</h3>
+      <div key={tv} className="ctrl-card group">
+        <h3 className="ctrl-card-title">
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+            style={{
+              background: isRunning
+                ? 'linear-gradient(135deg, rgba(0,121,107,0.25), rgba(0,121,107,0.15))'
+                : 'rgba(255,255,255,0.04)',
+              border: `1px solid ${isRunning ? 'rgba(0,121,107,0.35)' : 'rgba(255,255,255,0.08)'}`,
+            }}
+          >
+            <Tv className="w-4 h-4" style={{ color: isRunning ? '#26a69a' : 'rgba(255,255,255,0.3)' }} />
+          </div>
+          {tv} Content
+        </h3>
         <div className="ctrl-content-preview">
           <div className="ctrl-content-row">
             <span className="ctrl-label">Announcements:</span>
-            <span className={`ctrl-badge ctrl-badge-notice`}>{c.a}</span>
+            <span className="ctrl-badge ctrl-badge-notice">{c.a}</span>
           </div>
           <div className="ctrl-content-row">
             <span className="ctrl-label">Ticker Items:</span>
-            <span className={`ctrl-badge ctrl-badge-video`}>{c.t}</span>
+            <span className="ctrl-badge ctrl-badge-video">{c.t}</span>
           </div>
           <div className="ctrl-content-row">
             <span className="ctrl-label">Events:</span>
-            <span className={`ctrl-badge ctrl-badge-image`}>{c.e}</span>
+            <span className="ctrl-badge ctrl-badge-image">{c.e}</span>
           </div>
         </div>
       </div>
@@ -164,147 +222,258 @@ export default function ControlPage() {
   // ── Render ──
   return (
     <div className="ctrl-page">
+      {/* ── Premium Header ── */}
       <header className="ctrl-header">
-        <h1>📺 TV Player — Control Panel</h1>
+        <h1>
+          <span className="header-icon">
+            <GraduationCap className="w-5 h-5 text-white" />
+          </span>
+          <span>
+            <span style={{ color: '#ffc107', textShadow: '0 0 16px rgba(255,193,7,0.3)' }}>KUET</span>
+            <span style={{ color: 'rgba(255,255,255,0.2)', margin: '0 8px' }}>|</span>
+            <span style={{ fontWeight: 600, letterSpacing: '0.02em' }}>TV Player — Control Panel</span>
+          </span>
+        </h1>
         {!isElectron && (
           <div className="ctrl-warning">
+            <Info className="w-4 h-4 inline-block mr-2 opacity-80" />
             Running in browser mode. Electron features (display detection,
             TV window management) are unavailable.
           </div>
         )}
       </header>
 
-      {message && <div className="ctrl-message">{message}</div>}
-
-      {/* ── Status ── */}
-      <section className="ctrl-section">
-        <h2>Status</h2>
-        <div className="ctrl-status-grid">
-          {tvNames.map((name) => (
-            <div
-              key={name}
-              className={`ctrl-status-item ${
-                status.tvStatus[name] === 'running' ? 'status-ok' : 'status-off'
-              }`}
-            >
-              {name}: {status.tvStatus[name] || 'stopped'}
-            </div>
-          ))}
-          <div className="ctrl-status-item">
-            Displays connected: {status.displays}
+      <div className="ctrl-body">
+        {message && (
+          <div className="ctrl-message">
+            <ChevronRight className="w-4 h-4 inline-block mr-1 opacity-70" />
+            {message}
           </div>
-        </div>
-      </section>
+        )}
 
-      {/* ── Display Mapping ── */}
-      <section className="ctrl-section">
-        <h2>Display Mapping</h2>
-        {displays.length === 0 ? (
-          <p className="ctrl-text-muted">
-            {isElectron
-              ? 'No displays detected'
-              : 'Display detection requires Electron'}
-          </p>
-        ) : (
-          <>
-            <div className="ctrl-display-list">
-              {displays.map((d) => (
-                <div key={d.id} className="ctrl-display-item">
-                  <strong>
-                    {d.isPrimary ? '🖥️ Primary' : '📺 External'}
-                  </strong>{' '}
-                  — ID: {d.id}, {d.bounds.width}×{d.bounds.height} at (
-                  {d.bounds.x}, {d.bounds.y}), Scale: {d.scaleFactor}x
-                </div>
-              ))}
-            </div>
-
-            <div className="ctrl-mapping-form">
-              {tvNames.map((name) => (
-                <div key={name} className="ctrl-form-row">
-                  <label>{name} Display:</label>
-                  <select
-                    value={config[name] ?? ''}
-                    onChange={(e) =>
-                      setConfig({
-                        ...config,
-                        [name]: e.target.value ? Number(e.target.value) : null,
-                      })
-                    }
-                  >
-                    <option value="">Auto-detect</option>
-                    {displays.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.isPrimary ? 'Primary' : 'External'} —{' '}
-                        {d.bounds.width}×{d.bounds.height} (ID: {d.id})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ))}
-
-              <div className="ctrl-form-actions">
-                <button onClick={handleSaveConfig} disabled={saving}>
-                  {saving ? 'Saving…' : 'Save Mapping'}
-                </button>
-                <button onClick={handleOpenTvWindows}>
-                  Reopen TV Windows
-                </button>
-                <button
-                  onClick={handleCloseTvWindows}
-                  className="ctrl-btn-danger"
+        {/* ── Status ── */}
+        <section className="ctrl-section">
+          <h2>
+            <Wifi className="w-3.5 h-3.5" />
+            Status
+          </h2>
+          <div className="ctrl-status-grid">
+            {tvNames.map((name) => {
+              const isRunning = status.tvStatus[name] === 'running';
+              const mappingIssue = status.mappingIssues[name];
+              return (
+                <div
+                  key={name}
+                  className={`ctrl-status-item ${isRunning ? 'status-ok' : 'status-off'}`}
                 >
-                  Close TV Windows
-                </button>
-                <button onClick={refreshDisplays}>Refresh Displays</button>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-2 h-2 rounded-full"
+                      style={{
+                        background: isRunning ? '#26a69a' : '#ef5350',
+                        boxShadow: isRunning
+                          ? '0 0 8px rgba(38,166,154,0.5)'
+                          : '0 0 8px rgba(239,83,80,0.3)',
+                      }}
+                    />
+                    {isRunning ? (
+                      <Wifi className="w-3.5 h-3.5 opacity-70" />
+                    ) : (
+                      <WifiOff className="w-3.5 h-3.5 opacity-70" />
+                    )}
+                    <span>
+                      {name}: {status.tvStatus[name] || 'stopped'}
+                      {mappingIssue ? ` · ${mappingIssue.replace(/-/g, ' ')}` : ''}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+            <div className="ctrl-status-item">
+              <div className="flex items-center gap-2">
+                <Monitor className="w-3.5 h-3.5 opacity-70" />
+                <span>Displays connected: {status.displays}</span>
               </div>
             </div>
-          </>
-        )}
-      </section>
+          </div>
+        </section>
 
-      {/* ── Current Content ── */}
-      <section className="ctrl-section">
-        <h2>Current Content</h2>
-        <div className="ctrl-content-grid">
-          {tvNames.map((name) => renderContentPreview(name))}
-        </div>
-      </section>
+        {/* ── Display Mapping ── */}
+        <section className="ctrl-section">
+          <h2>
+            <Layout className="w-3.5 h-3.5" />
+            Display Mapping
+          </h2>
+          {displays.length === 0 ? (
+            <p className="ctrl-text-muted">
+              {isElectron
+                ? 'No displays detected'
+                : 'Display detection requires Electron'}
+            </p>
+          ) : (
+            <>
+              <div className="ctrl-display-list">
+                {displays.map((d) => (
+                  <div key={d.id} className="ctrl-display-item">
+                    <div className="flex items-center gap-2">
+                      <Monitor className="w-4 h-4 flex-shrink-0" style={{ color: d.isPrimary ? '#ffc107' : '#26a69a' }} />
+                      <strong style={{ color: d.isPrimary ? '#ffc107' : '#26a69a' }}>
+                        {d.isPrimary ? 'Primary' : 'External'}
+                      </strong>
+                      <span style={{ color: 'rgba(255,255,255,0.4)', margin: '0 4px' }}>—</span>
+                      <span style={{ color: 'rgba(255,255,255,0.6)' }}>
+                        ID: {d.id}, {d.bounds.width}×{d.bounds.height} at ({d.bounds.x}, {d.bounds.y}), Scale: {d.scaleFactor}x
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
 
-      {/* ── Operational Notes ── */}
-      <section className="ctrl-section ctrl-notes">
-        <h2>Operational Notes</h2>
-        <ul>
-          <li>
-            Windows must be in <strong>Extend</strong> display mode (not
-            Duplicate/Mirror).
-          </li>
-          <li>
-            Disable sleep and screen timeout on the PC for uninterrupted
-            signage.
-          </li>
-          <li>
-            TV windows stay visible even when this control panel is
-            minimized or hidden.
-          </li>
-          <li>
-            Use the system tray icon (bottom-right) to reopen this panel if
-            closed.
-          </li>
-          <li>
-            Content is updated in real-time from the admin panel via
-            Supabase.
-          </li>
-          <li>
-            If a TV is disconnected, use &quot;Reopen TV Windows&quot; after
-            reconnecting.
-          </li>
-          <li>
-            Add new TVs from the admin web panel — they appear here
-            automatically.
-          </li>
-        </ul>
-      </section>
+              <div className="ctrl-mapping-form">
+                {tvNames.map((name) => (
+                  <div key={name} className="ctrl-form-row">
+                    <label>
+                      <Tv className="w-3.5 h-3.5 inline-block mr-2 opacity-60" />
+                      {name} Display:
+                    </label>
+                    <select
+                      value={mapping[name] ?? ''}
+                      onChange={(e) =>
+                        setMapping({
+                          ...mapping,
+                          [name]: e.target.value ? Number(e.target.value) : null,
+                        })
+                      }
+                    >
+                      <option value="">Auto-detect</option>
+                      {displays.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.isPrimary ? 'Primary (control display — use with caution)' : 'External'} —{' '}
+                          {d.bounds.width}×{d.bounds.height} (ID: {d.id})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+
+                <div className="ctrl-form-actions">
+                  <button onClick={handleSaveConfig} disabled={saving}>
+                    <Save className="w-3.5 h-3.5 inline-block mr-1.5" />
+                    {saving ? 'Saving…' : 'Save Mapping'}
+                  </button>
+                  <button onClick={handleOpenTvWindows}>
+                    <Play className="w-3.5 h-3.5 inline-block mr-1.5" />
+                    Reopen TV Windows
+                  </button>
+                  <button
+                    onClick={handleCloseTvWindows}
+                    className="ctrl-btn-danger"
+                  >
+                    <X className="w-3.5 h-3.5 inline-block mr-1.5" />
+                    Close TV Windows
+                  </button>
+                  <button onClick={refreshDisplays}>
+                    <RefreshCw className="w-3.5 h-3.5 inline-block mr-1.5" />
+                    Refresh Displays
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </section>
+
+        <section className="ctrl-section">
+          <h2>
+            <Settings2 className="w-3.5 h-3.5" />
+            Operations &amp; Offline Readiness
+          </h2>
+          <div className="ctrl-mapping-form">
+            <label className="ctrl-form-row">
+              <span>Prevent display sleep</span>
+              <input
+                type="checkbox"
+                checked={status.preventDisplaySleep}
+                onChange={(event) => updatePreference('preventDisplaySleep', event.target.checked)}
+              />
+            </label>
+            <label className="ctrl-form-row">
+              <span>Launch at Windows sign-in</span>
+              <input
+                type="checkbox"
+                checked={status.launchAtLogin}
+                onChange={(event) => updatePreference('launchAtLogin', event.target.checked)}
+              />
+            </label>
+            <div className="ctrl-content-grid">
+              <div className="ctrl-card">
+                <h3 className="ctrl-card-title">Offline snapshots</h3>
+                <p>{status.snapshotMeta.length} TV snapshot(s) available</p>
+                {status.snapshotMeta.map((entry) => (
+                  <p key={entry.target} className="ctrl-text-muted">
+                    {entry.target}: {new Date(entry.generatedAt).toLocaleString()}
+                  </p>
+                ))}
+              </div>
+              <div className="ctrl-card">
+                <h3 className="ctrl-card-title">Media cache</h3>
+                <p>{(status.mediaCache.sizeBytes / 1024 / 1024).toFixed(1)} MB · {status.mediaCache.entries} assets</p>
+                <p className="ctrl-text-muted">
+                  Quota: {(status.mediaCache.quotaBytes / 1024 / 1024).toFixed(0)} MB
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Current Content ── */}
+        <section className="ctrl-section">
+          <h2>
+            <Settings2 className="w-3.5 h-3.5" />
+            Current Content
+          </h2>
+          <div className="ctrl-content-grid">
+            {tvNames.map((name) => renderContentPreview(name))}
+          </div>
+        </section>
+
+        {/* ── Operational Notes ── */}
+        <section className="ctrl-section ctrl-notes">
+          <h2>
+            <Info className="w-3.5 h-3.5" />
+            Operational Notes
+          </h2>
+          <ul>
+            <li>
+              Windows must be in <strong>Extend</strong> display mode (not
+              Duplicate/Mirror).
+            </li>
+            <li>
+              Disable sleep and screen timeout on the PC for uninterrupted
+              signage.
+            </li>
+            <li>
+              TV windows stay visible even when this control panel is
+              minimized or hidden.
+            </li>
+            <li>
+              Use the system tray icon (bottom-right) to reopen this panel if
+              closed.
+            </li>
+            <li>
+              Content is updated in real-time from the admin panel via
+              Supabase.
+            </li>
+            <li>
+              If a TV is disconnected, use &quot;Reopen TV Windows&quot; after
+              reconnecting.
+            </li>
+            <li>
+              Add new TVs from the admin web panel — they appear here
+              automatically.
+            </li>
+          </ul>
+        </section>
+      </div>
     </div>
   );
 }

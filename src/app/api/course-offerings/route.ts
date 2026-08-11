@@ -9,9 +9,11 @@ import { badRequest, conflict, internalError, ok } from '@/lib/apiResponse';
 import { requireField, requireFields } from '@/lib/validators';
 import { COURSE_OFFERING_WITH_DETAILS } from '@/lib/queryConstants';
 import { notifyTeacherCourseAssigned, notifyStudentCourseAssigned } from '@/lib/notifications';
+import { dispatchPendingPushNotifications } from '@/lib/pushDispatch';
 import { getSupabaseAdmin, isSupabaseAdminConfigured } from '@/lib/supabaseAdmin';
 import { requireServerSession } from '@/lib/serverAuth';
 import { hashPassword } from '@/lib/passwordUtils';
+import { withAdminRateLimit } from '@/lib/withRateLimit';
 
 // ── Helpers ────────────────────────────────────────────
 
@@ -137,7 +139,7 @@ async function findOrCreateExternalTeacher(
 
 // ── GET /api/course-offerings ──────────────────────────
 
-export async function GET(request: NextRequest) {
+export const GET = withAdminRateLimit(async function GET(request: NextRequest) {
   const auth = requireServerSession(request);
   if (auth.response) return auth.response;
   const guard = serviceGuard();
@@ -162,11 +164,11 @@ export async function GET(request: NextRequest) {
   } catch (error: unknown) {
     return internalError(extractErrorMessage(error, 'Failed to fetch course offerings'));
   }
-}
+});
 
 // ── POST /api/course-offerings ─────────────────────────
 
-export async function POST(request: NextRequest) {
+export const POST = withAdminRateLimit(async function POST(request: NextRequest) {
   const auth = requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
   const guard = serviceGuard();
@@ -244,6 +246,11 @@ export async function POST(request: NextRequest) {
           section: section ?? null,
         }),
       ]);
+      // Force immediate FCM delivery — don't rely solely on the inline dispatch
+      // inside createNotification which can fail silently.
+      dispatchPendingPushNotifications(10).catch((err: unknown) => {
+        console.error('[course-offerings POST] push dispatch error:', err);
+      });
     } catch (notifErr) {
       // Non-critical: log but don't fail the assignment
       console.error('[course-offerings] Failed to send assignment notification:', notifErr);
@@ -253,11 +260,11 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     return internalError(extractErrorMessage(error, 'Failed to assign teacher'));
   }
-}
+});
 
 // ── PATCH /api/course-offerings ────────────────────────
 
-export async function PATCH(request: NextRequest) {
+export const PATCH = withAdminRateLimit(async function PATCH(request: NextRequest) {
   const auth = requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
   const guard = serviceGuard();
@@ -312,6 +319,10 @@ export async function PATCH(request: NextRequest) {
             section: sec,
           }),
         ]);
+        // Force immediate FCM delivery.
+        dispatchPendingPushNotifications(10).catch((err: unknown) => {
+          console.error('[course-offerings PATCH] push dispatch error:', err);
+        });
       } catch (notifErr) {
         console.error('[course-offerings] Failed to send reassignment notification:', notifErr);
       }
@@ -321,11 +332,11 @@ export async function PATCH(request: NextRequest) {
   } catch (error: unknown) {
     return internalError(extractErrorMessage(error, 'Failed to update offering'));
   }
-}
+});
 
 // ── DELETE /api/course-offerings ───────────────────────
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAdminRateLimit(async function DELETE(request: NextRequest) {
   const auth = requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
   const guard = serviceGuard();
@@ -352,4 +363,4 @@ export async function DELETE(request: NextRequest) {
   } catch (error: unknown) {
     return internalError(extractErrorMessage(error, 'Failed to remove assignment'));
   }
-}
+});

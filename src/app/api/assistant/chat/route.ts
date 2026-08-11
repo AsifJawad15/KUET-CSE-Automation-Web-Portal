@@ -1,9 +1,11 @@
 import { badRequest, guardSupabase, internalError } from '@/lib/apiResponse';
+import { requireServerSession } from '@/lib/serverAuth';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { NextRequest, NextResponse } from 'next/server';
 import { detectAdminCommand, executeAdminCommand } from './adminCommands';
 import { answerSystemInfoSearch, detectSystemInfoSearch } from './systemInfoSearch';
 import { answerTeacherDataIntent, detectTeacherDataIntent } from './teacherAssistantData';
+import { withAdminRateLimit } from '@/lib/withRateLimit';
 
 type ChatRole = 'admin' | 'teacher' | 'head';
 type AiProvider = 'gemini' | 'openai';
@@ -160,23 +162,28 @@ async function askConfiguredModel(input: ChatRequest): Promise<string> {
   return getAiProvider() === 'openai' ? askOpenAI(input) : askGemini(input);
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAdminRateLimit(async function POST(request: NextRequest) {
+  // ── Auth guard: only admin/teacher/head ──
+  const auth = requireServerSession(request, { roles: ['admin', 'teacher', 'head'] });
+  if (auth.response) return auth.response;
+
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
   try {
     const body = (await request.json()) as ChatRequest;
     const message = body.message?.trim() ?? '';
-    const role = body.role;
+
+    // Override client-supplied role/userId with verified session values
+    const role = auth.user.role as ChatRole;
+    const userId = auth.user.id;
+    const userName = auth.user.name ?? body.userName ?? 'User';
 
     if (!message) return badRequest('Message is required');
-    if (!role || !['admin', 'teacher', 'head'].includes(role)) {
-      return NextResponse.json({ success: false, error: 'Assistant access is limited to admin and teacher accounts.' }, { status: 403 });
-    }
 
     const adminCommand = detectAdminCommand(message);
     if (adminCommand) {
-      const answer = await executeAdminCommand(adminCommand, body.userName ?? 'Assistant User');
+      const answer = await executeAdminCommand(adminCommand, userName);
       return NextResponse.json({ success: true, data: { answer, source: 'tv-command' } });
     }
 
@@ -188,8 +195,8 @@ export async function POST(request: NextRequest) {
 
     const teacherDataIntent = detectTeacherDataIntent(message);
     if (teacherDataIntent) {
-      if ((role === 'teacher' || role === 'head') && body.userId) {
-        const answer = await answerTeacherDataIntent(teacherDataIntent, body.userId);
+      if ((role === 'teacher' || role === 'head') && userId) {
+        const answer = await answerTeacherDataIntent(teacherDataIntent, userId);
         return NextResponse.json({ success: true, data: { answer, source: teacherDataIntent } });
       }
 
@@ -202,11 +209,11 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const answer = await askConfiguredModel(body);
+    const answer = await askConfiguredModel({ message, userId, userName, role });
     return NextResponse.json({ success: true, data: { answer, source: 'ai' } });
   } catch (error: unknown) {
     const message = extractError(error, 'Assistant failed to respond');
     console.error('[Assistant Chat]', message);
     return internalError(message);
   }
-}
+});

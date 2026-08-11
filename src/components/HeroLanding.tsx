@@ -23,34 +23,6 @@ import { ArrowRight, Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import React, { useEffect, useMemo, useState } from 'react';
 
-// ── Types ──────────────────────────────────────────
-
-interface DbStats {
-  students: number;
-  faculty: number;
-  courses: number;
-  labs: number;
-  alumni: number;
-  papers: number;
-}
-
-// ── Helpers ────────────────────────────────────────
-
-/** Build StatItem[] from live DB counts, falling back to CMS stats. */
-function buildStats(dbStats: DbStats | null, cmsStats: LandingPageData['stats']): StatItem[] {
-  if (dbStats) {
-    return [
-      { id: 'db-students', icon: 'graduation-cap', value: `${dbStats.students}+`, label: 'Students' },
-      { id: 'db-faculty',  icon: 'users',          value: `${dbStats.faculty}+`,  label: 'Faculty Members' },
-      { id: 'db-courses',  icon: 'book-open',      value: `${dbStats.courses}+`,  label: 'Courses' },
-      { id: 'db-labs',     icon: 'flask-conical',   value: `${dbStats.labs}+`,     label: 'Research Labs' },
-      { id: 'db-alumni',   icon: 'globe',           value: `${dbStats.alumni}+`,   label: 'Alumni Worldwide' },
-      { id: 'db-papers',   icon: 'file-text',       value: `${dbStats.papers}+`,   label: 'Research Papers' },
-    ];
-  }
-  return cmsStats.map(s => ({ id: s.id, icon: s.icon || 'graduation-cap', value: s.value, label: s.label }));
-}
-
 // ── Main Component ─────────────────────────────────
 
 const HeroLanding: React.FC = () => {
@@ -58,7 +30,6 @@ const HeroLanding: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [navScrolled, setNavScrolled] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
-  const [dbStats, setDbStats] = useState<DbStats | null>(null);
 
   // ── Data fetching ──
 
@@ -66,28 +37,6 @@ const HeroLanding: React.FC = () => {
     fetchLandingPageData()
       .then(d => { setData(d); setLoading(false); })
       .catch(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    async function fetchDbStats() {
-      try {
-        const [studentsRes, teachersRes, coursesRes, roomsRes] = await Promise.all([
-          supabase.from('students').select('*', { count: 'exact', head: true }),
-          supabase.from('teachers').select('*', { count: 'exact', head: true }),
-          supabase.from('courses').select('*', { count: 'exact', head: true }),
-          supabase.from('rooms').select('*', { count: 'exact', head: true }).eq('room_type', 'lab'),
-        ]);
-        setDbStats({
-          students: studentsRes.count || 0,
-          faculty: teachersRes.count || 0,
-          courses: coursesRes.count || 0,
-          labs: roomsRes.count || 0,
-          alumni: 5000,
-          papers: 500,
-        });
-      } catch { /* fallback to CMS stats */ }
-    }
-    fetchDbStats();
   }, []);
 
   // ── Navbar scroll ──
@@ -125,7 +74,12 @@ const HeroLanding: React.FC = () => {
   const uniName      = dept['university_name'] || 'KUET';
   const shortName    = dept['short_name'] || 'CSE, KUET';
 
-  const stats = buildStats(dbStats, data.stats);
+  const stats = data.stats.map(s => ({
+    id: s.id,
+    icon: s.icon || 'graduation-cap',
+    value: s.value,
+    label: s.label,
+  }));
 
   // ── Render ──
 
@@ -153,7 +107,9 @@ const HeroLanding: React.FC = () => {
 
       {/* ── HOD MESSAGE ────────────────────────── */}
       {vis('hod_message') && data.hodMessage && (
-        <HodMessageSection hodMessage={data.hodMessage} sectionTitle={sec('hod_message')?.title || undefined} />
+        <div className="content-visibility-auto">
+          <HodMessageSection hodMessage={data.hodMessage} sectionTitle={sec('hod_message')?.title || undefined} />
+        </div>
       )}
 
       {/* ── NOTICES MARQUEE ────────────────────── */}
@@ -171,77 +127,97 @@ const HeroLanding: React.FC = () => {
       )}
 
       {/* ── STATS ──────────────────────────────── */}
-      {vis('stats') && <StatsSection stats={stats} />}
+      {vis('stats') && (
+        <div className="content-visibility-auto">
+          <StatsSection stats={stats} />
+        </div>
+      )}
 
       {/* ── QUICK NAVIGATION ───────────────────── */}
       {vis('quick_nav') && (
-        <QuickNavSection
-          links={quickNavLinks}
-          backgroundImagePath={data.heroSlides[1]?.image_path || data.heroSlides[0]?.image_path}
-          sectionTitle={sec('quick_nav')?.title || undefined}
-          sectionSubtitle={sec('quick_nav')?.subtitle || undefined}
-        />
+        <div className="content-visibility-auto">
+          <QuickNavSection
+            links={quickNavLinks}
+            backgroundImagePath={data.heroSlides[1]?.image_path || data.heroSlides[0]?.image_path}
+            sectionTitle={sec('quick_nav')?.title || undefined}
+            sectionSubtitle={sec('quick_nav')?.subtitle || undefined}
+          />
+        </div>
       )}
 
       {/* ── NEWS & EVENTS ──────────────────────── */}
       {vis('news') && (
-        <NewsSection
-          news={data.news}
-          sectionTitle={sec('news')?.title || undefined}
-          sectionSubtitle={sec('news')?.subtitle || undefined}
-        />
+        <div className="content-visibility-auto">
+          <NewsSection
+            news={data.news}
+            sectionTitle={sec('news')?.title || undefined}
+            sectionSubtitle={sec('news')?.subtitle || undefined}
+          />
+        </div>
       )}
 
       {/* ── RESEARCH ───────────────────────────── */}
       {vis('research') && (
-        <ResearchSection
-          research={data.research}
-          sectionTitle={sec('research')?.title || undefined}
-          sectionSubtitle={sec('research')?.subtitle || undefined}
-        />
+        <div className="content-visibility-auto">
+          <ResearchSection
+            research={data.research}
+            sectionTitle={sec('research')?.title || undefined}
+            sectionSubtitle={sec('research')?.subtitle || undefined}
+          />
+        </div>
       )}
 
       {/* ── LABS ───────────────────────────────── */}
       {vis('labs') && (
-        <LabsSection
-          labs={data.labs}
-          sectionTitle={sec('labs')?.title || undefined}
-          sectionSubtitle={sec('labs')?.subtitle || undefined}
-        />
+        <div className="content-visibility-auto">
+          <LabsSection
+            labs={data.labs}
+            sectionTitle={sec('labs')?.title || undefined}
+            sectionSubtitle={sec('labs')?.subtitle || undefined}
+          />
+        </div>
       )}
 
       {/* ── CLUBS ──────────────────────────────── */}
       {vis('clubs') && (
-        <ClubsSection
-          clubs={data.clubs}
-          sectionTitle={sec('clubs')?.title || undefined}
-          sectionSubtitle={sec('clubs')?.subtitle || undefined}
-        />
+        <div className="content-visibility-auto">
+          <ClubsSection
+            clubs={data.clubs}
+            sectionTitle={sec('clubs')?.title || undefined}
+            sectionSubtitle={sec('clubs')?.subtitle || undefined}
+          />
+        </div>
       )}
 
       {/* ── GALLERY ────────────────────────────── */}
       {vis('gallery') && (
-        <GallerySection
-          gallery={data.gallery}
-          sectionTitle={sec('gallery')?.title || undefined}
-          sectionSubtitle={sec('gallery')?.subtitle || undefined}
-        />
+        <div className="content-visibility-auto">
+          <GallerySection
+            gallery={data.gallery}
+            sectionTitle={sec('gallery')?.title || undefined}
+            sectionSubtitle={sec('gallery')?.subtitle || undefined}
+          />
+        </div>
       )}
 
       {/* ── PROGRAMS ───────────────────────────── */}
       {vis('programs') && (
-        <ProgramsSection
-          programs={data.programs}
-          sectionTitle={sec('programs')?.title || undefined}
-          sectionSubtitle={sec('programs')?.subtitle || undefined}
-        />
+        <div className="content-visibility-auto">
+          <ProgramsSection
+            programs={data.programs}
+            sectionTitle={sec('programs')?.title || undefined}
+            sectionSubtitle={sec('programs')?.subtitle || undefined}
+          />
+        </div>
       )}
 
       {/* ── CONTACT CTA ────────────────────────── */}
-      <ContactSection
-        backgroundImagePath={data.heroSlides[3]?.image_path || data.heroSlides[0]?.image_path}
-        email={dept['email'] || 'head@cse.kuet.ac.bd'}
-      />
+      <div className="content-visibility-auto">
+        <ContactSection
+          backgroundImagePath={data.heroSlides[3]?.image_path || data.heroSlides[0]?.image_path}
+          email={dept['email'] || 'head@cse.kuet.ac.bd'}
+        />
+      </div>
 
       {/* ── FOOTER ─────────────────────────────── */}
       <Footer departmentInfo={dept} socialLinks={socialLinks} navOf={navOf} />

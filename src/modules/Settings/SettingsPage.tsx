@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { motion } from 'framer-motion';
 import { Settings, User, Shield, Bell, Palette, Globe, ChevronRight } from 'lucide-react';
 
@@ -10,6 +11,7 @@ interface SettingsPageProps {
 
 export default function SettingsPage({ onMenuChange }: SettingsPageProps) {
   const { user } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   const settingsSections = [
     {
@@ -49,7 +51,7 @@ export default function SettingsPage({ onMenuChange }: SettingsPageProps) {
       icon: Palette,
       color: 'bg-violet-600',
       items: [
-        { label: 'Theme', detail: 'Light' },
+        { label: 'Theme', detail: theme === 'dark' ? 'Dark' : 'Light', onClick: toggleTheme },
         { label: 'Sidebar', detail: 'Expanded' },
       ],
     },
@@ -74,12 +76,12 @@ export default function SettingsPage({ onMenuChange }: SettingsPageProps) {
         className="flex items-center justify-between"
       >
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Settings</h1>
-          <p className="text-gray-500 mt-1">Manage your account and system preferences</p>
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-zinc-100">Settings</h1>
+          <p className="text-gray-500 dark:text-zinc-400 mt-1">Manage your account and system preferences</p>
         </div>
         <button
           onClick={() => onMenuChange('dashboard')}
-          className="px-4 py-2 text-sm text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          className="px-4 py-2 text-sm text-gray-500 dark:text-zinc-400 border border-gray-200 dark:border-zinc-700 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors"
         >
           Back to Dashboard
         </button>
@@ -95,27 +97,28 @@ export default function SettingsPage({ onMenuChange }: SettingsPageProps) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.05 * i }}
-              className="bg-white border border-gray-200 rounded-xl p-6"
+              className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl p-6"
             >
               <div className="flex items-center gap-3 mb-4">
                 <div className={`w-10 h-10 rounded-lg ${section.color} flex items-center justify-center`}>
                   <Icon className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-800">{section.title}</h2>
-                  <p className="text-sm text-gray-500">{section.description}</p>
+                  <h2 className="text-lg font-semibold text-gray-800 dark:text-zinc-100">{section.title}</h2>
+                  <p className="text-sm text-gray-500 dark:text-zinc-400">{section.description}</p>
                 </div>
               </div>
               <div className="space-y-1">
                 {section.items.map((item) => (
                   <div
                     key={item.label}
-                    className="flex items-center justify-between py-3 px-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={item.onClick}
+                    className="flex items-center justify-between py-3 px-3 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer"
                   >
-                    <span className="text-sm font-medium text-gray-700">{item.label}</span>
+                    <span className="text-sm font-medium text-gray-700 dark:text-zinc-300">{item.label}</span>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-400">{item.detail}</span>
-                      <ChevronRight className="w-4 h-4 text-gray-300" />
+                      <span className="text-sm text-gray-400 dark:text-zinc-500">{item.detail}</span>
+                      <ChevronRight className="w-4 h-4 text-gray-300 dark:text-zinc-600" />
                     </div>
                   </div>
                 ))}

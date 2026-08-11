@@ -25,6 +25,7 @@ import { getAllRooms } from '@/services/roomService';
 import type { DBRoom } from '@/types/database';
 import { CheckCircle2, Loader2, AlertCircle, ClipboardCheck, ArrowLeft, GraduationCap, Eye, MapPin, Radio, XCircle, Clock, DoorOpen, Users, Download } from 'lucide-react';
 import { downloadAttendancePDF } from '@/lib/pdfGenerator';
+import { Select, DatePicker } from '@/components/ui/FormPicker';
 
 const MAX_THEORY_ROOMS = 2;
 const MAX_LAB_ROOMS = 4;
@@ -529,11 +530,11 @@ export default function TakeAttendanceTab() {
             </button>
           </div>
           {viewMode === 'take' && (
-            <input
-              type="date"
+            <DatePicker
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-[#3d4951] bg-white dark:bg-[#0b090a] text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400 dark:focus:ring-red-400"
+              wrapperClassName="w-40"
+              className="!py-1.5"
             />
           )}
         </div>
@@ -846,16 +847,15 @@ export default function TakeAttendanceTab() {
                 <label className="mb-1.5 block text-xs font-medium text-gray-500 dark:text-[#b1a7a6]">
                   Section / Group <span className="text-red-500">*</span>
                 </label>
-                <select
+                <Select
                   value={geoSectionGroup}
                   onChange={(e) => setGeoSectionGroup(e.target.value)}
-                  className="w-full rounded-lg border border-gray-200 dark:border-[#3d4951] bg-white dark:bg-[#0b090a] px-3 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-teal-500"
                 >
                   <option value="">Select {isLab ? 'group' : 'section'}...</option>
                   {groups.map((g, gi) => (
                     <option key={gi} value={g.label}>{g.label}</option>
                   ))}
-                </select>
+                </Select>
               </div>
 
               {/* Room Number */}
@@ -863,10 +863,9 @@ export default function TakeAttendanceTab() {
                 <label className="mb-1.5 block text-xs font-medium text-gray-500 dark:text-[#b1a7a6]">
                   Room <span className="text-red-500">*</span>
                 </label>
-                <select
+                <Select
                   value={geoRoomNumber}
                   onChange={(e) => setGeoRoomNumber(e.target.value)}
-                  className="w-full rounded-lg border border-gray-200 dark:border-[#3d4951] bg-white dark:bg-[#0b090a] px-3 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-teal-500"
                 >
                   <option value="">Select GPS-enabled room...</option>
                   {geoAvailableRooms.map((room) => (
@@ -874,7 +873,7 @@ export default function TakeAttendanceTab() {
                       {room.room_number}{room.building_name ? ` — ${room.building_name}` : ''}
                     </option>
                   ))}
-                </select>
+                </Select>
                 <p className="mt-1 text-[10px] text-gray-400 dark:text-[#b1a7a6]">
                   Only rooms with saved GPS coordinates are shown here.
                 </p>

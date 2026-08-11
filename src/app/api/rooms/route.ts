@@ -10,6 +10,7 @@ import { getSupabaseAdmin, isSupabaseAdminConfigured } from '@/lib/supabaseAdmin
 import { requireServerSession } from '@/lib/serverAuth';
 import { requireField } from '@/lib/validators';
 import { NextRequest, NextResponse } from 'next/server';
+import { withAdminRateLimit } from '@/lib/withRateLimit';
 
 function serviceGuard() {
   if (!isSupabaseAdminConfigured()) {
@@ -20,7 +21,7 @@ function serviceGuard() {
 
 // ── GET /api/rooms ─────────────────────────────────────
 
-export async function GET(request: NextRequest) {
+export const GET = withAdminRateLimit(async function GET(request: NextRequest) {
   const auth = requireServerSession(request);
   if (auth.response) return auth.response;
   const guard = serviceGuard();
@@ -38,11 +39,11 @@ export async function GET(request: NextRequest) {
     const message = error instanceof Error ? error.message : 'Failed to fetch rooms';
     return internalError(message);
   }
-}
+});
 
 // ── POST /api/rooms ────────────────────────────────────
 
-export async function POST(request: NextRequest) {
+export const POST = withAdminRateLimit(async function POST(request: NextRequest) {
   const auth = requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
   const guard = serviceGuard();
@@ -82,11 +83,11 @@ export async function POST(request: NextRequest) {
     const message = error instanceof Error ? error.message : 'Failed to add room';
     return internalError(message);
   }
-}
+});
 
 // ── PATCH /api/rooms ───────────────────────────────────
 
-export async function PATCH(request: NextRequest) {
+export const PATCH = withAdminRateLimit(async function PATCH(request: NextRequest) {
   const auth = requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
   const guard = serviceGuard();
@@ -127,11 +128,11 @@ export async function PATCH(request: NextRequest) {
     const message = error instanceof Error ? error.message : 'Failed to update room';
     return internalError(message);
   }
-}
+});
 
 // ── DELETE /api/rooms ──────────────────────────────────
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAdminRateLimit(async function DELETE(request: NextRequest) {
   const auth = requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
   const guard = serviceGuard();
@@ -154,4 +155,4 @@ export async function DELETE(request: NextRequest) {
     const message = error instanceof Error ? error.message : 'Failed to delete room';
     return internalError(message);
   }
-}
+});

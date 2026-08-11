@@ -129,25 +129,32 @@ async function resolveRecipients(target: NotificationRow): Promise<string[]> {
         }
       }
 
-      const pairs = uniq((offerings ?? []).map((row: { term?: string | null; section?: string | null }) => {
-        const term = row.term?.trim() || '';
-        const section = row.section?.trim() || '';
-        return term ? `${term}::${section}` : '';
-      }));
+      const terms = uniq((offerings ?? [])
+        .map((row: { term?: string | null }) => row.term?.trim() || '')
+        .filter(Boolean));
 
-      for (const pair of pairs) {
-        const [term, section] = pair.split('::');
-        let studentQuery = db
+      if (terms.length > 0) {
+        const { data: students, error: studentError } = await db
           .from('students')
-          .select('user_id')
-          .eq('term', term);
-        if (section) {
-          studentQuery = studentQuery.eq('section', section);
-        }
-        const { data: students, error: studentError } = await studentQuery;
+          .select('user_id, term, section')
+          .in('term', terms);
         if (studentError) throw studentError;
-        for (const row of students ?? []) {
-          if (row.user_id?.trim()) recipients.add(row.user_id);
+
+        const termSectionPairs = new Set((offerings ?? []).map((row: { term?: string | null; section?: string | null }) => {
+          const t = row.term?.trim() || '';
+          const s = row.section?.trim() || '';
+          return t ? `${t}::${s}` : '';
+        }));
+
+        for (const s of students ?? []) {
+          const sTerm = s.term?.trim() || '';
+          const sSection = s.section?.trim() || '';
+          const sUserId = s.user_id?.trim();
+          if (!sUserId) continue;
+
+          if (termSectionPairs.has(`${sTerm}::${sSection}`) || termSectionPairs.has(`${sTerm}::`)) {
+            recipients.add(sUserId);
+          }
         }
       }
       return [...recipients];
@@ -286,6 +293,38 @@ export async function dispatchPendingPushNotifications(
         continue;
       }
 
+      // Try invoking the Supabase Edge Function first (uses centralized FCM keys on Supabase)
+      let edgeSuccess = false;
+      try {
+        const dispatchKey = process.env.NOTIFICATION_DISPATCH_KEY || process.env.NOTIFICATION_CRON_KEY || '';
+        const headers: Record<string, string> = {};
+        if (dispatchKey) {
+          headers['x-notification-dispatch-key'] = dispatchKey;
+        }
+
+        const { data: edgeRes, error: edgeErr } = await db.functions.invoke('send-push-notification', {
+          body: { notification_id: notification.id },
+          headers,
+        });
+
+        if (edgeErr) {
+          console.warn(`[dispatchPendingPushNotifications] Edge function failed for ${notification.id}, falling back to local:`, edgeErr.message);
+        } else if (edgeRes && edgeRes.success) {
+          edgeSuccess = true;
+          sent += 1;
+          tokens += edgeRes.tokens || 0;
+        } else {
+          console.warn(`[dispatchPendingPushNotifications] Edge function returned success=false for ${notification.id}, falling back to local:`, edgeRes);
+        }
+      } catch (edgeExc) {
+        console.warn(`[dispatchPendingPushNotifications] Edge function exception for ${notification.id}, falling back to local:`, edgeExc);
+      }
+
+      if (edgeSuccess) {
+        continue;
+      }
+
+      // Local Fallback:
       const recipients = await resolveRecipients(notification);
       const tokenRows = await loadActiveFcmTokens(recipients);
       const uniqueTokenRows = new Map<string, DeviceTokenRow>();

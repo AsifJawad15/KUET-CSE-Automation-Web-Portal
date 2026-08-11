@@ -60,7 +60,7 @@ const DESIGNATION_LABELS: Record<string, string> = {
   LECTURER: 'Lecturer',
 };
 
-const WEB_ALLOWED_ROLES = new Set(['ADMIN', 'TEACHER', 'HEAD']);
+const WEB_ALLOWED_ROLES = new Set(['ADMIN', 'TEACHER', 'HEAD', 'STUDENT']);
 
 function normalizeRole(role: string): ServerUserRole {
   return role.toLowerCase() as ServerUserRole;
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { email, password } = body;
+    const { email, password, client } = body;
 
     const validation = runValidations(
       requireFields({ email, password }),
@@ -111,8 +111,15 @@ export async function POST(request: NextRequest) {
       return unauthorized('Account is deactivated. Contact administrator.');
     }
 
+    const clientType = request.headers.get('x-client-type') || client;
+    const isMobile = clientType === 'mobile';
+
+    if (profile.role === 'STUDENT' && !isMobile) {
+      return unauthorized('Students can only log in through the mobile app.');
+    }
+
     if (!WEB_ALLOWED_ROLES.has(profile.role)) {
-      return unauthorized('This account is not allowed to access the web portal.');
+      return unauthorized('This account type is not allowed to log in.');
     }
 
     // 2. Compare password
@@ -159,6 +166,16 @@ export async function POST(request: NextRequest) {
       department = staff?.department || department;
       designation = staff?.designation || 'Administrator';
       permissions = normalizeAdminPermissions(admin?.permissions ?? null);
+    } else if (profile.role === 'STUDENT') {
+      const { data: student } = await db
+        .from('students')
+        .select('full_name, roll_no, term, session, section, is_cr')
+        .eq('user_id', profile.user_id)
+        .maybeSingle();
+
+      if (student) {
+        name = student.full_name;
+      }
     }
 
     // 4. Update last_login
@@ -167,18 +184,47 @@ export async function POST(request: NextRequest) {
       .update({ last_login: new Date().toISOString() })
       .eq('user_id', profile.user_id);
 
-    const user = {
+    // Build the session user (strictly typed for token creation)
+    const sessionUser = {
       id: profile.user_id,
       email: profile.email,
       name,
       role: normalizeRole(profile.role),
       permissions,
+    };
+
+    // Build the response user with additional fields
+    const user: Record<string, unknown> = {
+      ...sessionUser,
       department,
       designation,
     };
 
-    const response = ok(user);
-    setSessionCookie(response, createSessionToken(user));
+    // Append student-specific fields
+    if (profile.role === 'STUDENT') {
+      const { data: student } = await db
+        .from('students')
+        .select('roll_no, term, session, section, is_cr')
+        .eq('user_id', profile.user_id)
+        .maybeSingle();
+
+      if (student) {
+        user.roll_no = student.roll_no;
+        user.term = student.term;
+        user.session = student.session;
+        user.section = student.section;
+        user.is_cr = student.is_cr;
+      }
+    }
+
+    const token = createSessionToken(sessionUser);
+    const userWithToken = {
+      ...user,
+      token,
+    };
+
+    const response = ok(userWithToken);
+    setSessionCookie(response, token);
     return response;
   } catch (error: unknown) {
     return internalError(extractError(error, 'Login failed'));

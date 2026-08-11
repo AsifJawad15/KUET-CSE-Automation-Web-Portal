@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { X, Loader2, AlertCircle } from 'lucide-react';
+import { Select } from '@/components/ui/FormPicker';
 
 // ==========================================
 // Constants
@@ -269,7 +270,6 @@ export default function AddRoutineSlot({ show, onClose, onSave, term, session, s
               <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Course */}
                 <div>
-                  <label className="text-sm font-medium text-gray-400 dark:text-[#b1a7a6]">Course</label>
                   {uniqueCourses.length === 0 ? (
                     <div className="mt-1 p-3 border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 rounded-lg">
                       <p className="text-sm text-amber-700 dark:text-amber-400">
@@ -280,11 +280,12 @@ export default function AddRoutineSlot({ show, onClose, onSave, term, session, s
                       </p>
                     </div>
                   ) : (
-                    <select
+                    <Select
+                      label="Course"
+                      labelClassName="text-sm font-medium text-gray-400 dark:text-[#b1a7a6] normal-case mb-1"
                       value={selectedCourseId}
                       onChange={(e) => setSelectedCourseId(e.target.value)}
                       required
-                      className={selectClass}
                     >
                       <option value="" className={optionClass}>Select a course...</option>
                       {uniqueCourses.map(c => (
@@ -292,14 +293,13 @@ export default function AddRoutineSlot({ show, onClose, onSave, term, session, s
                           {c.code} – {c.title}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   )}
                 </div>
 
                 {/* Teacher */}
                 {selectedCourseId && (
                   <div>
-                    <label className="text-sm font-medium text-gray-400 dark:text-[#b1a7a6]">Teacher</label>
                     {teacherOptions.length === 0 ? (
                       <div className="mt-1 p-3 border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 rounded-lg">
                         <p className="text-sm text-amber-700 dark:text-amber-400">
@@ -307,11 +307,12 @@ export default function AddRoutineSlot({ show, onClose, onSave, term, session, s
                         </p>
                       </div>
                     ) : (
-                      <select
+                      <Select
+                        label="Teacher"
+                        labelClassName="text-sm font-medium text-gray-400 dark:text-[#b1a7a6] normal-case mb-1"
                         value={selectedTeacher}
                         onChange={(e) => setSelectedTeacher(e.target.value)}
                         required
-                        className={selectClass}
                       >
                         <option value="" className={optionClass}>Select teacher...</option>
                         {teacherOptions.map((t, i) => (
@@ -324,14 +325,13 @@ export default function AddRoutineSlot({ show, onClose, onSave, term, session, s
                             Combined ({teacherOptions.map(t => t.name).join(' & ')})
                           </option>
                         )}
-                      </select>
+                      </Select>
                     )}
                   </div>
                 )}
 
                 {/* Room */}
                 <div>
-                  <label className="text-sm font-medium text-gray-400 dark:text-[#b1a7a6]">Room</label>
                   {rooms.length === 0 ? (
                     <div className="mt-1 p-3 border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 rounded-lg">
                       <p className="text-sm text-amber-700 dark:text-amber-400">
@@ -339,11 +339,12 @@ export default function AddRoutineSlot({ show, onClose, onSave, term, session, s
                       </p>
                     </div>
                   ) : (
-                    <select
+                    <Select
+                      label="Room"
+                      labelClassName="text-sm font-medium text-gray-400 dark:text-[#b1a7a6] normal-case mb-1"
                       value={formData.room_number}
                       onChange={(e) => setFormData({ ...formData, room_number: e.target.value })}
                       required
-                      className={selectClass}
                     >
                       <option value="" className={optionClass}>Select a room...</option>
                       {rooms.map(r => (
@@ -351,58 +352,58 @@ export default function AddRoutineSlot({ show, onClose, onSave, term, session, s
                           {r.room_number} ({r.room_type || 'General'})
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   )}
                 </div>
 
                 {/* Day */}
                 <div>
-                  <label className="text-sm font-medium text-gray-400 dark:text-[#b1a7a6]">Day</label>
-                  <select
+                  <Select
+                    label="Day"
+                    labelClassName="text-sm font-medium text-gray-400 dark:text-[#b1a7a6] normal-case mb-1"
                     value={formData.day_of_week}
                     onChange={(e) => setFormData({ ...formData, day_of_week: parseInt(e.target.value) })}
-                    className={selectClass}
                   >
                     {DAYS.map(d => (
                       <option key={d.value} value={d.value} className={optionClass}>
                         {d.label}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
 
                 {/* Period Range */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-400 dark:text-[#b1a7a6]">From Period</label>
-                    <select
+                    <Select
+                      label="From Period"
+                      labelClassName="text-sm font-medium text-gray-400 dark:text-[#b1a7a6] normal-case mb-1"
                       value={formData.period_start}
                       onChange={(e) => {
                         const v = parseInt(e.target.value);
                         setFormData({ ...formData, period_start: v, period_end: Math.max(v, formData.period_end) });
                       }}
-                      className={selectClass}
                     >
                       {PERIODS.map((p, i) => (
                         <option key={i} value={i} className={optionClass}>
                           P{p.id}: {p.label}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-400 dark:text-[#b1a7a6]">To Period</label>
-                    <select
+                    <Select
+                      label="To Period"
+                      labelClassName="text-sm font-medium text-gray-400 dark:text-[#b1a7a6] normal-case mb-1"
                       value={formData.period_end}
                       onChange={(e) => setFormData({ ...formData, period_end: parseInt(e.target.value) })}
-                      className={selectClass}
                     >
                       {PERIODS.filter((_, i) => i >= formData.period_start).map((p, i) => (
                         <option key={formData.period_start + i} value={formData.period_start + i} className={optionClass}>
                           P{p.id}: {p.label}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
                 </div>
 

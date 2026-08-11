@@ -3,6 +3,7 @@
 // Dependency Inversion: Services depend on this abstraction, not raw fetch()
 // Single Responsibility: Only handles HTTP communication
 // Open/Closed: Easily extendable for interceptors, auth headers, etc.
+// Rate-limit aware: throws RateLimitError on 429 responses
 // ==========================================
 
 /**
@@ -13,6 +14,23 @@ export interface ServiceResult<T = unknown> {
   data?: T;
   error?: string;
   meta?: Record<string, unknown>;
+}
+
+/**
+ * Thrown when the server returns HTTP 429 (rate limit / queue overflow).
+ * The useRateLimit hook catches this and shows the queue loading UI.
+ */
+export class RateLimitError extends Error {
+  readonly rateLimited = true as const;
+  readonly queuePosition: number;
+  readonly estimatedWaitMs: number;
+
+  constructor(message: string, queuePosition = 1, estimatedWaitMs = 10000) {
+    super(message);
+    this.name = 'RateLimitError';
+    this.queuePosition = queuePosition;
+    this.estimatedWaitMs = estimatedWaitMs;
+  }
 }
 
 /**
@@ -63,7 +81,13 @@ class HttpClient {
         signal: options?.signal,
       });
       if (!response.ok) return [];
-      return await response.json() ?? [];
+      const json = await response.json();
+      if (json && typeof json === 'object') {
+        if (Array.isArray(json.data)) {
+          return json.data;
+        }
+      }
+      return Array.isArray(json) ? json : [];
     } catch {
       return [];
     }
@@ -129,6 +153,15 @@ class HttpClient {
 
   private async handleResponse<T>(response: Response): Promise<ServiceResult<T>> {
     const json = await response.json().catch(() => ({}));
+
+    // ── Rate limit: throw structured error so useRateLimit hook can intercept ──
+    if (response.status === 429) {
+      throw new RateLimitError(
+        json.error ?? 'Server is busy. Your request has been queued.',
+        json.queuePosition ?? 1,
+        json.estimatedWaitMs ?? 10000,
+      );
+    }
 
     if (!response.ok) {
       return {

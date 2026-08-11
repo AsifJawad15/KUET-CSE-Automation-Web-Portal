@@ -156,7 +156,7 @@ export default function Sidebar({ activeItem, onMenuChange, isCollapsed, onToggl
               className="w-full"
             >
               <div
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors duration-100 relative ${
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors duration-100 relative group ${
                   isActive
                     ? 'bg-[#6E4229] text-[#FFF2E3] font-bold shadow-[inset_0_0_0_1px_rgba(255,233,215,0.08)]'
                     : 'text-[#E6CCAE] font-semibold hover:bg-[#2C1810] hover:text-[#FFF1DF]'

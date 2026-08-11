@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { UserCog, Loader2, AlertCircle, Mail, Phone, GraduationCap, Calendar, Upload } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { FileUploadModal, studentUploadConfig } from '@/components/upload';
+import { Select } from '@/components/ui/FormPicker';
 
 export default function StudentInfoPage() {
   const [students, setStudents] = useState<StudentWithAuth[]>([]);
@@ -165,26 +166,24 @@ export default function StudentInfoPage() {
             className="w-full px-4 py-2 border border-gray-200 dark:border-[#3d4951] rounded-lg bg-white dark:bg-[#161a1d] text-gray-700 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/40 focus:border-indigo-400 dark:focus:border-red-400 focus:outline-none focus:ring-1 focus:ring-indigo-300 dark:focus:ring-red-400"
           />
         </div>
-        <select
+        <Select
           value={filterSession}
           onChange={(e) => setFilterSession(e.target.value)}
-          className="px-4 py-2 border border-gray-200 dark:border-[#3d4951] rounded-lg bg-white dark:bg-[#161a1d] text-gray-700 dark:text-white focus:border-indigo-400 dark:focus:border-red-400 focus:outline-none"
         >
           <option value="all">All Sessions</option>
           {uniqueSessions.map(session => (
             <option key={session} value={session}>Session {session}</option>
           ))}
-        </select>
-        <select
+        </Select>
+        <Select
           value={filterTerm}
           onChange={(e) => setFilterTerm(e.target.value)}
-          className="px-4 py-2 border border-gray-200 dark:border-[#3d4951] rounded-lg bg-white dark:bg-[#161a1d] text-gray-700 dark:text-white focus:border-indigo-400 dark:focus:border-red-400 focus:outline-none"
         >
           <option value="all">All Terms</option>
           {uniqueTerms.map(term => (
             <option key={term} value={term}>{getTermLabel(term)}</option>
           ))}
-        </select>
+        </Select>
       </motion.div>
 
       {/* Student Grid */}

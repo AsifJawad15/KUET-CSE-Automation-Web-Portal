@@ -9,6 +9,7 @@ import { badRequest, conflict, internalError, ok } from '@/lib/apiResponse';
 import { requireField, requireFields, runValidations, validateUppercase, validatePositiveNumber } from '@/lib/validators';
 import { getSupabaseAdmin, isSupabaseAdminConfigured } from '@/lib/supabaseAdmin';
 import { requireServerSession } from '@/lib/serverAuth';
+import { withAdminRateLimit } from '@/lib/withRateLimit';
 
 // ── Helpers ────────────────────────────────────────────
 
@@ -29,7 +30,7 @@ function serviceGuard() {
 
 // ── GET /api/courses ───────────────────────────────────
 
-export async function GET(request: NextRequest) {
+export const GET = withAdminRateLimit(async function GET(request: NextRequest) {
   const auth = requireServerSession(request);
   if (auth.response) return auth.response;
   const guard = serviceGuard();
@@ -46,11 +47,11 @@ export async function GET(request: NextRequest) {
   } catch (error: unknown) {
     return internalError(extractErrorMessage(error, 'Failed to fetch courses'));
   }
-}
+});
 
 // ── POST /api/courses ──────────────────────────────────
 
-export async function POST(request: NextRequest) {
+export const POST = withAdminRateLimit(async function POST(request: NextRequest) {
   const auth = requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
   const guard = serviceGuard();
@@ -88,11 +89,11 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     return internalError(extractErrorMessage(error, 'Failed to add course'));
   }
-}
+});
 
 // ── PATCH /api/courses ─────────────────────────────────
 
-export async function PATCH(request: NextRequest) {
+export const PATCH = withAdminRateLimit(async function PATCH(request: NextRequest) {
   const auth = requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
   const guard = serviceGuard();
@@ -140,11 +141,11 @@ export async function PATCH(request: NextRequest) {
   } catch (error: unknown) {
     return internalError(extractErrorMessage(error, 'Failed to update course'));
   }
-}
+});
 
 // ── DELETE /api/courses ────────────────────────────────
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAdminRateLimit(async function DELETE(request: NextRequest) {
   const auth = requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
   const guard = serviceGuard();
@@ -185,4 +186,4 @@ export async function DELETE(request: NextRequest) {
   } catch (error: unknown) {
     return internalError(extractErrorMessage(error, 'Failed to delete course'));
   }
-}
+});
