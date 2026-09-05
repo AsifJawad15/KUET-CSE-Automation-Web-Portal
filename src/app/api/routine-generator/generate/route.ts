@@ -3,11 +3,11 @@ import { requireServerSession } from '@/lib/serverAuth';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { badRequest, ok, internalError, serviceUnavailable } from '@/lib/apiResponse';
 import { buildSolverInput } from '@/lib/routine-generator/buildSolverInput';
-import { generateRoutineRecommendations } from '@/lib/routine-generator/solver';
+import { generateRoutineRecommendations, createSolverMetrics } from '@/lib/routine-generator/solver';
 import { periodRangeToTime } from '@/lib/routine-generator/periods';
 
 export async function POST(request: NextRequest) {
-  const auth = requireServerSession(request, { adminLike: true });
+  const auth = await requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
 
   const user = auth.user;
@@ -21,7 +21,11 @@ export async function POST(request: NextRequest) {
       return badRequest('session, year, term, and section are required parameters.');
     }
 
+    const seed = body.seed ?? options.seed ?? 0;
+    const maxNodes = body.maxNodes ?? options.maxNodes ?? 100000;
+    if (!Number.isInteger(draftCount) || draftCount < 1 || draftCount > 5 || !Number.isSafeInteger(seed) || seed < 0 || seed > 0xffffffff || !Number.isInteger(maxNodes) || maxNodes < 1 || maxNodes > 1000000) return badRequest('Invalid draftCount, seed or maxNodes');
     const solverOptions = {
+      seed, maxNodes, deterministic: options.deterministic === true,
       includeExistingSelectedSlots: !!options.includeExistingSelectedSlots,
       respectTeacherAvailability: options.respectTeacherAvailability !== false,
       respectRoomCapacity: options.respectRoomCapacity !== false,
@@ -50,7 +54,8 @@ export async function POST(request: NextRequest) {
         section,
         status: 'running',
         requested_by: user.id,
-        constraints: JSON.stringify(solverInput.constraints) as any,
+        solver_input: solverInput,
+        constraints: { ...solverInput.constraints, execution: { seed, maxNodes } } as any,
       })
       .select()
       .single();
@@ -58,7 +63,8 @@ export async function POST(request: NextRequest) {
     if (jobError) throw jobError;
 
     // 3. Execute solver
-    const drafts = generateRoutineRecommendations(solverInput, draftCount, 20000);
+    const metrics = createSolverMetrics(seed);
+    const drafts = generateRoutineRecommendations(solverInput, draftCount, 20000, metrics);
 
     if (drafts.length === 0) {
       // Update job to failed
@@ -68,11 +74,12 @@ export async function POST(request: NextRequest) {
           status: 'failed',
           message: 'No feasible routine found. Try relaxing soft preferences, adding available rooms, or checking teacher availability.',
           completed_at: new Date().toISOString(),
+          solver_metrics: metrics,
         })
         .eq('id', job.id);
 
       return ok({
-        success: false,
+        success: false, metrics,
         message: 'No feasible routine found. Try relaxing soft preferences, adding available rooms, or checking teacher availability.',
       });
     }
@@ -85,6 +92,8 @@ export async function POST(request: NextRequest) {
           job_id: job.id,
           draft_name: draft.name,
           score: draft.score,
+          total_penalty: draft.totalPenalty,
+          penalty_components: draft.penaltyComponents,
           hard_conflict_count: draft.hardConflictCount,
           soft_warning_count: draft.softWarningCount,
           summary: draft.summary,
@@ -146,6 +155,7 @@ export async function POST(request: NextRequest) {
         status: 'completed',
         best_score: bestScore,
         completed_at: new Date().toISOString(),
+          solver_metrics: metrics,
       })
       .eq('id', job.id)
       .select()
@@ -155,6 +165,7 @@ export async function POST(request: NextRequest) {
       success: true,
       job: finalJob,
       draftCount: drafts.length,
+      metrics,
     });
   } catch (error: any) {
     console.error('Generation failed:', error);

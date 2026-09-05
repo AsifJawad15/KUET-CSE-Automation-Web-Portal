@@ -6,7 +6,7 @@ import { buildSolverInput } from '@/lib/routine-generator/buildSolverInput';
 import { validateSlot } from '@/lib/routine-generator/conflictValidator';
 
 export async function POST(request: NextRequest) {
-  const auth = requireServerSession(request, { adminLike: true });
+  const auth = await requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
 
   try {

@@ -43,7 +43,7 @@ function getLongestConsecutive(periods: number[]): number {
 export function scoreDraft(
   assignments: ScheduleAssignment[],
   context: SolverInput
-): { score: number; warnings: SoftWarning[] } {
+): { score: number; totalPenalty: number; components: Record<string, number>; warnings: SoftWarning[] } {
   const warnings: SoftWarning[] = [];
   let totalPenalty = 0;
 
@@ -63,20 +63,25 @@ export function scoreDraft(
   const wLastPeriod = getWeight('last_period', 4);
   const wDaySpread = getWeight('course_day_spread', 8);
 
-  const days = [0, 1, 2, 3, 4]; // Sun-Thu
+  const days = context.options.allowSaturday ? [0, 1, 2, 3, 4, 6] : [0, 1, 2, 3, 4];
 
   // Helper to map assignments to activities
   const getAct = (aId: string) => context.activities.find((act) => act.id === aId);
 
   // 1. Student Gaps & Consecutive Periods
-  const groupNames = Array.from(
-    new Set(context.activities.map((a) => a.groupName).filter(Boolean) as string[])
-  );
-
-  const groupsToTest = groupNames.length > 0 ? groupNames : [null];
+  const sectionsFor = (act: SolverInput['activities'][number]): string[] =>
+    act.section ? [act.section] : [...new Set(act.teachers.map(t => t.section).filter((v): v is string => !!v))];
+  const sections = [...new Set(context.activities.flatMap(a => sectionsFor(a)))];
+  if (!sections.length) sections.push(context.section);
+  const cohorts = sections.flatMap(section => {
+    const groups = [...new Set(context.activities.filter(a => sectionsFor(a).includes(section)).map(a => a.groupName).filter(Boolean))];
+    return (groups.length ? groups : [null]).map(group => ({ section, group }));
+  });
+  const belongs = (act: SolverInput['activities'][number], section: string, group: string | null) =>
+    (sectionsFor(act).length === 0 || sectionsFor(act).includes(section)) && (!act.groupName || act.groupName === group);
 
   for (const day of days) {
-    for (const group of groupsToTest) {
+    for (const { section, group } of cohorts) {
       const activePeriods: number[] = [];
 
       for (const asn of assignments) {
@@ -84,7 +89,7 @@ export function scoreDraft(
         const act = getAct(asn.activityId);
         if (!act) continue;
 
-        if (act.groupName === null || act.groupName === group) {
+        if (belongs(act, section, group)) {
           activePeriods.push(...getPeriodRange(asn.startPeriod, asn.endPeriod));
         }
       }
@@ -96,7 +101,7 @@ export function scoreDraft(
         totalPenalty += penalty;
         warnings.push({
           type: 'student_gap',
-          reason: `Section ${context.section} (${group || 'Whole'}) has ${studentGaps} empty period gaps on ${dayName(day)}.`,
+          reason: `Section ${section} (${group || 'Whole'}) has ${studentGaps} empty period gaps on ${dayName(day)}.`,
           penalty,
           dayOfWeek: day,
         });
@@ -110,7 +115,7 @@ export function scoreDraft(
         totalPenalty += penalty;
         warnings.push({
           type: 'consecutive_periods',
-          reason: `Section ${context.section} (${group || 'Whole'}) has ${longestConsec} consecutive periods on ${dayName(day)} (preferred max 3).`,
+          reason: `Section ${section} (${group || 'Whole'}) has ${longestConsec} consecutive periods on ${dayName(day)} (preferred max 3).`,
           penalty,
           dayOfWeek: day,
         });
@@ -178,8 +183,9 @@ export function scoreDraft(
   }
 
   // 3. Day Load Balance
+  for (const { section, group } of cohorts) {
   const periodsPerDay = days.map((day) => {
-    const dayAsn = assignments.filter((a) => a.dayOfWeek === day);
+    const dayAsn = assignments.filter(a => a.dayOfWeek === day && !!getAct(a.activityId) && belongs(getAct(a.activityId)!, section, group));
     return dayAsn.reduce((sum, a) => {
       const act = getAct(a.activityId);
       return sum + (act ? act.duration : 1);
@@ -198,6 +204,8 @@ export function scoreDraft(
       reason: `Schedule is slightly unbalanced across the week. Max day load: ${maxPeriods} periods, Min: ${minPeriods} periods.`,
       penalty,
     });
+  }
+
   }
 
   // 4. Theory Period Preference & Room Preferences & Last Period
@@ -264,8 +272,9 @@ export function scoreDraft(
   // 5. Course Day Spread (theory and lab of same course on different days)
   if (wDaySpread > 0) {
     const courseIds = Array.from(new Set(context.activities.map((a) => a.courseId)));
+    for (const { section, group } of cohorts) {
     for (const cId of courseIds) {
-      const courseAsns = assignments.filter((a) => getAct(a.activityId)?.courseId === cId);
+      const courseAsns = assignments.filter((a) => getAct(a.activityId)?.courseId === cId && belongs(getAct(a.activityId)!, section, group));
       if (courseAsns.length > 1) {
         const daysUsed = Array.from(new Set(courseAsns.map((a) => a.dayOfWeek)));
         if (daysUsed.length < courseAsns.length) {
@@ -282,10 +291,13 @@ export function scoreDraft(
     }
   }
 
+    }
+
   const score = Math.max(0, Math.min(100, Math.round(100 - totalPenalty)));
 
   return {
-    score,
+    score, totalPenalty,
+    components: Object.fromEntries(['student_gap','teacher_gap','day_balance','consecutive_periods','morning_theory','room_preference','last_period','course_day_spread'].map(type => [type, warnings.filter(w => w.type === type).reduce((sum,w) => sum+w.penalty,0)])),
     warnings,
   };
 }

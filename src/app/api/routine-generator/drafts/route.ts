@@ -4,7 +4,7 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { badRequest, ok, notFound, internalError, noContent } from '@/lib/apiResponse';
 
 export async function GET(request: NextRequest) {
-  const auth = requireServerSession(request, { adminLike: true });
+  const auth = await requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
 
   try {
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
         .from('routine_drafts')
         .select('*')
         .eq('job_id', jobId)
-        .order('score', { ascending: false });
+        .order('total_penalty', { ascending: true, nullsFirst: false }).order('score', { ascending: false });
 
       if (draftsErr) throw draftsErr;
       return ok(drafts || []);
@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
         .select('*, routine_generation_jobs(session, year, term, section, created_at)')
         .in('job_id', jobIds)
         .order('created_at', { ascending: false })
-        .order('score', { ascending: false });
+        .order('total_penalty', { ascending: true, nullsFirst: false }).order('score', { ascending: false });
 
       if (draftsErr) throw draftsErr;
       return ok(drafts || []);
@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const auth = requireServerSession(request, { adminLike: true });
+  const auth = await requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
 
   try {

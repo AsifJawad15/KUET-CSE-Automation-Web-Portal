@@ -4,7 +4,7 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { badRequest, ok, internalError } from '@/lib/apiResponse';
 
 export async function GET(request: NextRequest) {
-  const auth = requireServerSession(request, { adminLike: true });
+  const auth = await requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
 
   try {
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = requireServerSession(request, { adminLike: true });
+  const auth = await requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
 
   try {

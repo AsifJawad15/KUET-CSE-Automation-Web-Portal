@@ -33,7 +33,7 @@ function serviceGuard() {
 // ── POST /api/teachers ─────────────────────────────────
 
 export const POST = withAdminRateLimit(async function POST(request: NextRequest) {
-  const auth = requireServerSession(request, { adminLike: true });
+  const auth = await requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
   const guard = serviceGuard();
   if (guard) return guard;
@@ -95,7 +95,7 @@ export const POST = withAdminRateLimit(async function POST(request: NextRequest)
 // ── GET /api/teachers ──────────────────────────────────
 
 export const GET = withAdminRateLimit(async function GET(request: NextRequest) {
-  const auth = requireServerSession(request);
+  const auth = await requireServerSession(request);
   if (auth.response) return auth.response;
   const guard = serviceGuard();
   if (guard) return guard;
@@ -116,7 +116,7 @@ export const GET = withAdminRateLimit(async function GET(request: NextRequest) {
 // ── DELETE /api/teachers ───────────────────────────────
 
 export const DELETE = withAdminRateLimit(async function DELETE(request: NextRequest) {
-  const auth = requireServerSession(request, { adminLike: true });
+  const auth = await requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
   const guard = serviceGuard();
   if (guard) return guard;
@@ -142,7 +142,7 @@ export const DELETE = withAdminRateLimit(async function DELETE(request: NextRequ
 // ── PATCH /api/teachers ────────────────────────────────
 
 export const PATCH = withAdminRateLimit(async function PATCH(request: NextRequest) {
-  const auth = requireServerSession(request, { adminLike: true });
+  const auth = await requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
   const guard = serviceGuard();
   if (guard) return guard;

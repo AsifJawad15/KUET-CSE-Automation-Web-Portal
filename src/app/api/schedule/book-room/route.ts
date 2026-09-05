@@ -10,7 +10,7 @@
 import { badRequest, internalError, ok } from '@/lib/apiResponse';
 import { requireServerSession } from '@/lib/serverAuth';
 import { getSupabaseAdmin, isSupabaseAdminConfigured } from '@/lib/supabaseAdmin';
-import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { isSupabaseConfigured, supabase } from '@/lib/supabaseServer';
 import { NextRequest } from 'next/server';
 import { withAdminRateLimit } from '@/lib/withRateLimit';
 
@@ -116,7 +116,7 @@ async function getOccupiedRanges(
 // ── GET /api/schedule/book-room — room period availability ──
 
 export const GET = withAdminRateLimit(async function GET(request: NextRequest) {
-  const auth = requireServerSession(request, { adminLike: true });
+  const auth = await requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
 
   if (!isSupabaseConfigured()) return internalError('Supabase not configured');
@@ -155,7 +155,7 @@ export const GET = withAdminRateLimit(async function GET(request: NextRequest) {
 // ── POST /api/schedule/book-room — create admin booking ──
 
 export const POST = withAdminRateLimit(async function POST(request: NextRequest) {
-  const auth = requireServerSession(request, { adminLike: true });
+  const auth = await requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
 
   if (!isSupabaseAdminConfigured()) return internalError('Supabase admin not configured');
@@ -236,7 +236,7 @@ export const POST = withAdminRateLimit(async function POST(request: NextRequest)
 // ── DELETE /api/schedule/book-room — cancel admin booking ──
 
 export const DELETE = withAdminRateLimit(async function DELETE(request: NextRequest) {
-  const auth = requireServerSession(request, { adminLike: true });
+  const auth = await requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
 
   if (!isSupabaseAdminConfigured()) return internalError('Supabase admin not configured');

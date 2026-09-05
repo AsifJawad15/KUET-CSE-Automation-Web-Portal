@@ -1,3 +1,6 @@
+import { canNotify } from '@/lib/notificationAudience';
+import { forbidden } from '@/lib/apiResponse';
+import { getSupabaseUser } from '@/lib/supabaseUser';
 // ==========================================
 // API: /api/notifications
 // Handles fetching, creating, and marking notifications as read
@@ -6,7 +9,7 @@
 import { badRequest, created, guardSupabase, internalError, noContent } from '@/lib/apiResponse';
 import { createNotification } from '@/lib/notifications';
 import { requireServerSession } from '@/lib/serverAuth';
-import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { isSupabaseConfigured } from '@/lib/supabaseServer';
 import { requireFields } from '@/lib/validators';
 import { NextRequest, NextResponse } from 'next/server';
 import { withAdminRateLimit } from '@/lib/withRateLimit';
@@ -48,90 +51,22 @@ export async function getVisibleNotifications(
   offset: number,
   unread_only: boolean
 ) {
-  // Fetch user context (role, term, section)
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('user_id', user_id)
-    .maybeSingle();
-
-  const { data: student } = await supabase
-    .from('students')
-    .select('term, section')
-    .eq('user_id', user_id)
-    .maybeSingle();
-
-  const userRole = profile?.role ?? null;   // 'STUDENT' | 'TEACHER'
-  const userTerm = student?.term ?? null;   // e.g. '3-2'
-  const userSection = student?.section ?? null; // e.g. 'A'
-
-  // Fetch enrollments (for COURSE-targeted notifications)
-  const { data: enrolledCourses } = await supabase
-    .from('course_offerings')
-    .select('courses!inner(code)')
-    .eq('term', userTerm || '')
-    .eq('section', userSection || '');
-
-  const enrolledCodes: string[] = (enrolledCourses ?? [])
-    .map((e: Record<string, unknown>) => {
-      const courses = e.courses as { code?: string } | null;
-      return courses?.code;
-    })
-    .filter(Boolean) as string[];
-
-  // Fetch read receipt IDs for this user
-  const { data: readData } = await supabase
-    .from('notification_reads')
-    .select('notification_id')
-    .eq('user_id', user_id);
-
-  const readIds = new Set((readData ?? []).map((r: { notification_id: string }) => r.notification_id));
-
-  // Fetch all non-expired notifications and filter visibility in JS
-  const now = new Date().toISOString();
-  const { data: allNotifs, error } = await supabase
-    .from('notifications')
-    .select('*')
-    .or(`expires_at.is.null,expires_at.gt.${now}`)
-    .order('created_at', { ascending: false })
-    .range(offset, offset + limit - 1 + 100); // over-fetch, then filter
-
+  const db = getSupabaseUser(user_id);
+  const { data: readData, error: readError } = await db.from('notification_reads').select('notification_id').eq('user_id', user_id);
+  if (readError) throw readError;
+  const readIds = new Set((readData ?? []).map(r => r.notification_id));
+  let query = db.from('notifications').select('*').order('created_at', { ascending: false });
+  if (unread_only && readIds.size) query = query.not('id', 'in', `(${[...readIds].join(',')})`);
+  const { data, error } = await query.range(offset, offset + limit - 1);
   if (error) throw error;
-
-  // Apply visibility rules (mirrors RLS policy)
-  const visible = (allNotifs ?? []).filter((n: Record<string, unknown>) => {
-    const tt = n.target_type as string;
-    const tv = n.target_value as string | null;
-    const tyt = n.target_year_term as string | null;
-
-    if (tt === 'ALL') return true;
-    if (tt === 'ROLE') return tv === userRole;
-    if (tt === 'YEAR_TERM') return tv === userTerm;
-    if (tt === 'SECTION') return tv === userSection && tyt === userTerm;
-    if (tt === 'COURSE') return tv !== null && enrolledCodes.includes(tv);
-    if (tt === 'USER') return tv === user_id;
-    return false;
-  });
-
-  // Annotate with is_read
-  const annotated = visible.map((n: Record<string, unknown>) => ({
-    ...n,
-    is_read: readIds.has(n.id as string),
-  }));
-
-  const result = unread_only ? annotated.filter((n) => !n.is_read) : annotated;
-  const paginated = result.slice(0, limit);
-
-  return {
-    notifications: paginated,
-    unread_count: annotated.filter((n) => !n.is_read).length,
-  };
+  const { data: unreadCount, error: countError } = await db.rpc('notification_unread_count');
+  if (countError) throw countError;
+  return { notifications: (data ?? []).map(n => ({ ...n, is_read: readIds.has(n.id) })),
+    unread_count: Number(unreadCount ?? 0) };
 }
 
-// ── GET /api/notifications ─────────────────────────────────────────────────────
-
 export async function GET(request: NextRequest) {
-  const auth = requireServerSession(request);
+  const auth = await requireServerSession(request);
   if (auth.response) return auth.response;
 
   const guard = guardSupabase(isSupabaseConfigured());
@@ -141,8 +76,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const user_id = auth.user.id;
     const unread_only = searchParams.get('unread_only') === 'true';
-    const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 100);
-    const offset = parseInt(searchParams.get('offset') || '0', 10);
+    const limit = Math.min(Math.max(Math.floor(Number(searchParams.get('limit'))) || 50, 1), 100);
+    const offset = Math.max(Math.floor(Number(searchParams.get('offset'))) || 0, 0);
 
     if (!user_id) return badRequest('user_id is required');
 
@@ -157,7 +92,7 @@ export async function GET(request: NextRequest) {
 // ── POST /api/notifications — Create a notification ───────────────────────────
 
 export const POST = withAdminRateLimit(async function POST(request: NextRequest) {
-  const auth = requireServerSession(request, { adminLike: true });
+  const auth = await requireServerSession(request);
   if (auth.response) return auth.response;
 
   const guard = guardSupabase(isSupabaseConfigured());
@@ -169,6 +104,9 @@ export const POST = withAdminRateLimit(async function POST(request: NextRequest)
     const { type, title, body: notifBody, target_type } = body;
     const validation = requireFields({ type, title, body: notifBody, target_type });
     if (!validation.valid) return badRequest(validation.error!);
+
+    if (typeof title !== 'string' || title.length > 200 || typeof notifBody !== 'string' || notifBody.length > 5000 || typeof type !== 'string') return badRequest('Invalid notification content');
+    if (!await canNotify(auth.user, body)) return forbidden('This audience is outside your assigned scope');
 
     // Validate target_type
     const validTargetTypes: NotificationTargetType[] = ['ALL', 'ROLE', 'YEAR_TERM', 'SECTION', 'COURSE', 'USER'];
@@ -193,7 +131,7 @@ export const POST = withAdminRateLimit(async function POST(request: NextRequest)
       target_value: body.target_value ?? null,
       target_year_term: body.target_year_term ?? null,
       created_by: auth.user.id,
-      created_by_role: 'ADMIN',
+      created_by_role: auth.user.role === 'student' ? 'STUDENT_CR' : auth.user.role === 'teacher' ? 'TEACHER' : 'ADMIN',
       metadata: body.metadata ?? {},
       expires_at: body.expires_at ?? null,
       dedupeKey: body.dedupe_key,
@@ -213,13 +151,14 @@ export const POST = withAdminRateLimit(async function POST(request: NextRequest)
 // ── PATCH /api/notifications — Mark notifications as read ─────────────────────
 
 export async function PATCH(request: NextRequest) {
-  const auth = requireServerSession(request);
+  const auth = await requireServerSession(request);
   if (auth.response) return auth.response;
 
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
   try {
+    const supabase = getSupabaseUser(auth.user.id);
     const body = await request.json();
     const { notification_ids, mark_all } = body;
     const user_id = auth.user.id;
@@ -229,15 +168,8 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (mark_all) {
-      const visibleData = await getVisibleNotifications(user_id, 500, 0, false);
-      const unreadIds = visibleData.notifications
-        .filter((n: any) => !n.is_read)
-        .map((n: any) => n.id as string);
-
-      if (unreadIds.length > 0) {
-        const rows = unreadIds.map((id: string) => ({ notification_id: id, user_id }));
-        await supabase.from('notification_reads').upsert(rows, { onConflict: 'notification_id,user_id' });
-      }
+      const { error } = await supabase.rpc('mark_all_notifications_read');
+      if (error) throw error;
       return noContent();
     }
 

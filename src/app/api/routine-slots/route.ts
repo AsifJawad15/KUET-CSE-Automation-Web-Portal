@@ -8,7 +8,7 @@ import { badRequest, conflict, guardSupabase, internalError, noContent, notFound
 import { buildStudentAudience, createNotification, notifyTeacherScheduleChanged } from '@/lib/notifications';
 import { ROUTINE_SLOT_WITH_DETAILS } from '@/lib/queryConstants';
 import { requireServerSession } from '@/lib/serverAuth';
-import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { isSupabaseConfigured, supabase } from '@/lib/supabaseServer';
 import { requireField, requireFields } from '@/lib/validators';
 import { resolveTvScheduleRange } from '@/services/tvScheduleResolver';
 import { NextRequest, NextResponse } from 'next/server';
@@ -460,7 +460,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   // ── Auth guard: admin/head only ──
-  const auth = requireServerSession(request, { adminLike: true });
+  const auth = await requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
 
   const guard = guardSupabase(isSupabaseConfigured());
@@ -515,7 +515,7 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   // ── Auth guard: admin/head only ──
-  const auth = requireServerSession(request, { adminLike: true });
+  const auth = await requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
 
   const guard = guardSupabase(isSupabaseConfigured());
@@ -594,7 +594,7 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   // ── Auth guard: admin/head only ──
-  const auth = requireServerSession(request, { adminLike: true });
+  const auth = await requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
 
   const guard = guardSupabase(isSupabaseConfigured());

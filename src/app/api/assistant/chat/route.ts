@@ -164,7 +164,7 @@ async function askConfiguredModel(input: ChatRequest): Promise<string> {
 
 export const POST = withAdminRateLimit(async function POST(request: NextRequest) {
   // ── Auth guard: only admin/teacher/head ──
-  const auth = requireServerSession(request, { roles: ['admin', 'teacher', 'head'] });
+  const auth = await requireServerSession(request, { roles: ['admin', 'teacher', 'head'] });
   if (auth.response) return auth.response;
 
   const guard = guardSupabase(isSupabaseConfigured());

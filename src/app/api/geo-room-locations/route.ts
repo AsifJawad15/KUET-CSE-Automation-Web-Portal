@@ -1,16 +1,19 @@
+import { requireServerSession } from '@/lib/serverAuth';
 // ==========================================
 // API: /api/geo-room-locations
 // Admin CRUD for geo-attendance room coordinates
 // ==========================================
 
 import { badRequest, conflict, guardSupabase, internalError, noContent, ok } from '@/lib/apiResponse';
-import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { isSupabaseConfigured, supabase } from '@/lib/supabaseServer';
 import { decodePlusCode } from '@/lib/plusCode';
 import { NextRequest, NextResponse } from 'next/server';
 
 // ── GET /api/geo-room-locations ────────────────────────
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
@@ -31,6 +34,8 @@ export async function GET() {
 // ── POST /api/geo-room-locations ───────────────────────
 
 export async function POST(request: NextRequest) {
+  const auth = await requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
@@ -88,6 +93,8 @@ export async function POST(request: NextRequest) {
 // ── PATCH /api/geo-room-locations ──────────────────────
 
 export async function PATCH(request: NextRequest) {
+  const auth = await requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
@@ -142,6 +149,8 @@ export async function PATCH(request: NextRequest) {
 // ── DELETE /api/geo-room-locations ─────────────────────
 
 export async function DELETE(request: NextRequest) {
+  const auth = await requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 

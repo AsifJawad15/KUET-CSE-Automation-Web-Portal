@@ -1,3 +1,5 @@
+import { boundedFormData, extractDocxText } from '@/lib/docxParser';
+import { requireServerSession } from '@/lib/serverAuth';
 // ==========================================
 // API: /api/upload/parse
 // Generic file parser for DOCX
@@ -10,12 +12,7 @@ import { badRequest, internalError } from '@/lib/apiResponse';
 
 // ── Text Extraction ────────────────────────────────────
 
-async function extractTextFromDOCX(buffer: ArrayBuffer): Promise<string> {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const mammoth = require('mammoth');
-  const result = await mammoth.extractRawText({ buffer: Buffer.from(buffer) });
-  return result.value;
-}
+
 
 // ── Column Info (from client) ──────────────────────────
 
@@ -115,12 +112,16 @@ function splitLine(line: string): string[] {
 // ── POST Handler ───────────────────────────────────────
 
 export async function POST(request: NextRequest) {
+  const auth = await requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
   try {
-    const formData = await request.formData();
+    const formData = await boundedFormData(request);
     const file = formData.get('file') as File | null;
     const columnsJson = formData.get('columns') as string | null;
 
     if (!file) return badRequest('No file uploaded');
+    if (file.size > 2 * 1024 * 1024) return badRequest('File exceeds the 2 MiB limit');
+    if (!file.name.toLowerCase().endsWith('.docx') || (file.type && file.type !== 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')) return badRequest('Only DOCX documents are supported');
     if (!columnsJson) return badRequest('No column definitions provided');
 
     let columns: ColumnInfo[];
@@ -130,13 +131,14 @@ export async function POST(request: NextRequest) {
       return badRequest('Invalid column definitions');
     }
 
+    if (!Array.isArray(columns) || columns.length > 50 || columns.some(c => typeof c.key !== 'string' || !Array.isArray(c.aliases) || c.aliases.some(a => typeof a !== 'string'))) return badRequest('Invalid column definitions');
     const fileName = file.name.toLowerCase();
     const buffer = await file.arrayBuffer();
 
     let rawText: string;
 
     if (fileName.endsWith('.docx') || fileName.endsWith('.doc')) {
-      rawText = await extractTextFromDOCX(buffer);
+      rawText = await extractDocxText(Buffer.from(buffer));
     } else {
       return badRequest('Unsupported file format. Use CSV or DOCX.');
     }
@@ -148,6 +150,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    if (rawText.length > 2_000_000 || rawText.split('\n').length > 10000) return badRequest('Document exceeds parsing limits');
     const { records, errors } = parseTextToRecords(rawText, columns);
 
     return Response.json({ records, errors });

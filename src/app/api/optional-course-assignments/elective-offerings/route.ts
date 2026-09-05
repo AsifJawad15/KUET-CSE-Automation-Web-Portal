@@ -1,3 +1,4 @@
+import { requireServerSession } from '@/lib/serverAuth';
 // ==========================================
 // API: /api/optional-course-assignments/elective-offerings
 // Returns elective course offerings for a term with curriculum grouping
@@ -5,7 +6,7 @@
 // ==========================================
 
 import { badRequest, created, guardSupabase, internalError, noContent, ok } from '@/lib/apiResponse';
-import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { isSupabaseConfigured, supabase } from '@/lib/supabaseServer';
 import { NextRequest, NextResponse } from 'next/server';
 
 function extractErrorMessage(error: unknown, fallback: string): string {
@@ -14,6 +15,8 @@ function extractErrorMessage(error: unknown, fallback: string): string {
 
 // ── GET /api/optional-course-assignments/elective-offerings ────────────────
 export async function GET(request: NextRequest) {
+  const auth = await requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
@@ -68,6 +71,8 @@ export async function GET(request: NextRequest) {
 // ── POST /api/optional-course-assignments/elective-offerings ───────────────
 // Create a new course offering for an elective course
 export async function POST(request: NextRequest) {
+  const auth = await requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
@@ -145,6 +150,8 @@ export async function POST(request: NextRequest) {
 // ── PATCH /api/optional-course-assignments/elective-offerings ──────────────
 // Update an existing elective offering (change teacher, session, etc.)
 export async function PATCH(request: NextRequest) {
+  const auth = await requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
@@ -199,6 +206,8 @@ export async function PATCH(request: NextRequest) {
 // ── DELETE /api/optional-course-assignments/elective-offerings ─────────────
 // Delete (deactivate) an elective offering
 export async function DELETE(request: NextRequest) {
+  const auth = await requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 

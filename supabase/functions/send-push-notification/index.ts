@@ -226,32 +226,13 @@ async function resolveRecipients(db: ReturnType<typeof createClient>, notificati
         const { data: enrollments, error: enrollmentError } = await db
           .from('enrollments')
           .select('student_user_id')
-          .in('offering_id', offeringIds);
+          .in('offering_id', offeringIds).eq('enrollment_status', 'ENROLLED');
         if (enrollmentError) throw enrollmentError;
         for (const enrollment of enrollments || []) {
           if (enrollment.student_user_id) recipients.add(enrollment.student_user_id);
         }
       }
 
-      const termSectionPairs = uniq((offerings || []).map((row: CourseOfferingRecipientRow) => {
-        const term = row.term?.trim() || '';
-        const section = row.section?.trim() || '';
-        return term ? `${term}::${section}` : '';
-      }));
-
-      for (const pair of termSectionPairs) {
-        const [term, section] = pair.split('::');
-        let studentQuery = db
-          .from('students')
-          .select('user_id')
-          .eq('term', term);
-        if (section) {
-          studentQuery = studentQuery.eq('section', section);
-        }
-        const { data: students, error: studentError } = await studentQuery;
-        if (studentError) throw studentError;
-        for (const student of students || []) recipients.add(student.user_id);
-      }
       return [...recipients];
     }
     case 'USER':
@@ -357,6 +338,7 @@ serve(async (request) => {
 
   const rawDispatchSecret = Deno.env.get('NOTIFICATION_DISPATCH_KEY');
   const dispatchSecret = rawDispatchSecret ? normalizeEnvValue(rawDispatchSecret) : null;
+  if (!dispatchSecret) return jsonResponse({ success: false, error: 'Dispatch is not configured' }, 503);
   if (dispatchSecret) {
     const authHeader = request.headers.get('authorization') || '';
     const bearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';

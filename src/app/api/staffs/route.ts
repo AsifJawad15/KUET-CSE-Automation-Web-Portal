@@ -61,7 +61,7 @@ function serviceGuard() {
 }
 
 export const GET = withAdminRateLimit(async function GET(request: NextRequest) {
-  const auth = requireServerSession(request, { adminLike: true });
+  const auth = await requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
   const guard = serviceGuard();
   if (guard) return guard;
@@ -90,7 +90,7 @@ export const GET = withAdminRateLimit(async function GET(request: NextRequest) {
 });
 
 export const POST = withAdminRateLimit(async function POST(request: NextRequest) {
-  const auth = requireServerSession(request, { adminLike: true });
+  const auth = await requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
   const guard = serviceGuard();
   if (guard) return guard;
@@ -187,7 +187,7 @@ export const POST = withAdminRateLimit(async function POST(request: NextRequest)
 });
 
 export const PATCH = withAdminRateLimit(async function PATCH(request: NextRequest) {
-  const auth = requireServerSession(request, { adminLike: true });
+  const auth = await requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
   const guard = serviceGuard();
   if (guard) return guard;
@@ -260,7 +260,7 @@ export const PATCH = withAdminRateLimit(async function PATCH(request: NextReques
 });
 
 export const DELETE = withAdminRateLimit(async function DELETE(request: NextRequest) {
-  const auth = requireServerSession(request, { adminLike: true });
+  const auth = await requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
   const guard = serviceGuard();
   if (guard) return guard;

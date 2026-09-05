@@ -1,3 +1,6 @@
+import { teachingScope } from '@/lib/teachingScope';
+import { forbidden } from '@/lib/apiResponse';
+import { requireServerSession } from '@/lib/serverAuth';
 // ==========================================
 // API: /api/teacher-portal/marks
 // Handles exam marks upload (CSV bulk)
@@ -5,7 +8,7 @@
 
 import { badRequest, guardSupabase, internalError } from '@/lib/apiResponse';
 import { createNotification, getStudentUsersByRolls } from '@/lib/notifications';
-import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { isSupabaseConfigured, supabase } from '@/lib/supabaseServer';
 import { requireField, runValidations } from '@/lib/validators';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -16,6 +19,9 @@ function extractError(error: unknown, fallback: string): string {
 // ── POST /api/teacher-portal/marks ─────────────────────
 
 export async function POST(request: NextRequest) {
+  const auth = await requireServerSession(request, { roles: ['teacher', 'head'] });
+  if (auth.response) return auth.response;
+
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
@@ -28,6 +34,12 @@ export async function POST(request: NextRequest) {
       return badRequest('No marks records provided');
     }
 
+    const scope = await teachingScope(auth.user.id, body.offering_id);
+    if (!scope) return forbidden('An assigned offering_id is required');
+    if (records.some((r: { course_code?: string; student_roll?: string }) =>
+      r.course_code !== scope.courseCode || !scope.rolls.includes(r.student_roll ?? ''))) {
+      return forbidden('Records must belong to this offering and its active enrolments');
+    }
     let inserted = 0;
     const errors: string[] = [];
 
@@ -44,7 +56,7 @@ export async function POST(request: NextRequest) {
 
       const marks = parseFloat(record.marks);
       const totalMarks = parseFloat(record.total_marks);
-      if (isNaN(marks) || isNaN(totalMarks) || marks < 0 || totalMarks <= 0) {
+      if (!Number.isFinite(marks) || !Number.isFinite(totalMarks) || marks < 0 || totalMarks <= 0) {
         errors.push(`Roll ${record.student_roll}: Invalid marks value`);
         continue;
       }
@@ -56,12 +68,13 @@ export async function POST(request: NextRequest) {
       const { error } = await supabase
         .from('exam_marks')
         .upsert({
+          offering_id: scope.offeringId,
           course_code: record.course_code,
           student_roll: record.student_roll,
           exam_type: record.exam_type,
           marks,
           total_marks: totalMarks,
-        }, { onConflict: 'course_code,student_roll,exam_type' });
+        }, { onConflict: 'offering_id,student_roll,exam_type' });
 
       if (error) {
         errors.push(`Roll ${record.student_roll}: ${error.message}`);
@@ -113,19 +126,25 @@ export async function POST(request: NextRequest) {
 // ── GET /api/teacher-portal/marks ──────────────────────
 
 export async function GET(request: NextRequest) {
+  const auth = await requireServerSession(request, { roles: ['teacher', 'head'] });
+  if (auth.response) return auth.response;
+
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
   try {
     const { searchParams } = new URL(request.url);
-    const courseCode = searchParams.get('course_code');
+    const scope = await teachingScope(auth.user.id, searchParams.get('offering_id'));
+    if (!scope) return forbidden('An assigned offering_id is required');
+
+    const courseCode = scope.courseCode;
 
     if (!courseCode) return badRequest('Course code is required');
 
     let query = supabase
       .from('exam_marks')
       .select('*')
-      .eq('course_code', courseCode);
+      .eq('offering_id', scope.offeringId).eq('course_code', courseCode).in('student_roll', scope.rolls);
 
     const examType = searchParams.get('exam_type');
     if (examType) {

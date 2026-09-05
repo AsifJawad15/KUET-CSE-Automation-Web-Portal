@@ -22,11 +22,23 @@ import type {
 import { createClient } from '@supabase/supabase-js';
 
 // CMS Supabase client (separate from academic DB)
-const CMS_URL = process.env.NEXT_PUBLIC_CMS_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const CMS_KEY = process.env.NEXT_PUBLIC_CMS_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const CMS_URL = process.env.NEXT_PUBLIC_CMS_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+const CMS_KEY = process.env.NEXT_PUBLIC_CMS_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
 const CMS_BUCKET = 'cms-images';
 
-export const cmsSupabase = createClient(CMS_URL, CMS_KEY);
+export const cmsSupabase = createClient(CMS_URL, CMS_KEY, {
+  global: { fetch: async (input, init) => {
+    const url = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url);
+    const method = init?.method ?? 'GET';
+    if (typeof window !== 'undefined' && url.pathname.startsWith('/rest/v1/') &&
+        (method !== 'GET' || window.location.pathname.startsWith('/dashboard') || url.pathname.endsWith('/cms_tv_devices'))) {
+      const table = url.pathname.slice('/rest/v1/'.length);
+      const headers = new Headers(init?.headers); headers.delete('apikey'); headers.delete('authorization');
+      return fetch(`/api/cms-data/${table}${url.search}`, { ...init, headers, credentials: 'same-origin' });
+    }
+    return fetch(input, init);
+  } },
+});
 
 /**
  * Build public URL for images in the cms-images storage bucket.

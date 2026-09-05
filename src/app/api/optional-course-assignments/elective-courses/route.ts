@@ -1,3 +1,4 @@
+import { requireServerSession } from '@/lib/serverAuth';
 // ==========================================
 // API: /api/optional-course-assignments/elective-courses
 // Returns elective courses from curriculum for a given term
@@ -5,7 +6,7 @@
 // ==========================================
 
 import { badRequest, guardSupabase, internalError } from '@/lib/apiResponse';
-import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { isSupabaseConfigured, supabase } from '@/lib/supabaseServer';
 import { NextRequest, NextResponse } from 'next/server';
 
 function extractErrorMessage(error: unknown, fallback: string): string {
@@ -13,6 +14,8 @@ function extractErrorMessage(error: unknown, fallback: string): string {
 }
 
 export async function GET(request: NextRequest) {
+  const auth = await requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 

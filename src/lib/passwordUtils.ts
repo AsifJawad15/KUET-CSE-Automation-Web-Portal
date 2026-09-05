@@ -27,13 +27,11 @@ export async function comparePassword(password: string, hash: string): Promise<b
 }
 
 /**
- * Generate a random 6-digit password for teachers using crypto.randomInt
- * @returns 6-digit numeric string (e.g., "123456")
+ * Generate a cryptographically random initial password for teachers
+ * @returns 16-character password
  */
 export function generateTeacherPassword(): string {
-  const min = 100000;
-  const max = 999999;
-  return randomInt(min, max + 1).toString();
+  return generateSecurePassword(16);
 }
 
 /**
@@ -52,12 +50,12 @@ export function getStudentInitialPassword(): string {
  * @returns Object with isValid flag and error message if invalid
  */
 export function validatePassword(password: string): { isValid: boolean; error?: string } {
-  if (!password || password.length < 6) {
-    return { isValid: false, error: 'Password must be at least 6 characters long' };
+  if (!password || password.length < 12) {
+    return { isValid: false, error: 'Password must be at least 12 characters long' };
   }
   
-  if (password.length > 100) {
-    return { isValid: false, error: 'Password must be less than 100 characters' };
+  if (Buffer.byteLength(password, 'utf8') > 72) {
+    return { isValid: false, error: 'Password must be at most 72 UTF-8 bytes' };
   }
   
   return { isValid: true };

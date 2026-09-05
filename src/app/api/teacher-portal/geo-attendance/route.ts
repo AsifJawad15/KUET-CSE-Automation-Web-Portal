@@ -1,3 +1,4 @@
+import { requireServerSession } from '@/lib/serverAuth';
 // ==========================================
 // API: /api/teacher-portal/geo-attendance
 // Teacher opens/closes geo-attendance rooms
@@ -12,7 +13,7 @@ import {
   parseGeoAttendanceInteger,
 } from '@/lib/geoAttendanceConfig';
 import { notifyGeoAttendanceRoomOpened } from '@/lib/geoAttendanceNotifications';
-import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { isSupabaseConfigured, supabase } from '@/lib/supabaseServer';
 import { NextRequest, NextResponse } from 'next/server';
 
 function extractError(error: unknown, fallback: string): string {
@@ -269,13 +270,16 @@ const MAX_LAB_ROOMS = 4;
 // ── POST: Open a geo-attendance room ──────────────────
 
 export async function POST(request: NextRequest) {
+  const auth = await requireServerSession(request, { roles: ['teacher', 'head'] });
+  if (auth.response) return auth.response;
+
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
   try {
     const body = await request.json();
     const offering_id = cleanText(body.offering_id);
-    const teacher_user_id = cleanText(body.teacher_user_id);
+    const teacher_user_id = auth.user.id;
     const room_number = cleanText(body.room_number);
     const section = cleanText(body.section);
 
@@ -516,12 +520,15 @@ export async function POST(request: NextRequest) {
 // ── GET: Get active/recent geo-attendance rooms ───────
 
 export async function GET(request: NextRequest) {
+  const auth = await requireServerSession(request, { roles: ['teacher', 'head'] });
+  if (auth.response) return auth.response;
+
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
   try {
     const { searchParams } = new URL(request.url);
-    const teacherId = searchParams.get('teacher_user_id');
+    const teacherId = auth.user.id;
     const offeringId = searchParams.get('offering_id');
     const activeOnly = searchParams.get('active_only') === 'true';
     const roomId = searchParams.get('room_id');
@@ -531,10 +538,12 @@ export async function GET(request: NextRequest) {
       const { data: roomMeta, error: roomMetaError } = await supabase
         .from('geo_attendance_rooms')
         .select('session_id, offering_id')
+        .eq('teacher_user_id', auth.user.id)
         .eq('id', roomId)
         .maybeSingle();
 
       if (roomMetaError) throw roomMetaError;
+      if (!roomMeta) return NextResponse.json({ error: 'Room access denied' }, { status: 403 });
 
       const { data: logs, error: logsError } = await supabase
         .from('geo_attendance_logs')
@@ -681,12 +690,16 @@ export async function GET(request: NextRequest) {
 // ── PATCH: Close a geo-attendance room ────────────────
 
 export async function PATCH(request: NextRequest) {
+  const auth = await requireServerSession(request, { roles: ['teacher', 'head'] });
+  if (auth.response) return auth.response;
+
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
   try {
     const body = await request.json();
-    const { room_id, teacher_user_id } = body;
+    const { room_id } = body;
+    const teacher_user_id = auth.user.id;
 
     if (!room_id) return badRequest('room_id is required');
 

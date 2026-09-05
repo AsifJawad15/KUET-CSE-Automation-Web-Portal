@@ -3,7 +3,7 @@ import {
   SolverDraft,
   ScheduleActivity,
   ScheduleAssignment,
-  Room,
+  SolverMetrics,
 } from './types';
 import { validateSlot, validateDraft } from './conflictValidator';
 import { scoreDraft } from './scoring';
@@ -12,10 +12,10 @@ import { periodsOverlap } from './periods';
 /**
  * Shuffles an array in place using Fisher-Yates algorithm.
  */
-function shuffleArray<T>(array: T[]): T[] {
+function shuffleArray<T>(array: T[], rng: () => number): T[] {
   const result = [...array];
   for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rng() * (i + 1));
     [result[i], result[j]] = [result[j], result[i]];
   }
   return result;
@@ -44,38 +44,8 @@ function generateDomains(context: SolverInput): Map<string, ScheduleAssignment[]
       return !isLabRoom;
     });
 
-    if (act.preferredRoomNumbers && act.preferredRoomNumbers.length > 0) {
-      eligibleRooms = eligibleRooms.filter((r) => act.preferredRoomNumbers.includes(r.room_number));
-    }
-
-    // 2. Combined section constraint: Check if this course is already scheduled/locked in another section
-    // If so, we MUST align with it! We restrict domain to ONLY that locked slot's time and room.
-    const lockedClassMatch = context.lockedSlots.filter(
-      (ls) => ls.courseCode === act.courseCode && act.isCombined
-    );
-
-    if (lockedClassMatch.length > 0) {
-      // Find the ones that aren't already mapped to avoid double-binding.
-      // Simply: the domain of this activity consists only of these locked slot configurations
-      for (const locked of lockedClassMatch) {
-        // Find if this locked room is in our rooms list
-        const roomExists = context.rooms.some((r) => r.room_number === locked.roomNumber);
-        if (!roomExists) continue;
-
-        actDomain.push({
-          activityId: act.id,
-          dayOfWeek: locked.dayOfWeek,
-          startPeriod: locked.startPeriod,
-          endPeriod: locked.endPeriod,
-          roomNumber: locked.roomNumber,
-        });
-      }
-
-      if (actDomain.length > 0) {
-        domains.set(act.id, actDomain);
-        continue; // Domain fully locked, skip general generation
-      }
-    }
+    const allowedRooms = isLab ? context.options.labRooms : context.options.theoryRooms;
+    if (allowedRooms?.length) eligibleRooms = eligibleRooms.filter(r => allowedRooms.includes(r.room_number));
 
     // 3. General domain generation
     for (const day of days) {
@@ -84,8 +54,8 @@ function generateDomains(context: SolverInput): Map<string, ScheduleAssignment[]
       if (isLab) {
         timeSlots.push([1, 3], [4, 6], [7, 9]); // Lab blocks
       } else {
-        for (let p = 1; p <= 9; p++) {
-          timeSlots.push([p, p]); // Theory blocks
+        for (let p = 1; p + act.duration - 1 <= 9; p++) {
+          timeSlots.push([p, p + act.duration - 1]); // Theory blocks
         }
       }
 
@@ -140,10 +110,16 @@ function backtrack(
   domains: Map<string, ScheduleAssignment[]>,
   context: SolverInput,
   startTime: number,
-  timeoutMs: number
+  timeoutMs: number,
+  rng: () => number,
+  metrics: SolverMetrics,
+  maxNodes: number
 ): Map<string, ScheduleAssignment> | null {
-  // Check timeout
+  if (metrics.nodes >= maxNodes) { metrics.termination = 'node_budget'; return null; }
+  metrics.nodes++;
+  // Interactive requests retain a wall-clock guard; fixture runs use nodes only.
   if (Date.now() - startTime > timeoutMs) {
+    metrics.termination = 'timeout';
     return null;
   }
 
@@ -166,7 +142,7 @@ function backtrack(
   }
 
   // Value Ordering: Shuffle the values to produce varied recommendations across runs
-  const shuffledValues = shuffleArray([...nextActDomain]);
+  const shuffledValues = shuffleArray(nextActDomain, rng);
 
   for (const val of shuffledValues) {
     const assignedList = Array.from(assigned.values());
@@ -190,6 +166,7 @@ function backtrack(
         return checkResult.isValid;
       });
 
+      metrics.prunedValues += uDom.length - filteredUDom.length;
       if (filteredUDom.length === 0) {
         consistent = false;
         break;
@@ -198,12 +175,14 @@ function backtrack(
     }
 
     if (consistent) {
-      const result = backtrack(assigned, newUnassigned, nextDomains, context, startTime, timeoutMs);
+      const result = backtrack(assigned, newUnassigned, nextDomains, context, startTime, timeoutMs, rng, metrics, maxNodes);
       if (result) return result;
     }
 
     // Undo assignment (Backtrack)
     assigned.delete(nextAct.id);
+    metrics.backtracks++;
+    if (metrics.termination === 'node_budget' || metrics.termination === 'timeout') return null;
   }
 
   return null;
@@ -216,8 +195,23 @@ function backtrack(
 export function generateRoutineRecommendations(
   context: SolverInput,
   maxDrafts = 5,
-  timeoutTotalMs = 25000
+  timeoutTotalMs = 25000,
+  metrics: SolverMetrics = createSolverMetrics(context.options.seed ?? 0)
 ): SolverDraft[] {
+  if (!Number.isInteger(maxDrafts) || maxDrafts < 1 || maxDrafts > 5) throw new Error('draftCount must be 1 through 5');
+  const seed = context.options.seed ?? 0;
+  const maxNodes = context.options.maxNodes ?? 100000;
+  if (!Number.isSafeInteger(seed) || seed < 0 || seed > 0xffffffff) throw new Error('seed must be an unsigned 32-bit integer');
+  if (!Number.isSafeInteger(maxNodes) || maxNodes < 1 || maxNodes > 1000000) throw new Error('maxNodes must be 1 through 1000000');
+  Object.assign(metrics, createSolverMetrics(seed));
+  const rng = mulberry32(seed);
+  if (context.options.deterministic) timeoutTotalMs = Infinity;
+  if (!context.activities.length || new Set(context.activities.map(a => a.id)).size !== context.activities.length) throw new Error('Activities must be nonempty with unique IDs');
+  for (const a of context.activities) {
+    if (!Number.isInteger(a.duration) || a.duration < 1 || a.duration > 9 ||
+        !['Theory', 'Lab', 'Sessional'].includes(a.courseType) ||
+        (a.courseType !== 'Theory' && a.duration !== 3)) throw new Error('Invalid activity type or duration');
+  }
   const drafts: SolverDraft[] = [];
   const startTotal = Date.now();
   const maxAttempts = maxDrafts * 4; // Run up to 20 search attempts to find distinct ones
@@ -231,6 +225,8 @@ export function generateRoutineRecommendations(
     if (!dom || dom.length === 0) {
       // Immediately fail if an activity has no possible values
       console.warn(`Activity ${act.courseCode} has an empty initial domain.`);
+      metrics.termination = 'infeasible';
+      metrics.elapsedMs = Date.now() - startTotal;
       return [];
     }
   }
@@ -243,8 +239,9 @@ export function generateRoutineRecommendations(
 
   while (drafts.length < maxDrafts && attempt < maxAttempts) {
     attempt++;
+    metrics.attempts = attempt;
     const remainingTime = timeoutTotalMs - (Date.now() - startTotal);
-    if (remainingTime < 2000) break; // Not enough time for another full backtracking search
+    if (remainingTime <= 0) { metrics.termination = 'timeout'; break; } // Not enough time for another full backtracking search
 
     const startTime = Date.now();
     const assignedMap = new Map<string, ScheduleAssignment>();
@@ -261,9 +258,11 @@ export function generateRoutineRecommendations(
       domainsCopy,
       context,
       startTime,
-      Math.min(4000, remainingTime) // Max 4 seconds per single draft attempt
+      context.options.deterministic ? Infinity : Math.min(4000, remainingTime),
+      rng, metrics, maxNodes
     );
 
+    if (metrics.termination === 'node_budget' || metrics.termination === 'timeout') break;
     if (solution) {
       const assignments = Array.from(solution.values());
 
@@ -278,7 +277,8 @@ export function generateRoutineRecommendations(
 
         // Grade the assignment
         const validation = validateDraft(assignments, context);
-        const { score, warnings } = scoreDraft(assignments, context);
+        if (!validation.isValid) throw new Error('Solver produced an invalid draft');
+        const { score, warnings, totalPenalty, components } = scoreDraft(assignments, context);
 
         // Summarize draft features
         const advantages: string[] = [];
@@ -317,10 +317,10 @@ export function generateRoutineRecommendations(
 
         drafts.push({
           name: `Recommendation Draft ${drafts.length + 1}`,
-          score,
+          score, totalPenalty, penaltyComponents: components,
           assignments,
           hardConflictCount: validation.hardConflicts.length,
-          softWarningCount: warnings.length,
+          softWarningCount: warnings.length + validation.softWarnings.length,
           summary: {
             reason: summaryText,
             advantages,
@@ -331,6 +331,22 @@ export function generateRoutineRecommendations(
     }
   }
 
+  metrics.elapsedMs = Date.now() - startTotal;
+  if (!drafts.length && metrics.termination === 'completed') metrics.termination = 'infeasible';
   // Sort drafts by descending score
-  return drafts.sort((a, b) => b.score - a.score);
+  return drafts.sort((a, b) => (a.totalPenalty ?? 0) - (b.totalPenalty ?? 0));
+}
+
+export function mulberry32(seed: number): () => number {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6D2B79F5) >>> 0;
+    let value = Math.imul(state ^ (state >>> 15), state | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+export function createSolverMetrics(seed: number): SolverMetrics {
+  return { seed, nodes: 0, backtracks: 0, prunedValues: 0, attempts: 0, elapsedMs: 0, termination: 'completed' };
 }

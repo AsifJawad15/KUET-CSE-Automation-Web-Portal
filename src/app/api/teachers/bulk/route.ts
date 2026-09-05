@@ -22,7 +22,7 @@ const VALID_DESIGNATIONS = ['PROFESSOR', 'ASSOCIATE_PROFESSOR', 'ASSISTANT_PROFE
 
 export async function POST(request: NextRequest) {
   // ── Auth guard ──
-  const auth = requireServerSession(request, { adminLike: true });
+  const auth = await requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
 
   const guard = guardSupabase(isSupabaseAdminConfigured());

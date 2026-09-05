@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { guardSupabase, internalError, unauthorized } from '@/lib/apiResponse';
 import { notifyExamReminder } from '@/lib/notifications';
-import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { isSupabaseConfigured, supabase } from '@/lib/supabaseServer';
 
 type ExamRow = {
   id: string;
@@ -56,7 +56,7 @@ function isAuthorized(request: NextRequest): boolean {
 
   const authorization = request.headers.get('authorization');
   const bearerToken = authorization?.startsWith('Bearer ') ? authorization.slice(7).trim() : null;
-  const providedKey = request.headers.get('x-notification-cron-key') || bearerToken || new URL(request.url).searchParams.get('key');
+  const providedKey = request.headers.get('x-notification-cron-key') || bearerToken;
   return providedKey === requiredKey;
 }
 

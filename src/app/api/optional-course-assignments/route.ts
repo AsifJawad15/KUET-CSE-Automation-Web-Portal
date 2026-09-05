@@ -1,3 +1,4 @@
+import { requireServerSession } from '@/lib/serverAuth';
 // ==========================================
 // API: /api/optional-course-assignments
 // Single Responsibility: HTTP layer for optional course assignment CRUD
@@ -5,7 +6,7 @@
 
 import { badRequest, created, guardSupabase, internalError, noContent } from '@/lib/apiResponse';
 import { notifyOptionalCourseAssigned } from '@/lib/notifications';
-import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { isSupabaseConfigured, supabase } from '@/lib/supabaseServer';
 import { validateUUID } from '@/lib/validators';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -21,6 +22,8 @@ function extractErrorMessage(error: unknown, fallback: string): string {
 // ── GET /api/optional-course-assignments ───────────────
 
 export async function GET(request: NextRequest) {
+  const auth = await requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
@@ -73,6 +76,8 @@ export async function GET(request: NextRequest) {
 // ── POST /api/optional-course-assignments ──────────────
 
 export async function POST(request: NextRequest) {
+  const auth = await requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
@@ -146,6 +151,8 @@ export async function POST(request: NextRequest) {
 // ── DELETE /api/optional-course-assignments ─────────────
 
 export async function DELETE(request: NextRequest) {
+  const auth = await requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 

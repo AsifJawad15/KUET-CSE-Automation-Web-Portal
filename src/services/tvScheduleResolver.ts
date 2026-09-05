@@ -7,7 +7,7 @@ import {
   type TvSnapshotSchedule,
 } from '../../shared/tv-display/domain';
 import { ROUTINE_SLOT_WITH_DETAILS } from '@/lib/queryConstants';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseServer';
 
 type Row = Record<string, unknown>;
 
