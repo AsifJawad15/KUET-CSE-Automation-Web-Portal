@@ -29,12 +29,18 @@ test('wrong role and revoked session denied', async () => {
 });
 for (const path of ['teacher-portal/marks', 'teacher-portal/attendance', 'teacher-portal/geo-attendance',
   'teacher-portal/profile', 'teacher-portal/course-students', 'geo-room-locations', 'students/cr',
-  'optional-course-assignments', 'upload/parse', 'routine-generator/generate']) {
+  'optional-course-assignments', 'upload/parse', 'routine-generator/generate', 'student/geo-attendance']) {
   test(`${path} denies unauthenticated handlers before querying resources`, async () => {
     const route = require(`../src/app/api/${path}/route.ts`);
     for (const method of ['GET','POST','PATCH','DELETE']) if (route[method]) {
       const response = await route[method](new NextRequest(`https://example.invalid/api/${path}`, { method }));
       assert.equal(response.status, 401, method);
+      if (['teacher-portal/marks', 'teacher-portal/geo-attendance', 'geo-room-locations'].includes(path)) {
+        const forbiddenResponse = await route[method](new NextRequest(`https://example.invalid/api/${path}`, {
+          method, headers: { authorization: `Bearer ${auth.createSessionToken(student)}` },
+        }));
+        assert.equal(forbiddenResponse.status, 403, `${method} rejects a signed-in student`);
+      }
     }
   });
 }

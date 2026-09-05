@@ -16,6 +16,11 @@ test('database migrations enforce grants, row ownership, session revocation and 
     for (const file of fs.readdirSync('supabase/migrations').filter(f => f.endsWith('.sql')).sort()) {
       await db.exec(fs.readFileSync(`supabase/migrations/${file}`, 'utf8'));
     }
+    const protectedTables = ['profiles','students','notifications','device_push_tokens','geo_attendance_logs','password_recovery_tokens'];
+    const rls = await db.query(`select c.relname, c.relrowsecurity from pg_class c
+      join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname = any($1::text[])`, [protectedTables]);
+    assert.equal(rls.rows.length, protectedTables.length);
+    for (const row of rls.rows) assert.equal(row.relrowsecurity, true, `${row.relname} must enable RLS`);
     const a='00000000-0000-4000-8000-000000000001', b='00000000-0000-4000-8000-000000000002';
     await db.exec(`insert into profiles(user_id,email,password_hash,role) values ('${a}','a@example.invalid','hash','STUDENT'),('${b}','b@example.invalid','hash','STUDENT');
       insert into notifications(id,type,title,body,target_type,target_value) values
