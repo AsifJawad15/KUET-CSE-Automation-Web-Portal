@@ -9,6 +9,9 @@
     "lint": "eslint src shared --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "test": "node --require ./tests/register.cjs --test tests/*.test.cjs",
+    "check:migrations": "node scripts/check-migrations.cjs",
+    "test:database": "npm run check:migrations && node --require ./tests/register.cjs --test tests/database.test.cjs",
+    "verify:release": "npm run check:migrations && npm run verify",
     "reproduce:paper": "node scripts/reproduce.cjs",
     "verify": "npm run lint && npm run typecheck && npm test && npm run build"
   },
