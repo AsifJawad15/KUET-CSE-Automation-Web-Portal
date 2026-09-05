@@ -1,0 +1,662 @@
+{
+  "input": {
+    "session": "DEMO",
+    "year": 1,
+    "term": 1,
+    "section": "A",
+    "activities": [
+      {
+        "id": "theory-a-0",
+        "courseId": "theory",
+        "courseCode": "DEMO101",
+        "courseTitle": "Demo theory",
+        "courseType": "Theory",
+        "duration": 1,
+        "expectedStudents": 30,
+        "teachers": [
+          {
+            "teacherUserId": "t1",
+            "teacherName": "Instructor One",
+            "teacherUid": "T1",
+            "courseOfferingId": "oA",
+            "section": "A"
+          }
+        ],
+        "groupName": null,
+        "isCombined": false,
+        "preferredRoomType": null,
+        "preferredRoomNumbers": [],
+        "section": "A"
+      },
+      {
+        "id": "theory-a-1",
+        "courseId": "theory",
+        "courseCode": "DEMO101",
+        "courseTitle": "Demo theory",
+        "courseType": "Theory",
+        "duration": 1,
+        "expectedStudents": 30,
+        "teachers": [
+          {
+            "teacherUserId": "t1",
+            "teacherName": "Instructor One",
+            "teacherUid": "T1",
+            "courseOfferingId": "oA",
+            "section": "A"
+          }
+        ],
+        "groupName": null,
+        "isCombined": false,
+        "preferredRoomType": null,
+        "preferredRoomNumbers": [],
+        "section": "A"
+      },
+      {
+        "id": "lab-A",
+        "courseId": "lab",
+        "courseCode": "DEMO102",
+        "courseTitle": "Demo laboratory",
+        "courseType": "Lab",
+        "duration": 3,
+        "expectedStudents": 15,
+        "teachers": [
+          {
+            "teacherUserId": "t2",
+            "teacherName": "Instructor Two",
+            "teacherUid": "T2",
+            "courseOfferingId": "labA",
+            "section": "A"
+          }
+        ],
+        "groupName": "A1",
+        "isCombined": false,
+        "preferredRoomType": null,
+        "preferredRoomNumbers": [],
+        "section": "A"
+      },
+      {
+        "id": "theory-b-0",
+        "courseId": "theory",
+        "courseCode": "DEMO101",
+        "courseTitle": "Demo theory",
+        "courseType": "Theory",
+        "duration": 1,
+        "expectedStudents": 30,
+        "teachers": [
+          {
+            "teacherUserId": "t1",
+            "teacherName": "Instructor One",
+            "teacherUid": "T1",
+            "courseOfferingId": "oB",
+            "section": "B"
+          }
+        ],
+        "groupName": null,
+        "isCombined": false,
+        "preferredRoomType": null,
+        "preferredRoomNumbers": [],
+        "section": "B"
+      },
+      {
+        "id": "theory-b-1",
+        "courseId": "theory",
+        "courseCode": "DEMO101",
+        "courseTitle": "Demo theory",
+        "courseType": "Theory",
+        "duration": 1,
+        "expectedStudents": 30,
+        "teachers": [
+          {
+            "teacherUserId": "t1",
+            "teacherName": "Instructor One",
+            "teacherUid": "T1",
+            "courseOfferingId": "oB",
+            "section": "B"
+          }
+        ],
+        "groupName": null,
+        "isCombined": false,
+        "preferredRoomType": null,
+        "preferredRoomNumbers": [],
+        "section": "B"
+      },
+      {
+        "id": "lab-B",
+        "courseId": "lab",
+        "courseCode": "DEMO102",
+        "courseTitle": "Demo laboratory",
+        "courseType": "Lab",
+        "duration": 3,
+        "expectedStudents": 15,
+        "teachers": [
+          {
+            "teacherUserId": "t2",
+            "teacherName": "Instructor Two",
+            "teacherUid": "T2",
+            "courseOfferingId": "labB",
+            "section": "B"
+          }
+        ],
+        "groupName": "B1",
+        "isCombined": false,
+        "preferredRoomType": null,
+        "preferredRoomNumbers": [],
+        "section": "B"
+      },
+      {
+        "id": "combined",
+        "courseId": "combined",
+        "courseCode": "DEMO201",
+        "courseTitle": "Demo theory",
+        "courseType": "Theory",
+        "duration": 1,
+        "expectedStudents": 60,
+        "teachers": [
+          {
+            "teacherUserId": "t1",
+            "teacherName": "Instructor One",
+            "teacherUid": "T1",
+            "courseOfferingId": "oA",
+            "section": "A"
+          }
+        ],
+        "groupName": null,
+        "isCombined": true,
+        "preferredRoomType": null,
+        "preferredRoomNumbers": [],
+        "section": null
+      }
+    ],
+    "rooms": [
+      {
+        "room_number": "R1",
+        "building_name": "Demo",
+        "capacity": 80,
+        "room_type": "classroom",
+        "is_active": true
+      },
+      {
+        "room_number": "R2",
+        "building_name": "Demo",
+        "capacity": 20,
+        "room_type": "classroom",
+        "is_active": true
+      },
+      {
+        "room_number": "L1",
+        "building_name": "Demo",
+        "capacity": 30,
+        "room_type": "lab",
+        "is_active": true
+      }
+    ],
+    "lockedSlots": [
+      {
+        "id": "locked",
+        "courseCode": "OTHER",
+        "teacherUserId": "t1",
+        "teacherName": "Instructor One",
+        "roomNumber": "R1",
+        "dayOfWeek": 0,
+        "startPeriod": 1,
+        "endPeriod": 1,
+        "term": "2-1",
+        "session": "DEMO",
+        "section": "A"
+      }
+    ],
+    "teacherAvailabilities": [
+      {
+        "teacherUserId": "t2",
+        "dayOfWeek": 1,
+        "startPeriod": 1,
+        "endPeriod": 3,
+        "availabilityType": "unavailable",
+        "priority": 1
+      }
+    ],
+    "constraints": {},
+    "options": {
+      "includeExistingSelectedSlots": false,
+      "respectTeacherAvailability": true,
+      "respectRoomCapacity": true,
+      "allowSaturday": false,
+      "seed": 42,
+      "maxNodes": 10000,
+      "deterministic": true
+    }
+  },
+  "metrics": {
+    "seed": 42,
+    "nodes": 24,
+    "backtracks": 0,
+    "prunedValues": 186,
+    "attempts": 3,
+    "termination": "completed"
+  },
+  "drafts": [
+    {
+      "name": "Recommendation Draft 1",
+      "score": 41,
+      "totalPenalty": 59,
+      "penaltyComponents": {
+        "student_gap": 5,
+        "teacher_gap": 15,
+        "day_balance": 20,
+        "consecutive_periods": 0,
+        "morning_theory": 15,
+        "room_preference": 0,
+        "last_period": 4,
+        "course_day_spread": 0
+      },
+      "assignments": [
+        {
+          "activityId": "lab-A",
+          "dayOfWeek": 1,
+          "startPeriod": 4,
+          "endPeriod": 6,
+          "roomNumber": "L1"
+        },
+        {
+          "activityId": "lab-B",
+          "dayOfWeek": 0,
+          "startPeriod": 4,
+          "endPeriod": 6,
+          "roomNumber": "L1"
+        },
+        {
+          "activityId": "combined",
+          "dayOfWeek": 4,
+          "startPeriod": 8,
+          "endPeriod": 8,
+          "roomNumber": "R2"
+        },
+        {
+          "activityId": "theory-a-0",
+          "dayOfWeek": 3,
+          "startPeriod": 9,
+          "endPeriod": 9,
+          "roomNumber": "R1"
+        },
+        {
+          "activityId": "theory-a-1",
+          "dayOfWeek": 0,
+          "startPeriod": 8,
+          "endPeriod": 8,
+          "roomNumber": "R2"
+        },
+        {
+          "activityId": "theory-b-0",
+          "dayOfWeek": 0,
+          "startPeriod": 2,
+          "endPeriod": 2,
+          "roomNumber": "R1"
+        },
+        {
+          "activityId": "theory-b-1",
+          "dayOfWeek": 1,
+          "startPeriod": 1,
+          "endPeriod": 1,
+          "roomNumber": "R2"
+        }
+      ],
+      "hardConflictCount": 0,
+      "softWarningCount": 10,
+      "summary": {
+        "reason": ". Note: 1 student gap warnings.",
+        "advantages": [],
+        "disadvantages": [
+          "1 student gap warnings.",
+          "1 teacher gap warnings.",
+          "Slightly unbalanced class distribution."
+        ]
+      },
+      "penalties": [
+        {
+          "type": "student_gap",
+          "reason": "Section B (B1) has 1 empty period gaps on Sunday.",
+          "penalty": 5,
+          "dayOfWeek": 0
+        },
+        {
+          "type": "teacher_gap",
+          "reason": "Dr./Prof. Instructor One has 5 empty period gaps on Sunday.",
+          "penalty": 15,
+          "dayOfWeek": 0
+        },
+        {
+          "type": "day_balance",
+          "reason": "Schedule is slightly unbalanced across the week. Max day load: 3 periods, Min: 0 periods.",
+          "penalty": 8
+        },
+        {
+          "type": "day_balance",
+          "reason": "Schedule is slightly unbalanced across the week. Max day load: 4 periods, Min: 0 periods.",
+          "penalty": 12
+        },
+        {
+          "type": "morning_theory",
+          "reason": "Theory class DEMO201 scheduled in late afternoon period 8.",
+          "penalty": 5,
+          "activityId": "combined",
+          "dayOfWeek": 4,
+          "startPeriod": 8
+        },
+        {
+          "type": "morning_theory",
+          "reason": "Theory class DEMO101 scheduled in late afternoon period 9.",
+          "penalty": 5,
+          "activityId": "theory-a-0",
+          "dayOfWeek": 3,
+          "startPeriod": 9
+        },
+        {
+          "type": "last_period",
+          "reason": "Course DEMO101 scheduled in the last period of the day (period 9).",
+          "penalty": 4,
+          "activityId": "theory-a-0",
+          "dayOfWeek": 3,
+          "startPeriod": 9
+        },
+        {
+          "type": "morning_theory",
+          "reason": "Theory class DEMO101 scheduled in late afternoon period 8.",
+          "penalty": 5,
+          "activityId": "theory-a-1",
+          "dayOfWeek": 0,
+          "startPeriod": 8
+        }
+      ]
+    },
+    {
+      "name": "Recommendation Draft 3",
+      "score": 38,
+      "totalPenalty": 62,
+      "penaltyComponents": {
+        "student_gap": 0,
+        "teacher_gap": 27,
+        "day_balance": 16,
+        "consecutive_periods": 0,
+        "morning_theory": 19,
+        "room_preference": 0,
+        "last_period": 0,
+        "course_day_spread": 0
+      },
+      "assignments": [
+        {
+          "activityId": "lab-A",
+          "dayOfWeek": 3,
+          "startPeriod": 4,
+          "endPeriod": 6,
+          "roomNumber": "L1"
+        },
+        {
+          "activityId": "lab-B",
+          "dayOfWeek": 2,
+          "startPeriod": 1,
+          "endPeriod": 3,
+          "roomNumber": "L1"
+        },
+        {
+          "activityId": "combined",
+          "dayOfWeek": 0,
+          "startPeriod": 8,
+          "endPeriod": 8,
+          "roomNumber": "R2"
+        },
+        {
+          "activityId": "theory-a-0",
+          "dayOfWeek": 4,
+          "startPeriod": 8,
+          "endPeriod": 8,
+          "roomNumber": "R2"
+        },
+        {
+          "activityId": "theory-a-1",
+          "dayOfWeek": 1,
+          "startPeriod": 7,
+          "endPeriod": 7,
+          "roomNumber": "R1"
+        },
+        {
+          "activityId": "theory-b-0",
+          "dayOfWeek": 4,
+          "startPeriod": 4,
+          "endPeriod": 4,
+          "roomNumber": "R1"
+        },
+        {
+          "activityId": "theory-b-1",
+          "dayOfWeek": 3,
+          "startPeriod": 6,
+          "endPeriod": 6,
+          "roomNumber": "R2"
+        }
+      ],
+      "hardConflictCount": 0,
+      "softWarningCount": 11,
+      "summary": {
+        "reason": "No student class gaps found.. Note: 2 teacher gap warnings.",
+        "advantages": [
+          "No student class gaps found."
+        ],
+        "disadvantages": [
+          "2 teacher gap warnings.",
+          "Slightly unbalanced class distribution."
+        ]
+      },
+      "penalties": [
+        {
+          "type": "teacher_gap",
+          "reason": "Dr./Prof. Instructor One has 6 empty period gaps on Sunday.",
+          "penalty": 18,
+          "dayOfWeek": 0
+        },
+        {
+          "type": "teacher_gap",
+          "reason": "Dr./Prof. Instructor One has 3 empty period gaps on Thursday.",
+          "penalty": 9,
+          "dayOfWeek": 4
+        },
+        {
+          "type": "day_balance",
+          "reason": "Schedule is slightly unbalanced across the week. Max day load: 3 periods, Min: 0 periods.",
+          "penalty": 8
+        },
+        {
+          "type": "day_balance",
+          "reason": "Schedule is slightly unbalanced across the week. Max day load: 3 periods, Min: 0 periods.",
+          "penalty": 8
+        },
+        {
+          "type": "morning_theory",
+          "reason": "Theory class DEMO201 scheduled in late afternoon period 8.",
+          "penalty": 5,
+          "activityId": "combined",
+          "dayOfWeek": 0,
+          "startPeriod": 8
+        },
+        {
+          "type": "morning_theory",
+          "reason": "Theory class DEMO101 scheduled in late afternoon period 8.",
+          "penalty": 5,
+          "activityId": "theory-a-0",
+          "dayOfWeek": 4,
+          "startPeriod": 8
+        },
+        {
+          "type": "morning_theory",
+          "reason": "Theory class DEMO101 scheduled in late afternoon period 7.",
+          "penalty": 5,
+          "activityId": "theory-a-1",
+          "dayOfWeek": 1,
+          "startPeriod": 7
+        },
+        {
+          "type": "morning_theory",
+          "reason": "Theory class DEMO101 scheduled in midday period 4.",
+          "penalty": 2,
+          "activityId": "theory-b-0",
+          "dayOfWeek": 4,
+          "startPeriod": 4
+        },
+        {
+          "type": "morning_theory",
+          "reason": "Theory class DEMO101 scheduled in midday period 6.",
+          "penalty": 2,
+          "activityId": "theory-b-1",
+          "dayOfWeek": 3,
+          "startPeriod": 6
+        }
+      ]
+    },
+    {
+      "name": "Recommendation Draft 2",
+      "score": 20,
+      "totalPenalty": 80,
+      "penaltyComponents": {
+        "student_gap": 0,
+        "teacher_gap": 21,
+        "day_balance": 24,
+        "consecutive_periods": 20,
+        "morning_theory": 11,
+        "room_preference": 0,
+        "last_period": 4,
+        "course_day_spread": 0
+      },
+      "assignments": [
+        {
+          "activityId": "lab-A",
+          "dayOfWeek": 1,
+          "startPeriod": 7,
+          "endPeriod": 9,
+          "roomNumber": "L1"
+        },
+        {
+          "activityId": "lab-B",
+          "dayOfWeek": 3,
+          "startPeriod": 1,
+          "endPeriod": 3,
+          "roomNumber": "L1"
+        },
+        {
+          "activityId": "combined",
+          "dayOfWeek": 1,
+          "startPeriod": 6,
+          "endPeriod": 6,
+          "roomNumber": "R2"
+        },
+        {
+          "activityId": "theory-a-0",
+          "dayOfWeek": 1,
+          "startPeriod": 5,
+          "endPeriod": 5,
+          "roomNumber": "R1"
+        },
+        {
+          "activityId": "theory-a-1",
+          "dayOfWeek": 2,
+          "startPeriod": 5,
+          "endPeriod": 5,
+          "roomNumber": "R2"
+        },
+        {
+          "activityId": "theory-b-0",
+          "dayOfWeek": 2,
+          "startPeriod": 3,
+          "endPeriod": 3,
+          "roomNumber": "R2"
+        },
+        {
+          "activityId": "theory-b-1",
+          "dayOfWeek": 0,
+          "startPeriod": 8,
+          "endPeriod": 8,
+          "roomNumber": "R1"
+        }
+      ],
+      "hardConflictCount": 0,
+      "softWarningCount": 12,
+      "summary": {
+        "reason": "No student class gaps found.. Note: 2 teacher gap warnings.",
+        "advantages": [
+          "No student class gaps found."
+        ],
+        "disadvantages": [
+          "2 teacher gap warnings.",
+          "Slightly unbalanced class distribution."
+        ]
+      },
+      "penalties": [
+        {
+          "type": "consecutive_periods",
+          "reason": "Section A (A1) has 5 consecutive periods on Monday (preferred max 3).",
+          "penalty": 20,
+          "dayOfWeek": 1
+        },
+        {
+          "type": "teacher_gap",
+          "reason": "Dr./Prof. Instructor One has 6 empty period gaps on Sunday.",
+          "penalty": 18,
+          "dayOfWeek": 0
+        },
+        {
+          "type": "teacher_gap",
+          "reason": "Dr./Prof. Instructor One has 1 empty period gaps on Tuesday.",
+          "penalty": 3,
+          "dayOfWeek": 2
+        },
+        {
+          "type": "day_balance",
+          "reason": "Schedule is slightly unbalanced across the week. Max day load: 5 periods, Min: 0 periods.",
+          "penalty": 16
+        },
+        {
+          "type": "day_balance",
+          "reason": "Schedule is slightly unbalanced across the week. Max day load: 3 periods, Min: 0 periods.",
+          "penalty": 8
+        },
+        {
+          "type": "last_period",
+          "reason": "Course DEMO102 scheduled in the last period of the day (period 9).",
+          "penalty": 4,
+          "activityId": "lab-A",
+          "dayOfWeek": 1,
+          "startPeriod": 7
+        },
+        {
+          "type": "morning_theory",
+          "reason": "Theory class DEMO201 scheduled in midday period 6.",
+          "penalty": 2,
+          "activityId": "combined",
+          "dayOfWeek": 1,
+          "startPeriod": 6
+        },
+        {
+          "type": "morning_theory",
+          "reason": "Theory class DEMO101 scheduled in midday period 5.",
+          "penalty": 2,
+          "activityId": "theory-a-0",
+          "dayOfWeek": 1,
+          "startPeriod": 5
+        },
+        {
+          "type": "morning_theory",
+          "reason": "Theory class DEMO101 scheduled in midday period 5.",
+          "penalty": 2,
+          "activityId": "theory-a-1",
+          "dayOfWeek": 2,
+          "startPeriod": 5
+        },
+        {
+          "type": "morning_theory",
+          "reason": "Theory class DEMO101 scheduled in late afternoon period 8.",
+          "penalty": 5,
+          "activityId": "theory-b-1",
+          "dayOfWeek": 0,
+          "startPeriod": 8
+        }
+      ]
+    }
+  ]
+}
