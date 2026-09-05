@@ -6,7 +6,7 @@ Use Node 24.19.0 (see `.nvmrc`), npm 10 or newer, and the committed lockfiles. T
 
 ```sh
 npm ci
-npm run verify
+npm run verify:release
 npm run reproduce:paper
 cd tv-player-app
 npm ci
@@ -20,6 +20,32 @@ The tests use an isolated PostgreSQL engine (PGlite) and synthetic data. They do
 ## Database installation
 
 `supabase/migrations/` is the authoritative, ordered migration history for this revision. On a **new, empty local Supabase database**, run `supabase start` followed by `supabase db reset`. This requires the Supabase CLI and Docker; `db reset` replaces the local development database. Alternatively, apply the migration files in filename order to a new isolated Supabase project. The automated database test executes this entire sequence in PGlite.
+
+Before either route, run `npm run check:migrations`. The exact filenames and
+LF-normalized SHA-256 checksums are recorded in `docs/migration-manifest.json`.
+The command also requires the separate CMS security boundary. It rejects a
+missing, additional, or modified academic migration. `npm run test:database`
+performs this check before running the isolated database tests, and
+`npm run verify:release` performs it before the full web verification. The general
+`npm test` command retains its explicit skip for clones without the local SQL set.
+
+The ordered academic sequence is:
+
+1. `20260101000000_baseline.sql`
+2. `20260627000000_smart_routine_generator.sql`
+3. `20260725000000_tv_display_production_hardening.sql`
+4. `20260905000000_authenticated_boundary.sql`
+5. `20260905001000_atomic_geo_attendance.sql`
+6. `20260905002000_booking_and_client_policies.sql`
+7. `20260905003000_inbox_and_legacy_marks.sql`
+8. `20260905004000_student_requests.sql`
+9. `20260905005000_manual_attendance.sql`
+10. `20260905006000_solver_run_evidence.sql`
+
+Apply `database/cms_security_boundary.sql` only to the separate CMS project,
+after its existing CMS schema. The sequence above is for the academic project.
+The historical April and June root-level migrations are not extra steps after
+this consolidated baseline. Do not mix the two installation paths.
 
 The `20260101000000_baseline.sql` snapshot includes the academic and TV schema. It defers foreign keys until all referenced tables exist and uses text for the snapshot's formerly unspecified enum types. Older root-level SQL files and `database_schema.sql` are historical references, not additional installation steps. Do not replay the baseline or old permissive-policy scripts over an existing deployment.
 
@@ -53,4 +79,4 @@ FCM service-account credentials and `NOTIFICATION_DISPATCH_KEY` belong only on t
 
 `npm run reproduce:paper` runs the synthetic fixture twice and verifies byte-identical normalized output. An independent validator checks the activities, periods, teacher/room/cohort collisions, room suitability and occupied slots. `examples/routine/output.json` stores the input, drafts, component penalties and deterministic counters; `environment.json` stores machine-dependent timing, memory and output SHA-256. These small correctness fixtures are not evidence of production scalability or institutional impact.
 
-Before publishing a release, run both repository CI workflows, review the staging migration and multi-role workflows, and record exact commits and lockfiles for web, TV and mobile. Package the fixture, results, setup instructions and tests together with the source. Tags, archive publication and DOI registration are separate release actions and have not been performed here. Manuscript revision is deferred.
+Before publishing a release, run both repository CI workflows, review the staging migration and multi-role workflows, and record exact commits and lockfiles for web, TV and mobile. Package the fixture, results, setup instructions and tests together with the source and complete SQL set. Tags, archive publication and DOI registration are separate release actions and have not been performed here. The revised manuscript is maintained in the workspace `softwarex` folder. See [REVISION_VERIFICATION.md](REVISION_VERIFICATION.md) for the remaining publication steps.

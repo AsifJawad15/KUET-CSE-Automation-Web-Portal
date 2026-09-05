@@ -14,8 +14,8 @@
 
 ### **A reusable, role-based department automation platform for academic administration, teaching, student services, and public communication**
 
-[![GitHub Stars](https://img.shields.io/github/stars/AsifJawad15/KUET-CSE-Automation-Web-Portal?style=social)](https://github.com/AsifJawad15/KUET-CSE-Automation-Web-Portal)
-[![GitHub Forks](https://img.shields.io/github/forks/AsifJawad15/KUET-CSE-Automation-Web-Portal?style=social)](https://github.com/AsifJawad15/KUET-CSE-Automation-Web-Portal/fork)
+[![GitHub Stars](https://img.shields.io/github/stars/abdullahshahporan/KUET-CSE-Automation-Web-Portal?style=social)](https://github.com/abdullahshahporan/KUET-CSE-Automation-Web-Portal)
+[![GitHub Forks](https://img.shields.io/github/forks/abdullahshahporan/KUET-CSE-Automation-Web-Portal?style=social)](https://github.com/abdullahshahporan/KUET-CSE-Automation-Web-Portal/fork)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 [Key Features](#-features) • [Tech Stack](#-tech-stack) • [Getting Started](#-getting-started) • [Architecture](#-architecture) • [API Reference](#-api-reference) • [Contributing](#-contributing)
@@ -128,7 +128,7 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 - Assign rooms, teachers, and sections per slot  
 - Automatic conflict detection: no double-booking of rooms or teachers  
 - Combined lab-slot support (multiple teachers, merged view)  
-- Generate and compare constraint-aware routine drafts using course requirements, teacher availability, locked slots, and preferred rooms
+- Generate and compare constraint-aware routine drafts using course requirements, teacher availability, occupied published slots, and preferred rooms; general persistent locks on manually fixed drafts are not implemented
 - Review draft scores, hard conflicts, and soft warnings; move and revalidate individual slots before publication
 - Export routine as PDF  
 
@@ -272,7 +272,7 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 - Per-display content targeting, section visibility, rotation intervals, and layout configuration
 - Supabase Realtime plus polling, with cached content retained during temporary network loss
 - Electron control panel for display discovery, TV1/TV2 mapping, kiosk windows, HDMI changes, tray access, and persistent device mappings
-- Standalone Windows installer: **[TV Player v1.0.0 release](https://github.com/AsifJawad15/KUET-CSE-Automation-Web-Portal/releases/tag/tv-player-v1.0.0)**
+- Historical Windows installer: **[TV Player v1.0.0](https://github.com/abdullahshahporan/KUET-CSE-Automation-Web-Portal/releases/tag/tv-player-v1.0.0)**; evaluated TV source version: **1.1.0**
 
 ---
 
@@ -337,7 +337,7 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 ### 1 — Clone the Repository
 
 ```bash
-git clone https://github.com/AsifJawad15/KUET-CSE-Automation-Web-Portal.git
+git clone https://github.com/abdullahshahporan/KUET-CSE-Automation-Web-Portal.git
 cd KUET-CSE-Automation-Web-Portal
 ```
 
@@ -641,7 +641,7 @@ All API routes live under `/src/app/api/`. Each folder maps to a Next.js Route H
 - 📱 **Fully Responsive** — Desktop, tablet, and mobile layouts  
 - 🌓 **Dark Mode** — Integrated theme toggle persisted via context  
 - ⚡ **Smooth Animations** — Framer Motion page transitions + GSAP scroll effects  
-- 🔄 **Real-time Updates** — Supabase Realtime subscriptions in TV Display and notification inbox  
+- 🔄 **Updates** — TV Display uses configured Realtime subscriptions and polling; the private mobile inbox uses authenticated requests and FCM
 - 📄 **PDF Export** — Class routine and result sheets exportable as PDF  
 - 📊 **CSV Import** — Bulk student addition via CSV upload (PapaParse)  
 - 🔍 **OCR Support** — Scanned document text extraction (Tesseract via API)  
@@ -654,23 +654,35 @@ All API routes live under `/src/app/api/`. Each folder maps to a Next.js Route H
 |---|---|
 | **Password hashing** | bcryptjs (server-side) |
 | **Service role isolation** | `SUPABASE_SERVICE_ROLE_KEY` used only in server routes |
-| **Row-Level Security** | Supabase RLS policies on all sensitive tables |
+| **Row-Level Security** | Explicit grants and scoped policies; local tests cover selected tables and operations. See [verification coverage](docs/REVISION_VERIFICATION.md). Full hosted policy and Storage coverage is not certified. |
 | **Input validation** | Schema-level constraints + API-layer checks |
 | **XSS protection** | React's built-in escaping; no enforced Content Security Policy is claimed |
-| **CSRF protection** | Next.js built-in SameSite cookie handling |
-| **Secret management** | All keys in `.env.local` (gitignored) |
+| **Session cookies** | Application-set `HttpOnly`, `SameSite=Lax`, and production `Secure`; this is not a complete CSRF audit |
+| **Secret management** | Server secrets use private environment configuration; public Supabase client keys are governed by database grants and policies |
 
 ---
 
 ## 🧪 Testing
 
 ```bash
-# Lint check
+# Install locked dependencies (Node.js 22-24; tested on 24.19.0)
+npm ci
 npm run lint
-
-# Production build (catches TypeScript errors)
+npm run typecheck
+npm test
+npm run test:database   # Requires the complete separately supplied SQL set
+npm run reproduce:paper
 npm run build
+
+# Combined release check: fails if required SQL is missing or has changed
+npm run verify:release
 ```
+
+`npm test` reports a skipped database test if the local SQL set is absent.
+Use `npm run verify:release` for release evidence; a skipped database test is
+not sufficient. [SETUP.md](docs/SETUP.md) identifies the authoritative migration
+sequence. The TV player has its own `npm ci`, `npm test`, `npm run typecheck`,
+and `npm run build` commands in `tv-player-app/`.
 
 ---
 
@@ -681,9 +693,10 @@ control panel, versioned offline snapshots, media cache, and dynamic monitor
 mapping. It consumes the canonical `/api/tv-display/snapshot` contract so its
 content and merged room schedule match the web portal.
 
-Windows users can download the packaged installer from the
-**[TV Player v1.0.0 GitHub Release](https://github.com/AsifJawad15/KUET-CSE-Automation-Web-Portal/releases/tag/tv-player-v1.0.0)**.
-The release asset is `TV.Player.Setup.1.0.0.exe`.
+The evaluated TV source declares **1.1.0** in `tv-player-app/package.json`.
+The historical **[TV Player v1.0.0 installer](https://github.com/abdullahshahporan/KUET-CSE-Automation-Web-Portal/releases/tag/tv-player-v1.0.0)**
+(`TV.Player.Setup.1.0.0.exe`) belongs to an older release. It is not a binary
+for the evaluated 1.1.0 source or a synchronized web/mobile publication release.
 
 ```
 tv-player-app/
@@ -749,7 +762,7 @@ We welcome contributions! Please follow these steps:
 
 ## 🐛 Bug Reports
 
-Found a bug? Please [open an issue](https://github.com/AsifJawad15/KUET-CSE-Automation-Web-Portal/issues) with:
+Found a bug? Please [open an issue](https://github.com/abdullahshahporan/KUET-CSE-Automation-Web-Portal/issues) with:
 
 - Browser and OS version  
 - Node.js and npm versions  

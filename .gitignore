@@ -63,6 +63,7 @@ eng.traineddata
 !docs/
 !docs/SETUP.md
 !docs/REVIEW_FIXES.md
+!docs/REVISION_VERIFICATION.md
 
 # Local database migrations (distributed separately)
 /supabase/migrations/*.sql

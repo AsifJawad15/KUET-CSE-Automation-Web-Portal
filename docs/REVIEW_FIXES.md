@@ -17,6 +17,10 @@ This tracks software changes against `DeptFlow_SoftwareX_PreSubmission_Review.pd
 | Build and packaging | Direct ESLint command, Node declaration, bundled fonts, lockfile updates, CI; private Android release signing guard | Web production build, TV test/type/build, Flutter analysis/test/debug APK |
 | Installation and release | Ordered baseline/migrations, environment templates, non-destructive mobile config bootstrap, setup instructions | Fresh schema applied by automated tests; release archive and production migration remain unperformed |
 
-The software checks do not establish GPS authenticity, a production threat-model review, real-device FCM delivery, large-instance performance, usability or institutional impact. A real deployment must validate its data migration, accepted database signing key, authorization policies, storage policies and account provisioning in staging. The user has no production Android application ID/Firebase registration yet; the app's debug configuration remains available, and release builds require private production configuration.
+The software checks do not establish GPS authenticity, a production threat-model review, real-device FCM delivery, large-instance performance, usability or institutional impact. A real deployment must validate its data migration, accepted database signing key, authorization policies, storage policies and account provisioning in staging. The user has no production Android application ID/Firebase registration yet. Optimized testing APKs remain debug-signed; production app bundles or explicitly configured production builds require a registered ID and private signing configuration.
+
+The follow-up [verification record](REVISION_VERIFICATION.md) supersedes outdated
+release-packaging notes above and distinguishes local verification from hosted
+deployment and public-release status.
 
 See [SETUP.md](SETUP.md) for commands, compatibility changes and configuration limits. Exact test output for this working session is under the workspace `tmp/` directory; CI runs the committed checks independently.
