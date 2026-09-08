@@ -1,10 +1,13 @@
+import { teachingScope } from '@/lib/teachingScope';
+import { forbidden } from '@/lib/apiResponse';
+import { requireServerSession } from '@/lib/serverAuth';
 // ==========================================
 // API: /api/teacher-portal/course-students
 // Returns students enrolled in a specific course
 // ==========================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabaseServer';
 import { badRequest, guardSupabase, internalError } from '@/lib/apiResponse';
 import { WITH_PROFILE } from '@/lib/queryConstants';
 
@@ -15,12 +18,17 @@ function extractError(error: unknown, fallback: string): string {
 // ── GET /api/teacher-portal/course-students ────────────
 
 export async function GET(request: NextRequest) {
+  const auth = await requireServerSession(request, { roles: ['teacher', 'head'] });
+  if (auth.response) return auth.response;
+
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
   try {
     const { searchParams } = new URL(request.url);
-    const courseCode = searchParams.get('course_code');
+    const scope = await teachingScope(auth.user.id, searchParams.get('offering_id'));
+    if (!scope) return forbidden('An assigned offering_id is required');
+    const courseCode = scope.courseCode;
 
     if (!courseCode) return badRequest('Course code is required');
 
@@ -42,6 +50,7 @@ export async function GET(request: NextRequest) {
     let offeringQuery = supabase
       .from('course_offerings')
       .select('term, session, batch')
+      .eq('id', scope.offeringId)
       .eq('course_id', course.id)
       .eq('is_active', true);
 
@@ -61,6 +70,7 @@ export async function GET(request: NextRequest) {
     let studentQuery = supabase
       .from('students')
       .select(WITH_PROFILE)
+      .in('user_id', scope.studentIds)
       .eq('term', offeringTerm)
       .order('roll_no');
 

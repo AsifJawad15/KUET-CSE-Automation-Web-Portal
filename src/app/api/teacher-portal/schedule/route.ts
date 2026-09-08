@@ -1,3 +1,4 @@
+import { requireServerSession } from '@/lib/serverAuth';
 // ==========================================
 // API: /api/teacher-portal/schedule
 // Returns schedule slots for a specific teacher
@@ -5,7 +6,7 @@
 
 import { badRequest, guardSupabase, internalError } from '@/lib/apiResponse';
 import { notifyAttendanceMarkingReminder, notifyCourseAnomalyAlert } from '@/lib/notifications';
-import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { isSupabaseConfigured, supabase } from '@/lib/supabaseServer';
 import { NextRequest, NextResponse } from 'next/server';
 
 function extractError(error: unknown, fallback: string): string {
@@ -220,12 +221,15 @@ async function syncTeacherScheduleNotifications(teacherId: string, offerings: Of
 // ── GET /api/teacher-portal/schedule ───────────────────
 
 export async function GET(request: NextRequest) {
+  const auth = await requireServerSession(request, { roles: ['teacher', 'head'] });
+  if (auth.response) return auth.response;
+
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
   try {
     const { searchParams } = new URL(request.url);
-    const teacherId = searchParams.get('teacher_id');
+    const teacherId = auth.user.id;
 
     if (!teacherId) return badRequest('Teacher ID is required');
 

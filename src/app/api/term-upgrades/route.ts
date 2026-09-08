@@ -8,7 +8,7 @@ import { badRequest, conflict, created, guardSupabase, internalError, noContent,
 import { notifyTermUpgrade } from '@/lib/notifications';
 import { TERM_UPGRADE_WITH_STUDENT } from '@/lib/queryConstants';
 import { requireServerSession } from '@/lib/serverAuth';
-import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { isSupabaseConfigured, supabase } from '@/lib/supabaseServer';
 import { requireFields, validateUUID } from '@/lib/validators';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -33,7 +33,7 @@ const VALID_REVIEW_STATUSES = ['approved', 'rejected'] as const;
 
 export async function GET(request: NextRequest) {
   // ── Auth guard ──
-  const auth = requireServerSession(request);
+  const auth = await requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
 
   const guard = guardSupabase(isSupabaseConfigured());
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   // ── Auth guard ──
-  const auth = requireServerSession(request);
+  const auth = await requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
 
   const guard = guardSupabase(isSupabaseConfigured());
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   // ── Auth guard: admin/head only ──
-  const auth = requireServerSession(request, { adminLike: true });
+  const auth = await requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
 
   const guard = guardSupabase(isSupabaseConfigured());
@@ -210,7 +210,7 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   // ── Auth guard ──
-  const auth = requireServerSession(request);
+  const auth = await requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
 
   const guard = guardSupabase(isSupabaseConfigured());

@@ -58,3 +58,14 @@ eng.traineddata
 
 # Temporary scratch scripts
 /scratch/
+
+# Versioned setup and review documentation
+!docs/
+!docs/SETUP.md
+!docs/REVIEW_FIXES.md
+!docs/REVISION_VERIFICATION.md
+!docs/PUBLIC_RELEASE_STATUS.md
+
+# Local database migrations (distributed separately)
+/supabase/migrations/*.sql
+/database/cms_security_boundary.sql

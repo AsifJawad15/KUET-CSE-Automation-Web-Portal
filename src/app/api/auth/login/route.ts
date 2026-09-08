@@ -42,6 +42,8 @@ const WINDOW_MS = 60_000; // 1 minute
 
 function isRateLimited(ip: string): boolean {
   const now = Date.now();
+  for (const [key, value] of loginAttempts) if (value.resetAt <= now) loginAttempts.delete(key);
+  if (loginAttempts.size >= 10000 && !loginAttempts.has(ip)) return true;
   const entry = loginAttempts.get(ip);
   if (!entry || now > entry.resetAt) {
     loginAttempts.set(ip, { count: 1, resetAt: now + WINDOW_MS });
@@ -81,6 +83,8 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { email, password, client } = body;
+    if (typeof email !== 'string' || email.length > 254 || typeof password !== 'string' ||
+        Buffer.byteLength(password, 'utf8') > 72) return badRequest('Invalid credentials');
 
     const validation = runValidations(
       requireFields({ email, password }),
@@ -99,7 +103,7 @@ export async function POST(request: NextRequest) {
     // 1. Fetch profile with password hash
     const { data: profile, error: profileError } = await db
       .from('profiles')
-      .select('user_id, role, email, password_hash, is_active')
+      .select('user_id, role, email, password_hash, is_active, session_version')
       .eq('email', normalizedEmail)
       .single();
 
@@ -191,6 +195,7 @@ export async function POST(request: NextRequest) {
       name,
       role: normalizeRole(profile.role),
       permissions,
+      sessionVersion: profile.session_version,
     };
 
     // Build the response user with additional fields

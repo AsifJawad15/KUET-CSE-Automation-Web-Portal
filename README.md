@@ -1,3 +1,5 @@
+> **Current setup and security changes:** follow [docs/SETUP.md](docs/SETUP.md) and [review implementation notes](docs/REVIEW_FIXES.md). The ordered migrations supersede older SQL installation lists.
+
 <div align="center">
 
 <img src="https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js"/>
@@ -126,7 +128,7 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 - Assign rooms, teachers, and sections per slot  
 - Automatic conflict detection: no double-booking of rooms or teachers  
 - Combined lab-slot support (multiple teachers, merged view)  
-- Generate and compare constraint-aware routine drafts using course requirements, teacher availability, locked slots, and preferred rooms
+- Generate and compare constraint-aware routine drafts using course requirements, teacher availability, occupied published slots, and preferred rooms; general persistent locks on manually fixed drafts are not implemented
 - Review draft scores, hard conflicts, and soft warnings; move and revalidate individual slots before publication
 - Export routine as PDF  
 
@@ -270,7 +272,7 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 - Per-display content targeting, section visibility, rotation intervals, and layout configuration
 - Supabase Realtime plus polling, with cached content retained during temporary network loss
 - Electron control panel for display discovery, TV1/TV2 mapping, kiosk windows, HDMI changes, tray access, and persistent device mappings
-- Standalone Windows installer: **[TV Player v1.0.0 release](https://github.com/abdullahshahporan/KUET-CSE-Automation-Web-Portal/releases/tag/tv-player-v1.0.0)**
+- Historical Windows installer: **[TV Player v1.0.0](https://github.com/abdullahshahporan/KUET-CSE-Automation-Web-Portal/releases/tag/tv-player-v1.0.0)**; evaluated TV source version: **1.1.0**
 
 ---
 
@@ -323,26 +325,31 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 
 ## 🚀 Getting Started
 
+This fork preserves the original project's history and incorporates upstream
+revision [`000011befda70d0db5cdf68b0519b9b7f6e81e6a`](https://github.com/abdullahshahporan/KUET-CSE-Automation-Web-Portal/commit/000011befda70d0db5cdf68b0519b9b7f6e81e6a).
+See the [public-clone verification and archive status](docs/PUBLIC_RELEASE_STATUS.md)
+before treating a source download as a complete installation capsule.
+
 ### Prerequisites
 
 | Requirement | Version |
 |---|---|
-| **Node.js** | 18 or higher |
-| **npm** | 9 or higher |
+| **Node.js** | 22–24; tested on 24.19.0 |
+| **npm** | 10 or higher |
 | **Git** | Latest |
 | **Supabase account** | [supabase.com](https://supabase.com) |
 
 ### 1 — Clone the Repository
 
 ```bash
-git clone https://github.com/abdullahshahporan/KUET-CSE-Automation-Web-Portal.git
+git clone https://github.com/AsifJawad15/KUET-CSE-Automation-Web-Portal.git
 cd KUET-CSE-Automation-Web-Portal
 ```
 
 ### 2 — Install Dependencies
 
 ```bash
-npm install
+npm ci
 ```
 
 ### 3 — Configure Environment Variables
@@ -354,6 +361,7 @@ Create a `.env.local` file in the project root:
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+SUPABASE_JWT_SECRET=your_project_accepted_HS256_signing_secret
 
 # ── Application ───────────────────────────────────────────────────
 NEXT_PUBLIC_APP_URL=http://localhost:3000
@@ -364,38 +372,23 @@ NODE_ENV=development
 FCM_PROJECT_ID=your_firebase_project_id
 FCM_CLIENT_EMAIL=your_firebase_service_account_email
 FCM_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
-NOTIFICATION_DISPATCH_KEY=optional_shared_secret
+NOTIFICATION_DISPATCH_KEY=required_private_shared_secret_if_push_is_enabled
 ```
 
 > ⚠️ **The `SUPABASE_SERVICE_ROLE_KEY` has elevated privileges. Never expose it in client-side code.**
 
 ### 4 — Set Up the Database
 
-In your Supabase SQL Editor, run the schema files **in this order**:
+Use the ordered files in `supabase/migrations/` for a new empty database. See [database installation and existing-deployment migration](docs/SETUP.md#database-installation) before applying anything to an existing project. Root-level SQL snapshots and old permissive-policy scripts are historical references. Never rerun them after the security boundary migrations.
 
-```bash
-# 1. Main schema
-database/main_db.sql
-
-# 2. CMS table
-database/cms_table.sql
-
-# 3. Incremental migrations
-supabase_migration_20260313_teacher_room_allocation.sql
-supabase_migration_20260316_room_booking_web_notification.sql
-supabase_migration_20260327_exam_notification_trigger.sql
-supabase_migration_20260327_exam_type_to_text.sql
-supabase_migration_20260407_rooms_coordinates.sql
-supabase_migration_20260417_fcm_notifications_roles.sql
-```
-
-You can also review `database_schema.sql` for the complete consolidated reference.
-
-If you need to create the first web admin account after migrating, update and run:
-
-```bash
-supabase_bootstrap_first_admin.sql
-```
+**The public clone is incomplete for database installation:** only two of the ten
+academic migrations are tracked, and the separate CMS security boundary is also
+absent. Obtain the exact nine missing files listed in
+[the manifest](docs/migration-manifest.json) from the maintainers, then run
+`npm run check:migrations` before installation. In particular, the sequence
+includes `20260905005000_manual_attendance.sql` and
+`20260905006000_solver_run_evidence.sql`; do not omit either. Historical duplicate
+schema files cannot substitute for the missing baseline or security migrations.
 
 ### 5 — Deploy the Push Edge Function
 
@@ -417,7 +410,7 @@ FCM_CLIENT_EMAIL
 FCM_PRIVATE_KEY
 ```
 
-> If mobile clients will invoke dispatch directly, leave `NOTIFICATION_DISPATCH_KEY` unset until you move that call behind a trusted backend.
+> Set `NOTIFICATION_DISPATCH_KEY` only on trusted servers. The dispatcher rejects requests when its key is missing; mobile clients never receive it.
 
 ### 6 — Start the Development Server
 
@@ -434,6 +427,10 @@ npm run dev      # Start development server (Next.js fast refresh)
 npm run build    # Production build
 npm run start    # Serve production build
 npm run lint     # Run ESLint
+npm run typecheck # Check TypeScript
+npm test         # Auth, database and solver regressions
+npm run verify   # Lint, typecheck, tests and production build
+npm run reproduce:paper # Deterministic synthetic fixture
 ```
 
 ---
@@ -658,7 +655,7 @@ All API routes live under `/src/app/api/`. Each folder maps to a Next.js Route H
 - 📱 **Fully Responsive** — Desktop, tablet, and mobile layouts  
 - 🌓 **Dark Mode** — Integrated theme toggle persisted via context  
 - ⚡ **Smooth Animations** — Framer Motion page transitions + GSAP scroll effects  
-- 🔄 **Real-time Updates** — Supabase Realtime subscriptions in TV Display and notification inbox  
+- 🔄 **Updates** — TV Display uses configured Realtime subscriptions and polling; the private mobile inbox uses authenticated requests and FCM
 - 📄 **PDF Export** — Class routine and result sheets exportable as PDF  
 - 📊 **CSV Import** — Bulk student addition via CSV upload (PapaParse)  
 - 🔍 **OCR Support** — Scanned document text extraction (Tesseract via API)  
@@ -671,23 +668,35 @@ All API routes live under `/src/app/api/`. Each folder maps to a Next.js Route H
 |---|---|
 | **Password hashing** | bcryptjs (server-side) |
 | **Service role isolation** | `SUPABASE_SERVICE_ROLE_KEY` used only in server routes |
-| **Row-Level Security** | Supabase RLS policies on all sensitive tables |
+| **Row-Level Security** | The database test targets `profiles`, `students`, `notifications`, `device_push_tokens`, `geo_attendance_logs`, and `password_recovery_tokens`, including selected grants and ownership checks. It skips when the separately supplied SQL is absent. See [current public-clone status](docs/PUBLIC_RELEASE_STATUS.md); full hosted policy and Storage coverage is not certified. |
 | **Input validation** | Schema-level constraints + API-layer checks |
-| **XSS protection** | React's built-in escaping + Content Security Policy headers |
-| **CSRF protection** | Next.js built-in SameSite cookie handling |
-| **Secret management** | All keys in `.env.local` (gitignored) |
+| **XSS protection** | React's built-in escaping; no enforced Content Security Policy is claimed |
+| **Session cookies** | Application-set `HttpOnly`, `SameSite=Lax`, and production `Secure`; this is not a complete CSRF audit |
+| **Secret management** | Server secrets use private environment configuration; public Supabase client keys are governed by database grants and policies |
 
 ---
 
 ## 🧪 Testing
 
 ```bash
-# Lint check
+# Install locked dependencies (Node.js 22-24; tested on 24.19.0)
+npm ci
 npm run lint
-
-# Production build (catches TypeScript errors)
+npm run typecheck
+npm test
+npm run test:database   # Requires the complete separately supplied SQL set
+npm run reproduce:paper
 npm run build
+
+# Combined release check: fails if required SQL is missing or has changed
+npm run verify:release
 ```
+
+`npm test` reports a skipped database test if the local SQL set is absent.
+Use `npm run verify:release` for release evidence; a skipped database test is
+not sufficient. [SETUP.md](docs/SETUP.md) identifies the authoritative migration
+sequence. The TV player has its own `npm ci`, `npm test`, `npm run typecheck`,
+and `npm run build` commands in `tv-player-app/`.
 
 ---
 
@@ -698,9 +707,10 @@ control panel, versioned offline snapshots, media cache, and dynamic monitor
 mapping. It consumes the canonical `/api/tv-display/snapshot` contract so its
 content and merged room schedule match the web portal.
 
-Windows users can download the packaged installer from the
-**[TV Player v1.0.0 GitHub Release](https://github.com/abdullahshahporan/KUET-CSE-Automation-Web-Portal/releases/tag/tv-player-v1.0.0)**.
-The release asset is `TV.Player.Setup.1.0.0.exe`.
+The evaluated TV source declares **1.1.0** in `tv-player-app/package.json`.
+The historical **[TV Player v1.0.0 installer](https://github.com/abdullahshahporan/KUET-CSE-Automation-Web-Portal/releases/tag/tv-player-v1.0.0)**
+(`TV.Player.Setup.1.0.0.exe`) belongs to an older release. It is not a binary
+for the evaluated 1.1.0 source or a synchronized web/mobile publication release.
 
 ```
 tv-player-app/
@@ -712,7 +722,7 @@ tv-player-app/
 
 ```bash
 cd tv-player-app
-npm install
+npm ci
 npm run dev         # Development mode
 npm run build       # Build distributable
 npm run package     # Build the Windows NSIS installer

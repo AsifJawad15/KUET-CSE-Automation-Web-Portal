@@ -13,12 +13,13 @@ import { PERIODS } from '@/modules/ClassRoutine/constants';
 /**
  * Maps HH:MM:SS or HH:MM string to period numbers.
  */
-function timeToPeriod(start: string, end: string): { startPeriod: number; endPeriod: number } {
+export function timeToPeriod(start: string, end: string): { startPeriod: number; endPeriod: number } {
   const sStr = start.substring(0, 5);
   const eStr = end.substring(0, 5);
 
-  const startPeriod = PERIODS.find((p) => p.start === sStr)?.id || 1;
-  const endPeriod = PERIODS.find((p) => p.end === eStr)?.id || startPeriod;
+  const startPeriod = PERIODS.find((p) => p.start === sStr)?.id;
+  const endPeriod = PERIODS.find((p) => p.end === eStr)?.id;
+  if (!startPeriod || !endPeriod || endPeriod < startPeriod) throw new Error(`Invalid period boundaries: ${start}-${end}`);
 
   return { startPeriod, endPeriod };
 }
@@ -84,7 +85,7 @@ export async function buildSolverInput(
   }));
 
   // 4. Fetch Course Schedule Requirements
-  const { data: dbReqs } = await supabase
+  const { data: dbReqs, error: reqError } = await supabase
     .from('course_schedule_requirements')
     .select('*')
     .eq('session', session)
@@ -92,6 +93,7 @@ export async function buildSolverInput(
     .eq('term', term)
     .in('section', ['A', 'B']);
 
+  if (availError) throw availError;
   const requirements: CourseScheduleRequirement[] = (dbReqs || []).map((r) => ({
     id: r.id,
     session: r.session,
@@ -112,11 +114,14 @@ export async function buildSolverInput(
     priority: r.priority,
   }));
 
+  if (reqError) throw reqError;
+
   // 5. Fetch Constraints
-  const { data: dbConstraints } = await supabase
+  const { data: dbConstraints, error: constraintsError } = await supabase
     .from('routine_constraints')
     .select('*');
 
+  if (constraintsError) throw constraintsError;
   const constraints: Record<string, { isActive: boolean; weight: number }> = {};
   if (dbConstraints) {
     for (const c of dbConstraints) {
@@ -184,7 +189,7 @@ export async function buildSolverInput(
 
   for (const off of validOfferings) {
     const cid = off.course_id;
-    const req = requirements.find((r) => r.courseId === cid);
+    const req = findRequirement(requirements, cid, off.section, off.id);
     const isCombined = req?.needsCombinedSection || false;
 
     const groupKey = isCombined ? cid : `${cid}|${off.section || 'whole'}`;
@@ -199,20 +204,15 @@ export async function buildSolverInput(
     const courseId = firstOff.course_id;
 
     // Find requirement row for this course
-    const req = requirements.find((r) => r.courseId === courseId);
+    const req = findRequirement(requirements, courseId, firstOff.section, firstOff.id);
 
     const isCombined = req ? req.needsCombinedSection : false;
-    const isLabCourse = (code: string, type?: string): boolean => {
-      const typeLower = type?.toLowerCase() || '';
-      if (typeLower === 'lab' || typeLower === 'sessional') return true;
-      const digits = code.replace(/\D/g, '');
-      if (digits.length > 0) {
-        const lastDigit = parseInt(digits[digits.length - 1], 10);
-        return lastDigit % 2 === 0; // Even digit is lab, odd is theory
-      }
-      return false;
-    };
-    const isLab = isLabCourse(course.code, course.course_type);
+    const normalizedType = normalizeCourseType(course.course_type);
+    const isLab = normalizedType !== 'Theory';
+    const { data: enrolments, error: enrolmentError } = await supabase.from('enrollments')
+      .select('student_user_id').in('offering_id', group.map(off => off.id)).eq('enrollment_status', 'ENROLLED');
+    if (enrolmentError) throw enrolmentError;
+    const expectedStudents = new Set((enrolments ?? []).map(e => e.student_user_id)).size;
 
     const requiredTheory = req ? req.requiredTheorySlots : (isLab ? 0 : Math.ceil(course.credit || 3));
     const requiredLab = req ? req.requiredLabSlots : (isLab ? 1 : 0);
@@ -257,6 +257,7 @@ export async function buildSolverInput(
               courseType: 'Lab',
               duration: req?.labDurationPeriods || 3,
               teachers: teachersList,
+              expectedStudents: null, // No authoritative lab-group membership table.
               groupName: grp,
               isCombined: false,
               preferredRoomType,
@@ -276,7 +277,8 @@ export async function buildSolverInput(
             courseType: 'Lab',
             duration: req?.labDurationPeriods || 3,
             teachers: teachersList,
-            groupName: null,
+            expectedStudents,
+          groupName: null,
             isCombined: false,
             preferredRoomType,
             preferredRoomNumbers: preferredRooms,
@@ -295,6 +297,7 @@ export async function buildSolverInput(
           courseType: 'Theory',
           duration: req?.theoryDurationPeriods || 1,
           teachers: teachersList,
+          expectedStudents,
           groupName: null,
           isCombined,
           preferredRoomType,
@@ -325,4 +328,19 @@ export async function buildSolverInput(
     constraints,
     options,
   };
+}
+
+export function normalizeCourseType(value: unknown): 'Theory' | 'Lab' | 'Sessional' {
+  switch (String(value ?? '').trim().toLowerCase()) {
+    case 'theory': return 'Theory';
+    case 'lab': return 'Lab';
+    case 'sessional': return 'Sessional';
+    default: throw new Error(`Unsupported or missing course_type: ${String(value)}`);
+  }
+}
+
+export function findRequirement(requirements: CourseScheduleRequirement[], courseId: string, section: string | null, offeringId: string): CourseScheduleRequirement | undefined {
+  return requirements.find(r => r.courseId === courseId && r.courseOfferingId === offeringId)
+    ?? requirements.find(r => r.courseId === courseId && r.section === section && !r.courseOfferingId)
+    ?? requirements.find(r => r.courseId === courseId && r.section === null && !r.courseOfferingId);
 }

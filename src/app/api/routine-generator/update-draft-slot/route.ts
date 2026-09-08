@@ -8,7 +8,7 @@ import { scoreDraft } from '@/lib/routine-generator/scoring';
 import { periodRangeToTime } from '@/lib/routine-generator/periods';
 
 export async function PATCH(request: NextRequest) {
-  const auth = requireServerSession(request, { adminLike: true });
+  const auth = await requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
 
   try {
@@ -106,7 +106,7 @@ export async function PATCH(request: NextRequest) {
 
     // 5. Run Draft-level validation and scoring
     const validation = validateDraft(assignments, solverInput);
-    const { score, warnings } = scoreDraft(assignments, solverInput);
+    const { score, warnings, totalPenalty, components } = scoreDraft(assignments, solverInput);
 
     // 6. Check what conflict details apply to the slotIds being updated
     // Look up in validation.hardConflicts and validation.softWarnings
@@ -203,9 +203,9 @@ export async function PATCH(request: NextRequest) {
     await supabase
       .from('routine_drafts')
       .update({
-        score,
+        score, total_penalty: totalPenalty, penalty_components: components,
         hard_conflict_count: validation.hardConflicts.length,
-        soft_warning_count: warnings.length,
+        soft_warning_count: warnings.length + validation.softWarnings.length,
         summary: {
           reason: summaryText,
           advantages,

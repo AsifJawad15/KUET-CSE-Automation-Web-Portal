@@ -60,6 +60,7 @@ export interface ScheduleActivity {
   courseCode: string;
   courseTitle: string;
   courseType: 'Theory' | 'Lab' | 'Sessional';
+  expectedStudents?: number | null;
   duration: number; // in periods (e.g., 1 for theory, 3 for lab)
   teachers: ActivityTeacher[];
   groupName: string | null; // e.g. "A1", "A2", or null for entire section
@@ -153,6 +154,9 @@ export interface SolverOptions {
   allowSaturday: boolean;
   theoryRooms?: string[];
   labRooms?: string[];
+  seed?: number;
+  maxNodes?: number;
+  deterministic?: boolean;
 }
 
 export interface SolverInput {
@@ -168,11 +172,23 @@ export interface SolverInput {
   options: SolverOptions;
 }
 
+export interface SolverMetrics {
+  seed: number;
+  nodes: number;
+  backtracks: number;
+  prunedValues: number;
+  attempts: number;
+  elapsedMs: number;
+  termination: 'completed' | 'node_budget' | 'timeout' | 'infeasible';
+}
+
 export interface SolverDraft {
   id?: string;
   name: string;
   score: number;
   assignments: ScheduleAssignment[];
+  totalPenalty?: number;
+  penaltyComponents?: Record<string, number>;
   hardConflictCount: number;
   softWarningCount: number;
   summary: {

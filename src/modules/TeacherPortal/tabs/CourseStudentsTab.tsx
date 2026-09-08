@@ -39,7 +39,7 @@ export default function CourseStudentsTab() {
   const selectCourse = async (course: TeacherCourse) => {
     setSelectedCourse(course);
     setLoadingStudents(true);
-    const data = await getCourseStudents(course.course_code, course.term, course.section || undefined);
+    const data = await getCourseStudents(course.course_code, course.term, course.section || undefined, course.offering_id);
     setStudents(data);
     setLoadingStudents(false);
   };

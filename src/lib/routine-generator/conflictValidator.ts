@@ -31,6 +31,13 @@ export function validateSlot(
     respectRoomCapacity = true,
   } = context.options || {};
 
+  const allowedDays = context.options.allowSaturday ? [0,1,2,3,4,6] : [0,1,2,3,4];
+  if (!allowedDays.includes(candidate.dayOfWeek) || !Number.isInteger(candidate.startPeriod) ||
+      !Number.isInteger(candidate.endPeriod) || candidate.startPeriod < 1 || candidate.endPeriod > 9 ||
+      candidate.endPeriod - candidate.startPeriod + 1 !== activity.duration) {
+    hardConflicts.push({ type: 'invalid_period', reason: `Invalid day, period or duration for ${activity.id}` });
+  }
+
   // 1. Break/Lunch & Block Validity Check
   if (activity.courseType === 'Lab' || activity.courseType === 'Sessional') {
     const start = candidate.startPeriod;
@@ -73,12 +80,14 @@ export function validateSlot(
     }
 
     // 3. Room Capacity check (if enabled)
-    if (respectRoomCapacity && room.capacity) {
-      const estimatedStudents = activity.groupName ? 35 : 70; // Lab groups are roughly 35, full sections 70
-      if (room.capacity < estimatedStudents) {
+    if (respectRoomCapacity && room.capacity != null) {
+      const estimatedStudents = activity.expectedStudents;
+      if (estimatedStudents == null) softWarnings.push({ type: 'unknown_enrolment',
+        reason: `Active enrolment is unavailable for ${activity.id}; capacity was not assessed.`, penalty: 0 });
+      if (estimatedStudents != null && room.capacity < estimatedStudents) {
         softWarnings.push({
           type: 'room_capacity',
-          reason: `Room ${candidate.roomNumber} capacity (${room.capacity}) is less than estimated student count (${estimatedStudents}) for ${activity.courseCode}.`,
+          reason: `Room ${candidate.roomNumber} capacity (${room.capacity}) is less than active student count (${estimatedStudents}) for ${activity.courseCode}.`,
           penalty: 5,
           activityId: candidate.activityId,
         });
@@ -143,16 +152,7 @@ export function validateSlot(
 
     if (!timeOverlap) continue;
 
-    // Check Combined exemption:
-    // Concurrently taught combined classes taught together in the same room/time are allowed
-    const isCombinedMatch =
-      activity.courseId === existAct.courseId &&
-      candidate.roomNumber === existing.roomNumber &&
-      activity.isCombined &&
-      existAct.isCombined;
-
-    if (isCombinedMatch) continue;
-
+    // A combined lesson is one activity. Distinct repetitions may never overlap.
     // A. Teacher conflict (check intersection of teachers)
     for (const t of activity.teachers) {
       const matchTeacher = existAct.teachers.find((et) => et.teacherUserId === t.teacherUserId);
@@ -243,7 +243,7 @@ export function validateSlot(
     if (isSameTargetSection) {
       const groupConflict =
         activity.groupName === null ||
-        locked.groupName === null ||
+        locked.groupName == null ||
         activity.groupName === locked.groupName;
 
       if (groupConflict) {
@@ -273,6 +273,10 @@ export function validateDraft(
   const hardConflicts: HardConflict[] = [];
   const softWarnings: SoftWarning[] = [];
 
+  for (const activity of context.activities) {
+    const count = assignments.filter(a => a.activityId === activity.id).length;
+    if (count !== 1) hardConflicts.push({ type: 'activity_count', reason: `${activity.id} must appear exactly once; got ${count}` });
+  }
   for (let i = 0; i < assignments.length; i++) {
     const candidate = assignments[i];
     const rest = assignments.slice(0, i).concat(assignments.slice(i + 1));

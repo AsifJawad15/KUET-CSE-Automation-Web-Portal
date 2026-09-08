@@ -194,12 +194,12 @@ export async function saveAttendance(records: AttendanceRecord[], offeringId?: s
 
 // ── Exam Marks ──
 
-export async function uploadMarks(records: ExamMarksRecord[]): Promise<ServiceResult<{ inserted: number; errors: string[] }>> {
-  return apiClient.post(`${BASE}/marks`, { records });
+export async function uploadMarks(records: ExamMarksRecord[], offeringId: string): Promise<ServiceResult<{ inserted: number; errors: string[] }>> {
+  return apiClient.post(`${BASE}/marks`, { records, offering_id: offeringId });
 }
 
-export async function getMarks(courseCode: string, examType?: string): Promise<ExamMarksRecord[]> {
-  const params: Record<string, string> = { course_code: courseCode };
+export async function getMarks(courseCode: string, offeringId: string, examType?: string): Promise<ExamMarksRecord[]> {
+  const params: Record<string, string> = { course_code: courseCode, offering_id: offeringId };
   if (examType) params.exam_type = examType;
   return apiClient.getList<ExamMarksRecord>(`${BASE}/marks`, params);
 }
@@ -247,10 +247,11 @@ export async function getMySchedule(teacherId: string): Promise<TeacherScheduleS
 
 // ── Course Students ──
 
-export async function getCourseStudents(courseCode: string, term?: string, section?: string): Promise<CourseStudent[]> {
+export async function getCourseStudents(courseCode: string, term?: string, section?: string, offeringId?: string): Promise<CourseStudent[]> {
   const params: Record<string, string> = { course_code: courseCode };
   if (term) params.term = term;
   if (section) params.section = section;
+  if (offeringId) params.offering_id = offeringId;
   return apiClient.getList<CourseStudent>(`${BASE}/course-students`, params);
 }
 

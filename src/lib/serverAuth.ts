@@ -1,7 +1,9 @@
+import { adminRouteAllowed } from './serverAdminPermissions';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { forbidden, serviceUnavailable, unauthorized } from './apiResponse';
+import { getSupabaseAdmin } from './supabaseAdmin';
 
 export type ServerUserRole = 'admin' | 'teacher' | 'student' | 'head' | 'staff';
 
@@ -10,6 +12,7 @@ export interface ServerSessionUser {
   email: string;
   name: string;
   role: ServerUserRole;
+  sessionVersion?: number;
   permissions?: {
     all?: boolean;
     menus?: string[];
@@ -29,10 +32,6 @@ const SESSION_TTL_SECONDS = 60 * 60 * 10;
 function getSessionSecret(): string | null {
   const secret = process.env.AUTH_SESSION_SECRET || process.env.NEXTAUTH_SECRET;
   if (secret) return secret;
-
-  if (process.env.NODE_ENV !== 'production') {
-    return 'kuet-dev-session-secret-change-before-production';
-  }
 
   return null;
 }
@@ -71,7 +70,7 @@ function signaturesMatch(actual: string, expected: string): boolean {
 export function createSessionToken(user: ServerSessionUser): string {
   const secret = getSessionSecret();
   if (!secret) {
-    throw new Error('AUTH_SESSION_SECRET is required in production');
+    throw new Error('AUTH_SESSION_SECRET is required');
   }
 
   const now = Math.floor(Date.now() / 1000);
@@ -89,20 +88,28 @@ export function verifySessionToken(token: string | undefined): ServerSessionUser
   const secret = getSessionSecret();
   if (!secret || !token) return null;
 
-  const [payload, signature] = token.split('.');
+  const parts = token.split('.');
+  if (parts.length !== 2) return null;
+  const [payload, signature] = parts;
   if (!payload || !signature) return null;
 
   const expected = signPayload(payload, secret);
   if (!signaturesMatch(signature, expected)) return null;
 
   const decoded = decodePayload(payload);
-  if (!decoded || decoded.exp <= Math.floor(Date.now() / 1000)) return null;
+  const now = Math.floor(Date.now() / 1000);
+  if (!decoded || !Number.isSafeInteger(decoded.exp) || !Number.isSafeInteger(decoded.iat) ||
+      decoded.exp <= now || decoded.iat > now || decoded.exp <= decoded.iat ||
+      typeof decoded.id !== 'string' || !decoded.id ||
+      typeof decoded.email !== 'string' || typeof decoded.name !== 'string' ||
+      !['admin', 'teacher', 'student', 'head', 'staff'].includes(decoded.role)) return null;
 
   return {
     id: decoded.id,
     email: decoded.email,
     name: decoded.name,
     role: decoded.role,
+    sessionVersion: decoded.sessionVersion,
     permissions: decoded.permissions ?? null,
   };
 }
@@ -148,10 +155,10 @@ export function isAdminLike(role: ServerUserRole | null | undefined): boolean {
   return role === 'admin' || role === 'head';
 }
 
-export function requireServerSession(
+export async function requireServerSession(
   request: NextRequest,
   options: { adminLike?: boolean; roles?: ServerUserRole[] } = {},
-): { user: ServerSessionUser; response?: never } | { user?: never; response: NextResponse } {
+): Promise<{ user: ServerSessionUser; response?: never } | { user?: never; response: NextResponse }> {
   if (!getSessionSecret()) {
     return {
       response: serviceUnavailable(
@@ -162,17 +169,32 @@ export function requireServerSession(
 
   const user = getSessionFromRequest(request);
   if (!user) {
-    if (process.env.NODE_ENV !== 'production') {
-      return {
-        user: {
-          id: '00000000-0000-0000-0000-000000000000',
-          email: 'admin@kuet-cse.local',
-          name: 'System Administrator',
-          role: 'admin',
-        },
-      };
-    }
     return { response: unauthorized('Authentication required') };
+  }
+
+  // Check current account state on every protected request. A password change,
+  // logout or role change invalidates already issued tokens.
+  try {
+    const { data: profile, error } = await getSupabaseAdmin().from('profiles')
+      .select('is_active, role, session_version').eq('user_id', user.id).maybeSingle();
+    if (error) return { response: serviceUnavailable('Account verification unavailable') };
+    if (!profile?.is_active || profile.role.toLowerCase() !== user.role ||
+        !Number.isSafeInteger(user.sessionVersion) || profile.session_version !== user.sessionVersion) {
+      return { response: unauthorized('Session expired. Please sign in again.') };
+    }
+  } catch {
+    return { response: serviceUnavailable('Account verification unavailable') };
+  }
+
+  if (user.role === 'admin') {
+    try {
+      const { data, error } = await getSupabaseAdmin().from('admins').select('permissions').eq('user_id', user.id).maybeSingle();
+      if (error) return { response: serviceUnavailable('Permission verification unavailable') };
+      user.permissions = data?.permissions ?? null;
+      if (user.permissions && !user.permissions.all && !adminRouteAllowed(request.nextUrl.pathname, request.method, user.permissions.menus ?? [])) {
+        return { response: forbidden('This administrative module is not assigned to your account') };
+      }
+    } catch { return { response: serviceUnavailable('Permission verification unavailable') }; }
   }
 
   if (options.adminLike && !isAdminLike(user.role)) {

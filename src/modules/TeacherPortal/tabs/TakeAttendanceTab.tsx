@@ -172,7 +172,7 @@ export default function TakeAttendanceTab() {
     setActiveGroup(0);
     setViewMode('take');
     setPreviewData([]);
-    const studentList = await getCourseStudents(course.course_code, course.term);
+    const studentList = await getCourseStudents(course.course_code, course.term, course.section || undefined, course.offering_id);
     setStudents(studentList);
     setRecords(studentList.map(s => ({
       course_code: course.course_code,

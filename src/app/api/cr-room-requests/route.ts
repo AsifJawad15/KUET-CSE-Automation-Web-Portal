@@ -5,7 +5,7 @@
 
 import { badRequest, guardSupabase, internalError, ok } from '@/lib/apiResponse';
 import { requireServerSession } from '@/lib/serverAuth';
-import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { isSupabaseConfigured, supabase } from '@/lib/supabaseServer';
 import { requireFields } from '@/lib/validators';
 import { notificationBroker } from '@/lib/notificationBroker';
 import { NextRequest, NextResponse } from 'next/server';
@@ -15,7 +15,7 @@ import { withAdminRateLimit } from '@/lib/withRateLimit';
 
 export async function GET(request: NextRequest) {
   // ── Auth guard ──
-  const auth = requireServerSession(request);
+  const auth = await requireServerSession(request);
   if (auth.response) return auth.response;
 
   const guard = guardSupabase(isSupabaseConfigured());
@@ -48,6 +48,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    if (auth.user.role === 'student') query = query.eq('student_user_id', auth.user.id);
+    else if (auth.user.role === 'teacher') query = query.eq('teacher_user_id', auth.user.id);
     const { data, error } = await query;
     if (error) throw error;
     return NextResponse.json(data || []);
@@ -61,7 +63,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   // ── Auth guard ──
-  const auth = requireServerSession(request);
+  const auth = await requireServerSession(request);
   if (auth.response) return auth.response;
 
   const guard = guardSupabase(isSupabaseConfigured());
@@ -69,23 +71,31 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { course_code, teacher_user_id, day_of_week, start_time, end_time, term, session, section, reason, request_date } = body;
+    const { course_code, teacher_user_id, start_time, end_time, reason, request_date } = body;
+    const day_of_week = new Date(`${request_date}T00:00:00Z`).getUTCDay();
 
     // Force student_user_id from verified session
     const student_user_id = auth.user.id;
 
-    const validation = requireFields({ student_user_id, course_code, teacher_user_id, day_of_week, start_time, end_time, term, session, request_date });
+    const validation = requireFields({ student_user_id, course_code, teacher_user_id, day_of_week, start_time, end_time, request_date });
     if (!validation.valid) return badRequest(validation.error!);
 
     // Verify the student is a CR
     const { data: student, error: studentError } = await supabase
       .from('students')
-      .select('is_cr')
+      .select('is_cr, term, session, section')
       .eq('user_id', student_user_id)
       .single();
 
     if (studentError || !student) return badRequest('Student not found');
     if (!student.is_cr) return badRequest('Only Class Representatives can make room requests');
+    const { term, session, section } = student;
+    const { data: offering, error: offeringError } = await supabase.from('course_offerings')
+      .select('id, courses!inner(code), enrollments!inner(student_user_id)')
+      .eq('courses.code', course_code).eq('teacher_user_id', teacher_user_id)
+      .eq('enrollments.student_user_id', student_user_id).eq('enrollments.enrollment_status', 'ENROLLED')
+      .eq('is_active', true).limit(1).maybeSingle();
+    if (offeringError || !offering) return badRequest('An enrolled course and its assigned teacher are required');
 
     // FCFS: Find rooms already booked for this specific date + time
     const { data: bookedRequests } = await supabase
@@ -137,7 +147,7 @@ export async function POST(request: NextRequest) {
       .eq('is_active', true)
       .order('room_number', { ascending: true });
 
-    const availableRoom = (allRooms || []).find(r => !bookedRoomNumbers.has(r.room_number));
+    const availableRoom = (allRooms || []).find(r => (!body.room_number || r.room_number === body.room_number) && !bookedRoomNumbers.has(r.room_number));
 
     if (!availableRoom) {
       return badRequest('No rooms available for the requested time slot');
@@ -201,7 +211,7 @@ export async function POST(request: NextRequest) {
 
 export const PATCH = withAdminRateLimit(async function PATCH(request: NextRequest) {
   // ── Auth guard: admin/head only ──
-  const auth = requireServerSession(request, { adminLike: true });
+  const auth = await requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
 
   const guard = guardSupabase(isSupabaseConfigured());
@@ -378,7 +388,7 @@ export const PATCH = withAdminRateLimit(async function PATCH(request: NextReques
 
 export async function DELETE(request: NextRequest) {
   // ── Auth guard ──
-  const auth = requireServerSession(request);
+  const auth = await requireServerSession(request);
   if (auth.response) return auth.response;
 
   const guard = guardSupabase(isSupabaseConfigured());
@@ -395,11 +405,13 @@ export async function DELETE(request: NextRequest) {
       .from('cr_room_requests')
       .select('course_code, day_of_week, start_time, end_time, request_date, room_number, status')
       .eq('id', id)
+      .eq('student_user_id', auth.user.id)
       .limit(1);
 
     const { error } = await supabase
       .from('cr_room_requests')
       .delete()
+      .eq('student_user_id', auth.user.id)
       .eq('id', id);
 
     if (error) throw error;

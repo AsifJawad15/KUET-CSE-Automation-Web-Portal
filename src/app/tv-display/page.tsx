@@ -194,7 +194,7 @@ export default function TvDisplayPublicPage() {
     const maxPage = events.length - 1;
     autoRotateRef.current = setInterval(() => setEventPage(prev => (prev >= maxPage ? 0 : prev + 1)), eventRotationSec * 1000);
     return () => { if (autoRotateRef.current) clearInterval(autoRotateRef.current); };
-  }, [events.map((event) => `${event.id}:${event.updated_at}`).join('|'), eventRotationSec]);
+  }, [events.length, eventRotationSec]);
 
   // Slide between upcoming periods every 20 s
   useEffect(() => {

@@ -5,7 +5,7 @@ import { badRequest, ok, notFound, conflict, internalError } from '@/lib/apiResp
 import { buildStudentAudience, createNotification, notifyTeacherScheduleChanged } from '@/lib/notifications';
 
 export async function POST(request: NextRequest) {
-  const auth = requireServerSession(request, { adminLike: true });
+  const auth = await requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
 
   const user = auth.user;

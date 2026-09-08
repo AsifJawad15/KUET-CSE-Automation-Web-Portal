@@ -140,7 +140,7 @@ async function findOrCreateExternalTeacher(
 // ── GET /api/course-offerings ──────────────────────────
 
 export const GET = withAdminRateLimit(async function GET(request: NextRequest) {
-  const auth = requireServerSession(request);
+  const auth = await requireServerSession(request);
   if (auth.response) return auth.response;
   const guard = serviceGuard();
   if (guard) return guard;
@@ -169,7 +169,7 @@ export const GET = withAdminRateLimit(async function GET(request: NextRequest) {
 // ── POST /api/course-offerings ─────────────────────────
 
 export const POST = withAdminRateLimit(async function POST(request: NextRequest) {
-  const auth = requireServerSession(request, { adminLike: true });
+  const auth = await requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
   const guard = serviceGuard();
   if (guard) return guard;
@@ -265,7 +265,7 @@ export const POST = withAdminRateLimit(async function POST(request: NextRequest)
 // ── PATCH /api/course-offerings ────────────────────────
 
 export const PATCH = withAdminRateLimit(async function PATCH(request: NextRequest) {
-  const auth = requireServerSession(request, { adminLike: true });
+  const auth = await requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
   const guard = serviceGuard();
   if (guard) return guard;
@@ -337,7 +337,7 @@ export const PATCH = withAdminRateLimit(async function PATCH(request: NextReques
 // ── DELETE /api/course-offerings ───────────────────────
 
 export const DELETE = withAdminRateLimit(async function DELETE(request: NextRequest) {
-  const auth = requireServerSession(request, { adminLike: true });
+  const auth = await requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
   const guard = serviceGuard();
   if (guard) return guard;

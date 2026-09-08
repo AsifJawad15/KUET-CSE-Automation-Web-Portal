@@ -1,3 +1,6 @@
+import { canNotify } from '@/lib/notificationAudience';
+import { forbidden } from '@/lib/apiResponse';
+import { requireServerSession } from '@/lib/serverAuth';
 // ==========================================
 // ==========================================
 // API: /api/teacher-portal/announcements
@@ -5,7 +8,7 @@
 // ==========================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabaseServer';
 import { badRequest, guardSupabase, internalError, noContent, ok } from '@/lib/apiResponse';
 import { requireFields, runValidations } from '@/lib/validators';
 
@@ -36,6 +39,9 @@ const ANNOUNCEMENTS_TABLE = 'cms_tv_announcements';
 // ── POST /api/teacher-portal/announcements ─────────────
 
 export async function POST(request: NextRequest) {
+  const auth = await requireServerSession(request, { roles: ['teacher', 'head'] });
+  if (auth.response) return auth.response;
+
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
@@ -47,7 +53,8 @@ export async function POST(request: NextRequest) {
     const courseCode = cleanText(body.course_code);
     const priority = cleanText(body.priority) ?? 'medium';
     const scheduledDate = cleanText(body.scheduled_date);
-    const createdBy = cleanText(body.created_by);
+    const createdBy = auth.user.id;
+    if (auth.user.role === 'teacher' && (!courseCode || !await canNotify(auth.user, { target_type: 'COURSE', target_value: courseCode }))) return forbidden('Select a course you teach');
 
     const validation = runValidations(
       requireFields({ title, content, type }),
@@ -101,12 +108,15 @@ export async function POST(request: NextRequest) {
 // ── GET /api/teacher-portal/announcements ──────────────
 
 export async function GET(request: NextRequest) {
+  const auth = await requireServerSession(request, { roles: ['teacher', 'head'] });
+  if (auth.response) return auth.response;
+
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
   try {
     const { searchParams } = new URL(request.url);
-    const teacherId = searchParams.get('teacher_id');
+    const teacherId = auth.user.id;
 
     let query = supabase
       .from(ANNOUNCEMENTS_TABLE)
@@ -129,6 +139,9 @@ export async function GET(request: NextRequest) {
 // ── DELETE /api/teacher-portal/announcements ───────────
 
 export async function DELETE(request: NextRequest) {
+  const auth = await requireServerSession(request, { roles: ['teacher', 'head'] });
+  if (auth.response) return auth.response;
+
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
@@ -141,6 +154,7 @@ export async function DELETE(request: NextRequest) {
     const { error } = await supabase
       .from(ANNOUNCEMENTS_TABLE)
       .delete()
+      .eq('created_by', auth.user.id)
       .eq('id', id);
 
     if (error) throw error;

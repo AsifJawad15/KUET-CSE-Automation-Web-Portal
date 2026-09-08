@@ -5,7 +5,7 @@
 
 import { badRequest, guardSupabase, internalError, ok } from '@/lib/apiResponse';
 import { requireServerSession } from '@/lib/serverAuth';
-import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { isSupabaseConfigured, supabase } from '@/lib/supabaseServer';
 import { requireFields, runValidations } from '@/lib/validators';
 import { notificationBroker } from '@/lib/notificationBroker';
 import { NextRequest, NextResponse } from 'next/server';
@@ -170,12 +170,17 @@ async function getOccupiedRanges(roomNumber: string, date: string, excludeReques
 // ── POST /api/teacher-portal/room-requests ─────────────
 
 export async function POST(request: NextRequest) {
+  const auth = await requireServerSession(request, { roles: ['teacher', 'head'] });
+  if (auth.response) return auth.response;
+
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
   try {
     const body = await request.json();
-    const { teacher_user_id, teacher_name, offering_id, room_number, date, start_time, end_time, purpose } = body;
+    const { offering_id, room_number, date, start_time, end_time, purpose } = body;
+    const teacher_user_id = auth.user.id;
+    const teacher_name = auth.user.name;
 
     const validation = runValidations(
       requireFields({ teacher_user_id, offering_id, room_number, date, start_time, end_time, purpose }),
@@ -250,7 +255,7 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   // ── Auth guard: admin/head only ──
-  const auth = requireServerSession(request, { adminLike: true });
+  const auth = await requireServerSession(request, { adminLike: true });
   if (auth.response) return auth.response;
 
   const guard = guardSupabase(isSupabaseConfigured());
@@ -394,12 +399,15 @@ export async function PATCH(request: NextRequest) {
 // ── GET /api/teacher-portal/room-requests ──────────────
 
 export async function GET(request: NextRequest) {
+  const auth = await requireServerSession(request, { roles: ['teacher', 'head'] });
+  if (auth.response) return auth.response;
+
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
   try {
     const { searchParams } = new URL(request.url);
-    const teacherId = searchParams.get('teacher_id');
+    const teacherId = auth.user.id;
     const roomNumber = searchParams.get('room_number');
     const date = searchParams.get('date');
     const mode = searchParams.get('mode');

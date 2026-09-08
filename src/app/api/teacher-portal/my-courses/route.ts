@@ -1,10 +1,11 @@
+import { requireServerSession } from '@/lib/serverAuth';
 // ==========================================
 // API: /api/teacher-portal/my-courses
 // Returns courses assigned to a specific teacher
 // ==========================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabaseServer';
 import { badRequest, guardSupabase, internalError } from '@/lib/apiResponse';
 
 function extractError(error: unknown, fallback: string): string {
@@ -27,12 +28,15 @@ function deriveTermFromCode(code: string): string | null {
 // ── GET /api/teacher-portal/my-courses ─────────────────
 
 export async function GET(request: NextRequest) {
+  const auth = await requireServerSession(request, { roles: ['teacher', 'head'] });
+  if (auth.response) return auth.response;
+
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
   try {
     const { searchParams } = new URL(request.url);
-    const teacherId = searchParams.get('teacher_id');
+    const teacherId = auth.user.id;
 
     if (!teacherId) return badRequest('Teacher ID is required');
 

@@ -120,7 +120,7 @@ async function resolveRecipients(target: NotificationRow): Promise<string[]> {
         const { data: enrollments, error: enrollmentError } = await db
           .from('enrollments')
           .select('student_user_id')
-          .in('offering_id', offeringIds);
+          .in('offering_id', offeringIds).eq('enrollment_status', 'ENROLLED');
         if (enrollmentError) throw enrollmentError;
 
         for (const row of enrollments ?? []) {
@@ -129,34 +129,6 @@ async function resolveRecipients(target: NotificationRow): Promise<string[]> {
         }
       }
 
-      const terms = uniq((offerings ?? [])
-        .map((row: { term?: string | null }) => row.term?.trim() || '')
-        .filter(Boolean));
-
-      if (terms.length > 0) {
-        const { data: students, error: studentError } = await db
-          .from('students')
-          .select('user_id, term, section')
-          .in('term', terms);
-        if (studentError) throw studentError;
-
-        const termSectionPairs = new Set((offerings ?? []).map((row: { term?: string | null; section?: string | null }) => {
-          const t = row.term?.trim() || '';
-          const s = row.section?.trim() || '';
-          return t ? `${t}::${s}` : '';
-        }));
-
-        for (const s of students ?? []) {
-          const sTerm = s.term?.trim() || '';
-          const sSection = s.section?.trim() || '';
-          const sUserId = s.user_id?.trim();
-          if (!sUserId) continue;
-
-          if (termSectionPairs.has(`${sTerm}::${sSection}`) || termSectionPairs.has(`${sTerm}::`)) {
-            recipients.add(sUserId);
-          }
-        }
-      }
       return [...recipients];
     }
     case 'USER': {

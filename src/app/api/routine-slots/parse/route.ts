@@ -1,3 +1,5 @@
+import { boundedFormData, extractDocxText } from '@/lib/docxParser';
+import { requireServerSession } from '@/lib/serverAuth';
 // ==========================================
 // API: /api/routine-slots/parse
 // Parse uploaded files (CSV/DOCX) into structured routine data
@@ -590,8 +592,10 @@ function parseTextServer(
 // ── POST Handler ───────────────────────────────────────
 
 export async function POST(request: NextRequest) {
+  const auth = await requireServerSession(request, { adminLike: true });
+  if (auth.response) return auth.response;
   try {
-    const formData = await request.formData();
+    const formData = await boundedFormData(request);
     const file = formData.get('file') as File | null;
     const term = (formData.get('term') as string) || '';
     const session = (formData.get('session') as string) || '';
@@ -605,10 +609,9 @@ export async function POST(request: NextRequest) {
     if (fileName.endsWith('.csv')) {
       const text = await file.text();
       result = parseCSVServer(text, term, session, section);
-    } else if (fileName.endsWith('.docx') || fileName.endsWith('.doc')) {
+    } else if (fileName.endsWith('.docx')) {
       const buffer = Buffer.from(await file.arrayBuffer());
-      const mammoth = await import('mammoth');
-      const docResult = await mammoth.extractRawText({ buffer });
+      const docResult = { value: await extractDocxText(buffer) };
       result = parseTextServer(docResult.value, term, session, section);
       if (result.slots.length === 0) {
         result.errors.push('Extracted text preview (first 500 chars): ' + docResult.value.slice(0, 500));

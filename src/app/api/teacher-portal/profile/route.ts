@@ -1,10 +1,12 @@
+import { POST as changePassword } from '@/app/api/auth/password/route';
+import { requireServerSession } from '@/lib/serverAuth';
 // ==========================================
 // API: /api/teacher-portal/profile
 // Handles teacher profile update & password change
 // ==========================================
 
 import { NextRequest } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabaseServer';
 import { badRequest, guardSupabase, internalError, noContent } from '@/lib/apiResponse';
 import { requireField, runValidations } from '@/lib/validators';
 import { hashPassword, comparePassword, validatePassword } from '@/lib/passwordUtils';
@@ -16,53 +18,24 @@ function extractError(error: unknown, fallback: string): string {
 // ── PATCH /api/teacher-portal/profile ──────────────────
 
 export async function PATCH(request: NextRequest) {
+  const auth = await requireServerSession(request, { roles: ['teacher', 'head'] });
+  if (auth.response) return auth.response;
+
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
   try {
     const body = await request.json();
-    const { userId, action } = body;
+    const { action } = body;
+    const userId = auth.user.id;
 
     const idCheck = requireField(userId, 'User ID');
     if (!idCheck.valid) return badRequest(idCheck.error!);
 
     // ── Change Password ──
     if (action === 'change_password') {
-      const { current_password, new_password } = body;
-
-      const validation = runValidations(
-        requireField(current_password, 'Current password'),
-        requireField(new_password, 'New password'),
-      );
-      if (validation) return badRequest(validation);
-
-      const passwordCheck = validatePassword(new_password);
-      if (!passwordCheck.isValid) return badRequest(passwordCheck.error!);
-
-      // Verify current password
-      const { data: profile, error: fetchError } = await supabase
-        .from('profiles')
-        .select('password_hash')
-        .eq('user_id', userId)
-        .single();
-
-      if (fetchError || !profile) {
-        return badRequest('User not found');
-      }
-
-      const isValid = await comparePassword(current_password, profile.password_hash);
-      if (!isValid) {
-        return badRequest('Current password is incorrect');
-      }
-
-      const newHash = await hashPassword(new_password);
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ password_hash: newHash })
-        .eq('user_id', userId);
-
-      if (updateError) throw updateError;
-      return noContent();
+      return changePassword(new NextRequest(request.url, { method: 'POST', headers: request.headers,
+        body: JSON.stringify({ current_password: body.current_password, new_password: body.new_password }) }));
     }
 
     // ── Update Profile ──

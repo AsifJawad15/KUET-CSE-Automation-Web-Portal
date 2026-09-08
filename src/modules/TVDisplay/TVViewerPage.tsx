@@ -588,7 +588,7 @@ function TVPreview({ target, showRoomSchedule }: { target: string; showRoomSched
     const maxPage = events.length - 1;
     autoRotateRef.current = setInterval(() => setEventPage(prev => (prev >= maxPage ? 0 : prev + 1)), eventRotationSec * 1000);
     return () => { if (autoRotateRef.current) clearInterval(autoRotateRef.current); };
-  }, [events.map((event) => `${event.id}:${event.updated_at}`).join('|'), eventRotationSec]);
+  }, [events.length, eventRotationSec]);
 
   // Slide upcoming periods
   useEffect(() => {

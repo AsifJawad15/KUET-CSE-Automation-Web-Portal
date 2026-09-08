@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseServer';
 
 export type TeacherAssistantIntent =
   | 'assigned-courses'

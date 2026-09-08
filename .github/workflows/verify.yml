@@ -1,0 +1,37 @@
+name: Web and database verification
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+      NEXT_PUBLIC_CMS_SUPABASE_URL: https://placeholder.supabase.co
+      NEXT_PUBLIC_CMS_SUPABASE_ANON_KEY: placeholder-anon-key
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run verify
+      - run: npm run reproduce:paper
+      - uses: actions/upload-artifact@v4
+        with:
+          name: routine-reproduction
+          path: examples/routine/*.json
+  tv:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tv-player-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci
+      - run: npm test
+      - run: npm run typecheck
+      - run: npm run build

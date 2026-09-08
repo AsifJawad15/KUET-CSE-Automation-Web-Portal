@@ -1,0 +1,9 @@
+{
+  "node": "v24.19.0",
+  "platform": "win32",
+  "architecture": "x64",
+  "cpu": "AMD Ryzen 7 4800H with Radeon Graphics         ",
+  "elapsedMs": 12,
+  "peakRssMiB": 94.44921875,
+  "sha256": "e148373ba86895467d546603147915ed16772e5d17922157a10d6ea558d7101b"
+}

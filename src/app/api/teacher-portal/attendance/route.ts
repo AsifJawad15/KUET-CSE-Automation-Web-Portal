@@ -1,3 +1,6 @@
+import { teachingScope } from '@/lib/teachingScope';
+import { forbidden } from '@/lib/apiResponse';
+import { requireServerSession } from '@/lib/serverAuth';
 // ==========================================
 // API: /api/teacher-portal/attendance
 // Handles attendance upload (CSV bulk) and manual save
@@ -8,7 +11,7 @@
 
 import { badRequest, guardSupabase, internalError } from '@/lib/apiResponse';
 import { createNotification, getStudentUsersByRolls } from '@/lib/notifications';
-import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { isSupabaseConfigured, supabase } from '@/lib/supabaseServer';
 import { requireField, runValidations } from '@/lib/validators';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -136,6 +139,9 @@ async function notifyAttendanceUpdates(records: AttendanceUploadRecord[]) {
 // ── POST /api/teacher-portal/attendance ────────────────
 
 export async function POST(request: NextRequest) {
+  const auth = await requireServerSession(request, { roles: ['teacher', 'head'] });
+  if (auth.response) return auth.response;
+
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
@@ -144,13 +150,19 @@ export async function POST(request: NextRequest) {
     const records = body.items || body.records;
     // Optional: offering_id and teacher_id for normalized write
     const offeringId: string | undefined = body.offering_id;
-    const teacherId: string | undefined = body.teacher_id;
+    const teacherId = auth.user.id;
     const savedRecords: AttendanceUploadRecord[] = [];
 
     if (!Array.isArray(records) || records.length === 0) {
       return badRequest('No attendance records provided');
     }
 
+    const scope = await teachingScope(auth.user.id, body.offering_id);
+    if (!scope) return forbidden('An assigned offering_id is required');
+    if (records.some((r: { course_code?: string; student_roll?: string }) =>
+      r.course_code !== scope.courseCode || !scope.rolls.includes(r.student_roll ?? ''))) {
+      return forbidden('Records must belong to this offering and its active enrolments');
+    }
     let inserted = 0;
     const errors: string[] = [];
 
@@ -309,23 +321,7 @@ async function syncToNormalizedTables(
         enrollmentMap.set(e.student_user_id, e.id);
       }
 
-      // Create missing enrollments
-      const missingUserIds = studentUserIds.filter(id => !enrollmentMap.has(id));
-      if (missingUserIds.length > 0) {
-        const { data: newEnrollments } = await supabase
-          .from('enrollments')
-          .insert(missingUserIds.map(uid => ({
-            offering_id: resolvedOfferingId,
-            student_user_id: uid,
-            enrollment_status: 'ENROLLED',
-          })))
-          .select('id, student_user_id');
-
-        for (const e of (newEnrollments || [])) {
-          enrollmentMap.set(e.student_user_id, e.id);
-        }
-      }
-
+      // Enrolment is administration-owned; attendance never creates it.
       // Upsert attendance_records
       const attendanceRows = groupRecords
         .filter(r => rollToUserId.has(r.student_roll))
@@ -357,13 +353,19 @@ async function syncToNormalizedTables(
 // ── GET /api/teacher-portal/attendance ─────────────────
 
 export async function GET(request: NextRequest) {
+  const auth = await requireServerSession(request, { roles: ['teacher', 'head'] });
+  if (auth.response) return auth.response;
+
   const guard = guardSupabase(isSupabaseConfigured());
   if (guard) return guard;
 
   try {
     const { searchParams } = new URL(request.url);
-    const courseCode = searchParams.get('course_code');
-    const offeringId = searchParams.get('offering_id');
+    const scope = await teachingScope(auth.user.id, searchParams.get('offering_id'));
+    if (!scope) return forbidden('An assigned offering_id is required');
+
+    const courseCode = scope.courseCode;
+    const offeringId = scope.offeringId;
 
     if (!courseCode && !offeringId) {
       return badRequest('Course code or offering ID is required');
@@ -371,7 +373,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('attendance')
-      .select('*')
+      .select('*').in('student_roll', scope.rolls)
       .order('date', { ascending: false });
 
     if (courseCode) {
