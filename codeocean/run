@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if [ -f "$(dirname "$0")/../package.json" ]; then
+  cd "$(dirname "$0")/.."
+else
+  cd "$(dirname "$0")"
+fi
+npm ci
+npm run check:migrations
+npm run reproduce:paper
+mkdir -p ../results
+cp examples/routine/output.json ../results/routine-output.json
+cp examples/routine/environment.json ../results/routine-environment.json
+cp docs/migration-manifest.json ../results/migration-manifest.json
+printf '%s\n' 'Scope: deterministic solver reproduction and complete SQL manifest validation.' > ../results/SCOPE.txt
+printf '%s\n' 'Full database/route/concurrency verification requires an isolated PostgreSQL service and npm run verify:release.' >> ../results/SCOPE.txt

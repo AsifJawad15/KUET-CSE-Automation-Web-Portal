@@ -66,6 +66,8 @@ eng.traineddata
 !docs/REVISION_VERIFICATION.md
 !docs/PUBLIC_RELEASE_STATUS.md
 
-# Local database migrations (distributed separately)
-/supabase/migrations/*.sql
-/database/cms_security_boundary.sql
+# Complete release SQL and evidence are tracked.
+!docs/SUBMISSION_CORRECTIONS.md
+!docs/MANUAL_STEPS.md
+!docs/ASSET_PROVENANCE.md
+!docs/DEPENDENCY_REVIEW.md

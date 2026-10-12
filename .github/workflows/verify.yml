@@ -3,7 +3,20 @@ on: [push, pull_request, workflow_dispatch]
 jobs:
   verify:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: deptflow-ci-fixture
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
+      TEST_DATABASE_URL: postgresql://postgres:deptflow-ci-fixture@127.0.0.1:5432/postgres
       NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
       NEXT_PUBLIC_CMS_SUPABASE_URL: https://placeholder.supabase.co
@@ -15,7 +28,7 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npm run verify
+      - run: npm run verify:release
       - run: npm run reproduce:paper
       - uses: actions/upload-artifact@v4
         with:

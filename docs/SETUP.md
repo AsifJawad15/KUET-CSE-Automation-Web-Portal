@@ -1,6 +1,8 @@
 # Dept Flow development and deployment
 
-SQL migration files added during this review are intentionally Git-ignored and distributed separately. Restore the complete local migration set before database installation or verification. Fresh clones and CI explicitly skip the database test when those files are absent; a passing CI run alone therefore does not verify database policies. Previously tracked migration files remain in Git history.
+Release 0.2.0 includes the complete reconstructed SQL set in Git. It is a newly tested October release, not a byte-for-byte recovery of the unavailable September set. `docs/migration-manifest.json` identifies this release; the old hashes are retained in `docs/migration-manifest.september.json` for provenance.
+
+Set `TEST_DATABASE_URL` to an isolated PostgreSQL server on localhost before running `verify:release`. The command now requires real multi-connection transaction tests in addition to PGlite tests, lint, type checks, and the build. CI provisions PostgreSQL 18 automatically. Tests create and remove only a randomly named `deptflow_test_...` database. The configured account needs local CREATE DATABASE permission.
 
 Use Node 24.19.0 (see `.nvmrc`), npm 10 or newer, and the committed lockfiles. The declared runtime range is Node 22–24. The web and TV packages have separate dependency installations.
 
@@ -15,7 +17,7 @@ npm run typecheck
 npm run build
 ```
 
-The tests use an isolated PostgreSQL engine (PGlite) and synthetic data. They do not need production credentials. The web fonts are bundled, including their license, so compilation does not download Google Fonts. Copy `.env.example` to `.env.local` for a running development service and supply your own project configuration. A random `AUTH_SESSION_SECRET` is required even in development; generate one with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` and store it privately.
+The tests use PGlite and a separate local PostgreSQL instance with synthetic data. They do not need production credentials. The web fonts are bundled, including their license, so compilation does not download Google Fonts. Copy `.env.example` to `.env.local` for a running development service and supply your own project configuration. A random `AUTH_SESSION_SECRET` is required even in development; generate one with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` and store it privately.
 
 ## Database installation
 
@@ -41,9 +43,9 @@ The ordered academic sequence is:
 8. `20260905004000_student_requests.sql`
 9. `20260905005000_manual_attendance.sql`
 10. `20260905006000_solver_run_evidence.sql`
+11. `20261012162115_atomic_routine_operations.sql`
 
-Apply `database/cms_security_boundary.sql` only to the separate CMS project,
-after its existing CMS schema. The sequence above is for the academic project.
+For a fresh separate CMS project, apply `database/cms_baseline.sql`, then `database/cms_security_boundary.sql`. For an existing CMS project, compare its schema in staging first. The sequence above is for the academic project.
 The historical April and June root-level migrations are not extra steps after
 this consolidated baseline. Do not mix the two installation paths.
 
@@ -80,3 +82,11 @@ FCM service-account credentials and `NOTIFICATION_DISPATCH_KEY` belong only on t
 `npm run reproduce:paper` runs the synthetic fixture twice and verifies byte-identical normalized output. An independent validator checks the activities, periods, teacher/room/cohort collisions, room suitability and occupied slots. `examples/routine/output.json` stores the input, drafts, component penalties and deterministic counters; `environment.json` stores machine-dependent timing, memory and output SHA-256. These small correctness fixtures are not evidence of production scalability or institutional impact.
 
 Before publishing a release, run both repository CI workflows, review the staging migration and multi-role workflows, and record exact commits and lockfiles for web, TV and mobile. Package the fixture, results, setup instructions and tests together with the source and complete SQL set. Tags, archive publication and DOI registration are separate release actions and have not been performed here. The revised manuscript is maintained in the workspace `softwarex` folder. See [REVISION_VERIFICATION.md](REVISION_VERIFICATION.md) for the remaining publication steps.
+
+## Atomic routine editing and publication (October release)
+
+Generate new drafts after installing the activity-ID migration. Old drafts with no stable identity are rejected with a regeneration message. The saved `solver_input.options` and activity mapping are retained. Edits expand to all peer rows, recompute per-activity conflicts and metrics, and persist the full draft atomically.
+
+The server reads a database revision before loading and validating current state. Statement triggers on every relevant scheduling/account table acquire a shared transaction-level advisory lock and advance that revision. The service-only `commit_routine_draft` operation checks the actor, current session/module permissions, and unchanged revision under the same lock before writing. A concurrent change returns HTTP 409 and requires reload/retry. A coarse global lock favors correctness over concurrent scheduling throughput; it is not a scalability result. PostgreSQL routine-slot triggers also enforce room/teacher/cohort conflicts for other writers. Notifications and the outbox are committed with publication; external push delivery is retried after commit through the existing dispatcher.
+
+The TypeScript production validator is separate from `scripts/verify-routine.cjs`, the independent reproduction checker. No 56-activity result is claimed by this release. See `docs/SUBMISSION_CORRECTIONS.md` and `docs/MANUAL_STEPS.md` for evidence and remaining author/account actions.

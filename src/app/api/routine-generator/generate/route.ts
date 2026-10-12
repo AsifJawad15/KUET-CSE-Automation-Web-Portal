@@ -115,6 +115,7 @@ export async function POST(request: NextRequest) {
         for (const t of act.teachers) {
           draftSlotsToInsert.push({
             draft_id: dbDraft.id,
+            activity_id: act.id,
             course_offering_id: t.courseOfferingId || null,
             course_id: act.courseId,
             teacher_user_id: t.teacherUserId,

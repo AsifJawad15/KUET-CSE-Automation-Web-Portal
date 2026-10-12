@@ -1,3 +1,5 @@
+> Historical September record. The current reconstructed October release is documented in [SUBMISSION_CORRECTIONS.md](SUBMISSION_CORRECTIONS.md). Its manifest and executed logs supersede the missing-file status and old test counts below.
+
 # Public source verification: 8 September 2026
 
 ## Source provenance

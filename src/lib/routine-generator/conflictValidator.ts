@@ -35,7 +35,7 @@ export function validateSlot(
   if (!allowedDays.includes(candidate.dayOfWeek) || !Number.isInteger(candidate.startPeriod) ||
       !Number.isInteger(candidate.endPeriod) || candidate.startPeriod < 1 || candidate.endPeriod > 9 ||
       candidate.endPeriod - candidate.startPeriod + 1 !== activity.duration) {
-    hardConflicts.push({ type: 'invalid_period', reason: `Invalid day, period or duration for ${activity.id}` });
+    hardConflicts.push({ type: 'invalid_period', reason: `Invalid day, period or duration for ${activity.id}`, activityId: activity.id });
   }
 
   // 1. Break/Lunch & Block Validity Check
@@ -275,7 +275,7 @@ export function validateDraft(
 
   for (const activity of context.activities) {
     const count = assignments.filter(a => a.activityId === activity.id).length;
-    if (count !== 1) hardConflicts.push({ type: 'activity_count', reason: `${activity.id} must appear exactly once; got ${count}` });
+    if (count !== 1) hardConflicts.push({ type: 'activity_count', reason: `${activity.id} must appear exactly once; got ${count}`, activityId: activity.id });
   }
   for (let i = 0; i < assignments.length; i++) {
     const candidate = assignments[i];
@@ -285,8 +285,8 @@ export function validateDraft(
     softWarnings.push(...result.softWarnings);
   }
 
-  const uniqueHard = Array.from(new Map(hardConflicts.map((c) => [c.reason, c])).values());
-  const uniqueSoft = Array.from(new Map(softWarnings.map((w) => [w.reason, w])).values());
+  const uniqueHard = Array.from(new Map(hardConflicts.map((c) => [`${c.activityId ?? ''}:${c.type}:${c.reason}`, c])).values());
+  const uniqueSoft = Array.from(new Map(softWarnings.map((w) => [`${w.activityId ?? ''}:${w.type}:${w.reason}`, w])).values());
 
   return {
     isValid: uniqueHard.length === 0,

@@ -1,0 +1,49 @@
+{
+  "description": "Evaluated SQL set; SHA-256 over UTF-8 SQL with CRLF normalized to LF. SQL is distributed separately.",
+  "files": [
+    {
+      "path": "supabase/migrations/20260101000000_baseline.sql",
+      "sha256": "172c58360e56b3102187044c5a000eaefb821dc424fc59779a019d57632ea5c4"
+    },
+    {
+      "path": "supabase/migrations/20260627000000_smart_routine_generator.sql",
+      "sha256": "d3c1d49808c30c890096c7856bea9eec14a696d5b4d84b69de06b2b4c09af9dd"
+    },
+    {
+      "path": "supabase/migrations/20260725000000_tv_display_production_hardening.sql",
+      "sha256": "c8acffa3182422771102bb166c5f49f7e5b810edef7ad58706e8ad86f8e8d25f"
+    },
+    {
+      "path": "supabase/migrations/20260905000000_authenticated_boundary.sql",
+      "sha256": "87aa192d83351e539f5c1efe5b72c0a108ff05605685436c97326fae435e3956"
+    },
+    {
+      "path": "supabase/migrations/20260905001000_atomic_geo_attendance.sql",
+      "sha256": "4612e82ac26a69d32ab82912fab893b739f2346e47d01b3bc6537b4ac472ddd4"
+    },
+    {
+      "path": "supabase/migrations/20260905002000_booking_and_client_policies.sql",
+      "sha256": "621a917f4c596c65899914ce3a9adc6bf41a85a0661d64cb2345bc1a8a75f33a"
+    },
+    {
+      "path": "supabase/migrations/20260905003000_inbox_and_legacy_marks.sql",
+      "sha256": "7dcd2d1de6bd3b1d33503139cbb3c6e2898776b1efba63fc5e1efac9c3267b74"
+    },
+    {
+      "path": "supabase/migrations/20260905004000_student_requests.sql",
+      "sha256": "20c14db175574d0a1bdb183e3e11b43e6b377adc7883fe30a2a9610154d6d9d8"
+    },
+    {
+      "path": "supabase/migrations/20260905005000_manual_attendance.sql",
+      "sha256": "1385c39cdccc1bc16625df6bb3854050e0af0bfe034d59e75d36cfed30b87dde"
+    },
+    {
+      "path": "supabase/migrations/20260905006000_solver_run_evidence.sql",
+      "sha256": "a43665275d9bfa0b47cd9a2ce82a147f586ed32bbc878d50635ca65c69e97b96"
+    },
+    {
+      "path": "database/cms_security_boundary.sql",
+      "sha256": "84a56a750d3bec7a581135658e3e991b432f3dbc09ae912bb9ee2d144de77d59"
+    }
+  ]
+}

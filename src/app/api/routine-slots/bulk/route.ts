@@ -10,6 +10,7 @@ import { badRequest, guardSupabase, internalError } from '@/lib/apiResponse';
 import { hashPassword } from '@/lib/passwordUtils';
 import { requireServerSession } from '@/lib/serverAuth';
 import { getSupabaseAdmin, isSupabaseAdminConfigured } from '@/lib/supabaseAdmin';
+import { randomBytes } from 'crypto';
 
 // ── Types ──────────────────────────────────────────────
 
@@ -101,8 +102,8 @@ export async function POST(request: NextRequest) {
       created_teachers: [],
     };
 
-    // ── Pre-compute the default teacher password hash ONCE ──
-    const defaultPasswordHash = await hashPassword('kuet123456');
+    // Imported accounts require private recovery; no predictable password is shipped.
+    const defaultPasswordHash = await hashPassword(randomBytes(32).toString('base64url'));
 
     // ── Batch pre-fetch all reference data ──
     const [

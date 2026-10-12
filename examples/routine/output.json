@@ -301,7 +301,7 @@
         }
       ],
       "hardConflictCount": 0,
-      "softWarningCount": 10,
+      "softWarningCount": 11,
       "summary": {
         "reason": ". Note: 1 student gap warnings.",
         "advantages": [],
@@ -434,7 +434,7 @@
         }
       ],
       "hardConflictCount": 0,
-      "softWarningCount": 11,
+      "softWarningCount": 12,
       "summary": {
         "reason": "No student class gaps found.. Note: 2 teacher gap warnings.",
         "advantages": [
@@ -576,7 +576,7 @@
         }
       ],
       "hardConflictCount": 0,
-      "softWarningCount": 12,
+      "softWarningCount": 13,
       "summary": {
         "reason": "No student class gaps found.. Note: 2 teacher gap warnings.",
         "advantages": [

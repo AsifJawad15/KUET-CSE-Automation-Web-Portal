@@ -1,3 +1,5 @@
+> October correction release 0.2.0: complete reconstructed SQL, atomic draft editing/publication, and required real PostgreSQL verification. Follow [setup](docs/SETUP.md), [correction evidence](docs/SUBMISSION_CORRECTIONS.md), and [manual account/author steps](docs/MANUAL_STEPS.md).
+
 > **Current setup and security changes:** follow [docs/SETUP.md](docs/SETUP.md) and [review implementation notes](docs/REVIEW_FIXES.md). The ordered migrations supersede older SQL installation lists.
 
 <div align="center">
@@ -381,14 +383,12 @@ NOTIFICATION_DISPATCH_KEY=required_private_shared_secret_if_push_is_enabled
 
 Use the ordered files in `supabase/migrations/` for a new empty database. See [database installation and existing-deployment migration](docs/SETUP.md#database-installation) before applying anything to an existing project. Root-level SQL snapshots and old permissive-policy scripts are historical references. Never rerun them after the security boundary migrations.
 
-**The public clone is incomplete for database installation:** only two of the ten
-academic migrations are tracked, and the separate CMS security boundary is also
-absent. Obtain the exact nine missing files listed in
-[the manifest](docs/migration-manifest.json) from the maintainers, then run
-`npm run check:migrations` before installation. In particular, the sequence
-includes `20260905005000_manual_attendance.sql` and
-`20260905006000_solver_run_evidence.sql`; do not omit either. Historical duplicate
-schema files cannot substitute for the missing baseline or security migrations.
+Release 0.2.0 supplies eleven academic migrations plus a separate CMS baseline
+and security boundary. These are reconstructed and newly tested October files,
+not recovered copies of the unavailable September SQL. Run
+`npm run check:migrations` before installation; apply the ordered academic
+sequence to a fresh academic project and the CMS files to a fresh separate CMS
+project. See [correction evidence](docs/SUBMISSION_CORRECTIONS.md).
 
 ### 5 — Deploy the Push Edge Function
 
@@ -668,7 +668,7 @@ All API routes live under `/src/app/api/`. Each folder maps to a Next.js Route H
 |---|---|
 | **Password hashing** | bcryptjs (server-side) |
 | **Service role isolation** | `SUPABASE_SERVICE_ROLE_KEY` used only in server routes |
-| **Row-Level Security** | The database test targets `profiles`, `students`, `notifications`, `device_push_tokens`, `geo_attendance_logs`, and `password_recovery_tokens`, including selected grants and ownership checks. It skips when the separately supplied SQL is absent. See [current public-clone status](docs/PUBLIC_RELEASE_STATUS.md); full hosted policy and Storage coverage is not certified. |
+| **Row-Level Security** | The database test targets `profiles`, `students`, `notifications`, `device_push_tokens`, `geo_attendance_logs`, and `password_recovery_tokens`, including selected grants and ownership checks. The complete reconstructed release executes these checks without skips. See [correction evidence](docs/SUBMISSION_CORRECTIONS.md); full hosted policy and Storage coverage is not certified. |
 | **Input validation** | Schema-level constraints + API-layer checks |
 | **XSS protection** | React's built-in escaping; no enforced Content Security Policy is claimed |
 | **Session cookies** | Application-set `HttpOnly`, `SameSite=Lax`, and production `Secure`; this is not a complete CSRF audit |
@@ -684,17 +684,17 @@ npm ci
 npm run lint
 npm run typecheck
 npm test
-npm run test:database   # Requires the complete separately supplied SQL set
+npm run test:database   # Checks the tracked complete migration set
 npm run reproduce:paper
 npm run build
 
-# Combined release check: fails if required SQL is missing or has changed
+# Combined release check: also requires TEST_DATABASE_URL for an isolated local PostgreSQL server
 npm run verify:release
 ```
 
-`npm test` reports a skipped database test if the local SQL set is absent.
-Use `npm run verify:release` for release evidence; a skipped database test is
-not sufficient. [SETUP.md](docs/SETUP.md) identifies the authoritative migration
+The complete package includes the SQL set; required database checks must execute.
+Set `TEST_DATABASE_URL` to an isolated local PostgreSQL server and use
+`npm run verify:release` for release evidence, including multi-connection tests. [SETUP.md](docs/SETUP.md) identifies the authoritative migration
 sequence. The TV player has its own `npm ci`, `npm test`, `npm run typecheck`,
 and `npm run build` commands in `tv-player-app/`.
 

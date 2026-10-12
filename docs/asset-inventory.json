@@ -1,0 +1,80 @@
+[
+  {
+    "repository": "web",
+    "path": "public/assets/landing_page.png",
+    "sha256": "ec058c099c2a67f9843d5a127d763d5753deb124464d674e1af2122bbcd1fdd4",
+    "rights_status": "Author verification required for existing image/media; no new permission claim."
+  },
+  {
+    "repository": "web",
+    "path": "public/assets/landing_page_walkthrough.webp",
+    "sha256": "939c880d07a52803fd52f5f98c70ebe0bc87280e26e48d94212be681885cbfa1",
+    "rights_status": "Author verification required for existing image/media; no new permission claim."
+  },
+  {
+    "repository": "web",
+    "path": "public/assets/signin_page.png",
+    "sha256": "793405ae1619ce25e0c496b15ead4e4f65e823a115d1906927db2d71b4b1293a",
+    "rights_status": "Author verification required for existing image/media; no new permission claim."
+  },
+  {
+    "repository": "web",
+    "path": "public/grid.svg",
+    "sha256": "62ce46926de386373b82bfe1bd0b5dd3e43b9266e3486f8d214f79b55b367d08",
+    "rights_status": "Author verification required for existing image/media; no new permission claim."
+  },
+  {
+    "repository": "web",
+    "path": "public/kuet-logo.png",
+    "sha256": "c0087882a4f1f3515ac7aa3bfde672a21804e2b60b717d436c215d5e928d8ad6",
+    "rights_status": "Author verification required for existing image/media; no new permission claim."
+  },
+  {
+    "repository": "web",
+    "path": "tv-player-app/public/icon.ico",
+    "sha256": "20c12aa7557420db2c78aeb3575b88ab737795bab51a8e4d1bb62093b1d05cac",
+    "rights_status": "Author verification required for existing image/media; no new permission claim."
+  },
+  {
+    "repository": "web",
+    "path": "tv-player-app/public/tray-icon.png",
+    "sha256": "75c3598f61d0e38caac6aab8d642512aefbc4dc84b8e2f1eca90f315ecc3b378",
+    "rights_status": "Author verification required for existing image/media; no new permission claim."
+  },
+  {
+    "repository": "mobile",
+    "path": "android/app/src/main/res/mipmap-hdpi/ic_launcher.png",
+    "sha256": "fe36600b9af59c9cd922f7646e78ae1ee6d09cf7f5c4b3cb195e193b4b105239",
+    "rights_status": "Author verification required for existing image/media; no new permission claim."
+  },
+  {
+    "repository": "mobile",
+    "path": "android/app/src/main/res/mipmap-mdpi/ic_launcher.png",
+    "sha256": "e7ccc6e1bb172487c1cb02176e7f3d4ad89e526e6cb051c4e22646bf058f1c8c",
+    "rights_status": "Author verification required for existing image/media; no new permission claim."
+  },
+  {
+    "repository": "mobile",
+    "path": "android/app/src/main/res/mipmap-xhdpi/ic_launcher.png",
+    "sha256": "e88d4a0f918732c4e70307094e5d336f44541016c5dd05ff3d4e079c93b787b2",
+    "rights_status": "Author verification required for existing image/media; no new permission claim."
+  },
+  {
+    "repository": "mobile",
+    "path": "android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png",
+    "sha256": "50477c176e9b0d4fdd4d900047a7bb8a327a7c168c1ee41b9eb854fba0d1c412",
+    "rights_status": "Author verification required for existing image/media; no new permission claim."
+  },
+  {
+    "repository": "mobile",
+    "path": "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png",
+    "sha256": "bef58fba6e1904770b1b9e1e5bfed19350f87669cc10c50a81786a4aeeb6f6f6",
+    "rights_status": "Author verification required for existing image/media; no new permission claim."
+  },
+  {
+    "repository": "mobile",
+    "path": "assets/app_logo/logo.jpeg",
+    "sha256": "ab97cbf7e76a9b5a0cf349eee386a1d11fea42aec36e5f4f9d4b901dabb79268",
+    "rights_status": "Author verification required for existing image/media; no new permission claim."
+  }
+]

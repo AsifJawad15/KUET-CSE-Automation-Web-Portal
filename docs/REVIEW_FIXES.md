@@ -1,3 +1,5 @@
+> Historical September record. The current reconstructed October release is documented in [SUBMISSION_CORRECTIONS.md](SUBMISSION_CORRECTIONS.md). Its manifest and executed logs supersede the missing-file status and old test counts below.
+
 # Software review work — 5 September 2026
 
 The user confirmed that both Supabase projects accepted their respective migrations. The new SQL files remain local and Git-ignored at the user's request. Fresh-clone CI skips database verification until that private migration set is supplied. Hosted application workflows have not been independently verified by this agent.

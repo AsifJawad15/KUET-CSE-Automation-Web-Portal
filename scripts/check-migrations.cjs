@@ -27,5 +27,5 @@ if (errors.length) {
   console.error('Restore the complete evaluated SQL set. Do not run historical schema snapshots as a substitute.');
   process.exitCode = 1;
 } else {
-  console.log(`Verified ${expectedAcademic.length} academic migrations and the separate CMS boundary (SHA-256, LF-normalized).`);
+  console.log(`Verified ${expectedAcademic.length} academic migrations and ${manifest.files.length - expectedAcademic.length} CMS files (SHA-256, LF-normalized).`);
 }

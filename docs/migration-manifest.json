@@ -1,9 +1,10 @@
 {
-  "description": "Evaluated SQL set; SHA-256 over UTF-8 SQL with CRLF normalized to LF. SQL is distributed separately.",
+  "release": "0.2.0",
+  "description": "Reconstructed October release; not the unavailable September evaluated SQL set. SHA-256 over UTF-8 SQL normalized from CRLF to LF.",
   "files": [
     {
       "path": "supabase/migrations/20260101000000_baseline.sql",
-      "sha256": "172c58360e56b3102187044c5a000eaefb821dc424fc59779a019d57632ea5c4"
+      "sha256": "b942c89128624f015838c64a164841c63be88469e554e847dd80bb90949a8c7a"
     },
     {
       "path": "supabase/migrations/20260627000000_smart_routine_generator.sql",
@@ -15,35 +16,43 @@
     },
     {
       "path": "supabase/migrations/20260905000000_authenticated_boundary.sql",
-      "sha256": "87aa192d83351e539f5c1efe5b72c0a108ff05605685436c97326fae435e3956"
+      "sha256": "48122e9729c04c7460faf4f6054811e88bf8c2fcaa8d0c42671274b1bb96a083"
     },
     {
       "path": "supabase/migrations/20260905001000_atomic_geo_attendance.sql",
-      "sha256": "4612e82ac26a69d32ab82912fab893b739f2346e47d01b3bc6537b4ac472ddd4"
+      "sha256": "826e020175d9140554451f40cc406760cc62a6fe727696cb3ef459458af5326b"
     },
     {
       "path": "supabase/migrations/20260905002000_booking_and_client_policies.sql",
-      "sha256": "621a917f4c596c65899914ce3a9adc6bf41a85a0661d64cb2345bc1a8a75f33a"
+      "sha256": "23890b5d420dd28b448bbc904825cf107fbafe9edc11f1f1032f71014471f114"
     },
     {
       "path": "supabase/migrations/20260905003000_inbox_and_legacy_marks.sql",
-      "sha256": "7dcd2d1de6bd3b1d33503139cbb3c6e2898776b1efba63fc5e1efac9c3267b74"
+      "sha256": "b7f4c73098f2fc8b8f22b21d5a0e2a1b91f6bf59bb3e4b393001642f63b73152"
     },
     {
       "path": "supabase/migrations/20260905004000_student_requests.sql",
-      "sha256": "20c14db175574d0a1bdb183e3e11b43e6b377adc7883fe30a2a9610154d6d9d8"
+      "sha256": "e6c97a0b36ffe354d4416dce5149b2d2e57a0aa4ab90aa83ff03ba1c6d2e5d31"
     },
     {
       "path": "supabase/migrations/20260905005000_manual_attendance.sql",
-      "sha256": "1385c39cdccc1bc16625df6bb3854050e0af0bfe034d59e75d36cfed30b87dde"
+      "sha256": "76d1a47f7db60257acddd7cec52324f412ec8005b63fa6e024544a31174b808d"
     },
     {
       "path": "supabase/migrations/20260905006000_solver_run_evidence.sql",
-      "sha256": "a43665275d9bfa0b47cd9a2ce82a147f586ed32bbc878d50635ca65c69e97b96"
+      "sha256": "fbd30bdb83c71c22a64d859c739f6b1c3e82f1d70ae984b613600dfcfb71048c"
+    },
+    {
+      "path": "supabase/migrations/20261012162115_atomic_routine_operations.sql",
+      "sha256": "68809869959ec6d4775143422a6ca7c4ec1c4800ec62379a26d7961e7176501d"
+    },
+    {
+      "path": "database/cms_baseline.sql",
+      "sha256": "fabd964e8faafc5d805d06bc06ab8ea1bcdeb9a330a088575e59fd135fb25ab7"
     },
     {
       "path": "database/cms_security_boundary.sql",
-      "sha256": "84a56a750d3bec7a581135658e3e991b432f3dbc09ae912bb9ee2d144de77d59"
+      "sha256": "3bf62fc50f7680a8049e81dfb94f9ddc15792d6f3c09e9f8744d2af4eeda420c"
     }
   ]
 }

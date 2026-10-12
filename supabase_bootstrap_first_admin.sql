@@ -1,17 +1,19 @@
 -- Bootstrap the first web admin account.
 -- Edit the values below, then run this in the Supabase SQL Editor.
 
-create extension if not exists pgcrypto;
-
 do $$
 declare
-  v_email text := lower(trim('admin@gmail.com'));
-  v_password text := 'admin123';
+  v_email text := lower(trim('__YOUR_ADMIN_EMAIL__'));
+  v_password_hash text := '__YOUR_PRIVATE_BCRYPT_HASH__';
   v_full_name text := 'System Administrator';
   v_phone text := null;
   v_department text := 'CSE';
   v_user_id uuid;
 begin
+  if v_email !~ '^[^@[:space:]]+@[^@[:space:]]+[.][^@[:space:]]+$' or
+     v_password_hash !~ '^[$]2[aby][$][0-9]{2}[$][./A-Za-z0-9]{53}$' then
+    raise exception 'Set your own administrator email and privately generated bcrypt hash before bootstrap';
+  end if;
   select user_id
     into v_user_id
   from public.profiles
@@ -32,14 +34,14 @@ begin
       v_user_id,
       'ADMIN',
       v_email,
-      crypt(v_password, gen_salt('bf', 10)),
+      v_password_hash,
       true
     );
   else
     update public.profiles
     set
       role = 'ADMIN',
-      password_hash = crypt(v_password, gen_salt('bf', 10)),
+      password_hash = v_password_hash,
       is_active = true,
       updated_at = now()
     where user_id = v_user_id;
