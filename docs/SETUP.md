@@ -52,6 +52,7 @@ The ordered academic sequence is:
 9. `20260905005000_manual_attendance.sql`
 10. `20260905006000_solver_run_evidence.sql`
 11. `20261012162115_atomic_routine_operations.sql`
+12. `20261013063223_routine_enum_role_compatibility.sql`
 
 For a fresh separate CMS project, apply `database/cms_baseline.sql`, then `database/cms_security_boundary.sql`. For an existing CMS project, compare its schema in staging first. The sequence above is for the academic project.
 The historical April and June root-level migrations are not extra steps after
@@ -98,3 +99,5 @@ Generate new drafts after installing the activity-ID migration. Old drafts with 
 The server reads a database revision before loading and validating current state. Statement triggers on every relevant scheduling/account table acquire a shared transaction-level advisory lock and advance that revision. The service-only `commit_routine_draft` operation checks the actor, current session/module permissions, and unchanged revision under the same lock before writing. A concurrent change returns HTTP 409 and requires reload/retry. A coarse global lock favors correctness over concurrent scheduling throughput; it is not a scalability result. PostgreSQL routine-slot triggers also enforce room/teacher/cohort conflicts for other writers. Notifications and the outbox are committed with publication; external push delivery is retried after commit through the existing dispatcher.
 
 The TypeScript production validator is separate from `scripts/verify-routine.cjs`, the independent reproduction checker. No 56-activity result is claimed by this release. See `docs/SUBMISSION_CORRECTIONS.md` and `docs/MANUAL_STEPS.md` for evidence and remaining author/account actions.
+
+Existing deployments can retain their `user_role` enum. The compatibility migration casts the role to text inside the timetable commit function and grants the existing server `service_role` usage of the private schema. Do not replay the baseline over production. See [the October 13 live verification](LIVE_VERIFICATION_20261013.md) for the reviewed additive upgrade and remaining data issues.

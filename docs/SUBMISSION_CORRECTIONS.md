@@ -1,6 +1,6 @@
 # October correction release 0.2.0
 
-The missing SQL was reconstructed and tested as a **new release**, not represented as recovery of the unavailable September files. The original manifest remains in `migration-manifest.september.json`; the current manifest covers eleven academic migrations plus the CMS baseline and boundary.
+The missing SQL was reconstructed and tested as a **new release**, not represented as recovery of the unavailable September files. The original manifest remains in `migration-manifest.september.json`; the current manifest covers twelve academic migrations plus the CMS baseline and boundary. The October 13 compatibility migration and live verification are recorded in [LIVE_VERIFICATION_20261013.md](LIVE_VERIFICATION_20261013.md); the case counts below describe the earlier October 12 run.
 
 | Item | Implemented correction | Evidence | Remaining action |
 |---|---|---|---|

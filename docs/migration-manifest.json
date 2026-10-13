@@ -47,6 +47,10 @@
       "sha256": "68809869959ec6d4775143422a6ca7c4ec1c4800ec62379a26d7961e7176501d"
     },
     {
+      "path": "supabase/migrations/20261013063223_routine_enum_role_compatibility.sql",
+      "sha256": "f41bae436c63cac43ab7d99f891f7127cbfcc5b12e2cf0aead2602b1e9a4d8f9"
+    },
+    {
       "path": "database/cms_baseline.sql",
       "sha256": "fabd964e8faafc5d805d06bc06ab8ea1bcdeb9a330a088575e59fd135fb25ab7"
     },

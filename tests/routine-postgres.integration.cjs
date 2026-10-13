@@ -76,6 +76,22 @@ test('real PostgreSQL rejects stale snapshots and serializes concurrent publicat
    const winnerInput=winner===fixture.draftId?fixture.input:input;
    verify(winnerInput,prepareDraftState(winner,await persisted(db,winner),winnerInput,winnerInput).assignments);
   });
+  await t.test('the privileged commit accepts the existing production role enum',async()=>{
+   await db.query('BEGIN');
+   try {
+    await db.query(`REVOKE USAGE ON SCHEMA deptflow_private FROM service_role;
+     ALTER TABLE profiles DROP CONSTRAINT supported_profile_role;
+     CREATE TYPE production_user_role AS ENUM ('ADMIN','HEAD','TEACHER','STUDENT','STAFF');
+     ALTER TABLE profiles ALTER COLUMN role TYPE production_user_role USING role::production_user_role;`);
+    await db.query(require('node:fs').readFileSync(require('node:path').join(__dirname,
+     '../supabase/migrations/20261013063223_routine_enum_role_compatibility.sql'),'utf8'));
+    await db.query('SET LOCAL ROLE service_role');
+    const revision=(await db.query('SELECT get_routine_revision() AS revision')).rows[0].revision;
+    await assert.rejects(db.query('SELECT commit_routine_draft($1,$2,0,$3,$4,$5,false,true)',
+     [revision,fixture.actor.id,id(999),JSON.stringify([]),JSON.stringify({})]),
+     e=>e.code==='22023' && /Complete draft state required/.test(e.message));
+   } finally { await db.query('ROLLBACK'); }
+  });
  }finally{
   await Promise.all(connections.map(c=>c.end()));
   await admin.query(`DROP DATABASE IF EXISTS ${name}`);await admin.end();

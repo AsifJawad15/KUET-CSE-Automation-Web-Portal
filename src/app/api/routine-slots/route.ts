@@ -142,13 +142,6 @@ async function sendTeacherScheduleNotification(
   }
 }
 
-/** Derive term from course code digits (e.g., "CSE 3201" → "3-2"). */
-function deriveTermFromCode(code: string): string | null {
-  const digits = code.replace(/\D/g, '');
-  if (digits.length < 2) return null;
-  return `${digits[0]}-${digits[1]}`;
-}
-
 /** Check for room time conflicts, excluding slots for the same course (combined slots allowed). */
 async function hasRoomConflict(
   roomNumber: string,
@@ -188,6 +181,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const term = searchParams.get('term');
+    const session = searchParams.get('session');
     const section = searchParams.get('section');
     const forDate = searchParams.get('date'); // optional: filter slots valid on this date
 
@@ -228,11 +222,8 @@ export async function GET(request: NextRequest) {
       }));
 
       if (section) slots = slots.filter((slot) => slot.section === section);
-      if (term) {
-        slots = slots.filter(
-          (slot) => deriveTermFromCode(slot.course_offerings.courses.code) === term,
-        );
-      }
+      if (term) slots = slots.filter((slot) => slot.course_offerings.term === term);
+      if (session) slots = slots.filter((slot) => slot.course_offerings.session === session);
       return NextResponse.json(slots);
     }
 
@@ -442,13 +433,10 @@ export async function GET(request: NextRequest) {
       filtered = filtered.filter((slot: Record<string, unknown>) => !slot.valid_from);
     }
 
-    if (term) {
-      filtered = filtered.filter((slot: Record<string, unknown>) => {
-        const offerings = slot.course_offerings as { courses?: { code?: string } } | null;
-        const code = offerings?.courses?.code || '';
-        return deriveTermFromCode(code) === term;
-      });
-    }
+    filtered = filtered.filter((slot: Record<string, unknown>) => {
+      const offering = slot.course_offerings as { term?: string; session?: string } | null;
+      return (!term || offering?.term === term) && (!session || offering?.session === session);
+    });
 
     return NextResponse.json(filtered);
   } catch (error: unknown) {

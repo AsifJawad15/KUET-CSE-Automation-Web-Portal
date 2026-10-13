@@ -1,0 +1,201 @@
+
+> kuet-cse-automation-web@0.2.0 verify:release
+> npm run check:migrations && npm run verify && npm run test:postgres
+
+
+> kuet-cse-automation-web@0.2.0 check:migrations
+> node scripts/check-migrations.cjs
+
+Verified 12 academic migrations and 2 CMS files (SHA-256, LF-normalized).
+
+> kuet-cse-automation-web@0.2.0 verify
+> npm run lint && npm run typecheck && npm test && npm run build
+
+
+> kuet-cse-automation-web@0.2.0 lint
+> eslint src shared --max-warnings=0
+
+
+> kuet-cse-automation-web@0.2.0 typecheck
+> tsc --noEmit
+
+
+> kuet-cse-automation-web@0.2.0 test
+> node --require ./tests/register.cjs --test tests/*.test.cjs
+
+✔ geo-attendance rejects foreign sessions, other lab groups and invalid room coordinates without partial records (6943.6757ms)
+✔ unsigned, tampered, malformed, expired tokens fail closed (12.4895ms)
+✔ development requests do not get a synthetic administrator (24.8226ms)
+✔ wrong role and revoked session denied (8.3319ms)
+✔ teacher-portal/marks denies unauthenticated handlers before querying resources (311.1616ms)
+✔ teacher-portal/attendance denies unauthenticated handlers before querying resources (164.1423ms)
+✔ teacher-portal/geo-attendance denies unauthenticated handlers before querying resources (312.8524ms)
+✔ teacher-portal/profile denies unauthenticated handlers before querying resources (123.9031ms)
+✔ teacher-portal/course-students denies unauthenticated handlers before querying resources (50.31ms)
+✔ geo-room-locations denies unauthenticated handlers before querying resources (141.0765ms)
+✔ students/cr denies unauthenticated handlers before querying resources (22.1015ms)
+✔ optional-course-assignments denies unauthenticated handlers before querying resources (62.0912ms)
+✔ upload/parse denies unauthenticated handlers before querying resources (110.651ms)
+✔ routine-generator/generate denies unauthenticated handlers before querying resources (237.8137ms)
+✔ student/geo-attendance denies unauthenticated handlers before querying resources (46.44ms)
+✔ administrator bootstrap rejects placeholders and provisions only private supplied credentials (6909.8782ms)
+✔ complete CMS installation exposes published content and denies anonymous mutations (6514.4082ms)
+✔ database migrations enforce grants, row ownership, session revocation and atomic attendance (7499.6534ms)
+✔ legacy manual combined classes remain valid while duplicates and partial-overlap conflicts are rejected (6943.0957ms)
+Atomic draft update failed 23514
+Atomic routine publication failed 23514
+▶ real edit/publication routes preserve activity identity, scope, calendar and transaction state
+  ✔ mixed-draft and multi-activity IDs fail without any write (95.9983ms)
+  ✔ one combined activity moves all peers and leaves repeated component unchanged (32.8452ms)
+  ✔ original Saturday exclusion remains enforced (18.2431ms)
+  ✔ conflicting edit persists accurate labels and cannot be published (51.7826ms)
+  ✔ metrics failure rolls back peer updates (31.9496ms)
+  ✔ publication failure after deletion restores old timetable and audit/outbox (35.667ms)
+  ✔ current teacher unavailability rejects a previously valid draft (21.0118ms)
+  ✔ an assigned teacher becoming inactive or on leave blocks publication (27.4614ms)
+  ✔ valid publication commits matching slots, selection, version and outbox (39.0374ms)
+  ✔ editing a published draft clears its selected flag and preserves the immutable publication snapshot (29.7589ms)
+✔ real edit/publication routes preserve activity identity, scope, calendar and transaction state (6924.6375ms)
+✔ weekly timetable respects offering term and selected session rather than course digits (31.4495ms)
+✔ unfiltered weekly consumers retain all sessions (5.2139ms)
+✔ dated timetable respects offering term and session as well (8.5925ms)
+✔ timetable service exposes API failures instead of reporting an empty timetable (144.4738ms)
+✔ custom room administrator cannot edit people, CMS, credentials or arbitrary data (3.0075ms)
+✔ upload bounds reject oversized bodies, malformed documents and extreme expansion (87.0813ms)
+✔ scoring does not mix sections and evaluates enabled Saturdays (4.7988ms)
+Activity DEMO101 has an empty initial domain.
+✔ seed and node budget reproduce assignments and search counts (80.5508ms)
+✔ all generated drafts have every activity and zero hard conflicts (12.2544ms)
+✔ reject missing and duplicate activities, invalid lab, room and teacher collisions (7.2541ms)
+✔ capacity uses fixture enrolment and remains a warning (1.0458ms)
+✔ infeasibility and exhaustion are explicit (5.8362ms)
+✔ strict input types, time boundaries and section-specific requirements (2.3469ms)
+ℹ tests 43
+ℹ suites 0
+ℹ pass 43
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8555.7363
+
+> kuet-cse-automation-web@0.2.0 build
+> next build
+
+▲ Next.js 16.4.0 (Turbopack)
+npm.cmd : ⚠ React 18 support is deprecated in Next.js 16 and will be removed in Next.js 17. Please upgrade to React 
+19. Learn more: https://nextjs.org/docs/messages/react-version
+At line:2 char:312
++ ... /postgres'; & 'C:\Program Files\nodejs\npm.cmd' run verify:release *> ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (⚠ React 18 supp...s/react-version:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+✓ Running next.config.ts took 42ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 4.9s
+  Running TypeScript ...
+  Finished TypeScript in 3.0s ...
+  Collecting page data using 15 workers ...
+  Generating static pages using 15 workers (0/66) ...
+  Generating static pages using 15 workers (16/66) 
+  Generating static pages using 15 workers (32/66) 
+  Generating static pages using 15 workers (49/66) 
+✓ Generating static pages using 15 workers (66/66) in 630ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /about
+├ ƒ /api/assistant/chat
+├ ƒ /api/auth/login
+├ ƒ /api/auth/logout
+├ ƒ /api/auth/password
+├ ƒ /api/auth/recovery
+├ ƒ /api/auth/session
+├ ƒ /api/cms-data/[table]
+├ ƒ /api/course-offerings
+├ ƒ /api/course-offerings/bulk
+├ ƒ /api/courses
+├ ƒ /api/courses/bulk
+├ ƒ /api/cr-room-requests
+├ ƒ /api/data/[table]
+├ ƒ /api/geo-room-locations
+├ ƒ /api/notifications
+├ ƒ /api/notifications/exam-reminders
+├ ƒ /api/notifications/push-dispatch
+├ ƒ /api/optional-course-assignments
+├ ƒ /api/optional-course-assignments/elective-courses
+├ ƒ /api/optional-course-assignments/elective-offerings
+├ ƒ /api/rooms
+├ ƒ /api/rooms/bulk
+├ ƒ /api/routine-generator/drafts
+├ ƒ /api/routine-generator/generate
+├ ƒ /api/routine-generator/publish
+├ ƒ /api/routine-generator/requirements
+├ ƒ /api/routine-generator/teacher-availability
+├ ƒ /api/routine-generator/update-draft-slot
+├ ƒ /api/routine-generator/validate-slot
+├ ƒ /api/routine-slots
+├ ƒ /api/routine-slots/bulk
+├ ƒ /api/routine-slots/parse
+├ ƒ /api/schedule/book-room
+├ ƒ /api/staffs
+├ ƒ /api/student/geo-attendance
+├ ƒ /api/students
+├ ƒ /api/students/bulk
+├ ƒ /api/students/cr
+├ ƒ /api/teacher-portal/announcements
+├ ƒ /api/teacher-portal/attendance
+├ ƒ /api/teacher-portal/attendance/session
+├ ƒ /api/teacher-portal/course-students
+├ ƒ /api/teacher-portal/geo-attendance
+├ ƒ /api/teacher-portal/marks
+├ ƒ /api/teacher-portal/my-courses
+├ ƒ /api/teacher-portal/profile
+├ ƒ /api/teacher-portal/room-requests
+├ ƒ /api/teacher-portal/schedule
+├ ƒ /api/teachers
+├ ƒ /api/teachers/bulk
+├ ƒ /api/term-upgrades
+├ ƒ /api/tv-display/snapshot
+├ ƒ /api/upload/parse
+├ ○ /auth/signin
+├ ○ /auth/signup
+├ ○ /contact
+├ ○ /dashboard
+├ ○ /facilities
+├ ○ /faculty
+├ ○ /gallery
+├ ○ /news
+├ ○ /notices
+├ ○ /programs
+├ ○ /research
+└ ○ /tv-display
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+
+> kuet-cse-automation-web@0.2.0 test:postgres
+> node --require ./tests/register.cjs --test tests/routine-postgres.integration.cjs
+
+▶ real PostgreSQL rejects stale snapshots and serializes concurrent publications across cohorts
+  ✔ all client roles are denied the privileged commit RPC (3.1729ms)
+  ✔ a stale validation result cannot commit after any relevant writer (14.3339ms)
+  ✔ a changed account session is rejected inside the protected operation (8.0654ms)
+  ✔ a role change immediately revokes assignment-derived database access (7.9868ms)
+  ✔ competing cohorts sharing a teacher/room cannot both publish (37.9805ms)
+  ✔ the privileged commit accepts the existing production role enum (28.4543ms)
+✔ real PostgreSQL rejects stale snapshots and serializes concurrent publications across cohorts (2142.0022ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2662.4357
