@@ -33,6 +33,7 @@ interface DashboardStats {
 export default function DashboardOverview({ onMenuChange }: DashboardOverviewProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
     totalStudents: 0,
     totalFaculty: 0,
@@ -44,13 +45,28 @@ export default function DashboardOverview({ onMenuChange }: DashboardOverviewPro
 
   const fetchDashboardData = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
+      const fetchList = async (path: string): Promise<any[]> => {
+        const response = await fetch(path, {
+          credentials: 'same-origin',
+          cache: 'no-store',
+        });
+        const payload = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(payload?.error || `Failed to load ${path} (${response.status})`);
+        }
+        if (Array.isArray(payload)) return payload;
+        if (payload?.success && Array.isArray(payload.data)) return payload.data;
+        throw new Error(`Unexpected response from ${path}`);
+      };
+
       const [studentsRes, teachersRes, roomsRes, coursesRes, upgradesRes] = await Promise.all([
-        fetch('/api/students').then(r => r.ok ? r.json() : []).catch(() => []),
-        fetch('/api/teachers').then(r => r.ok ? r.json() : []).catch(() => []),
-        fetch('/api/rooms').then(r => r.ok ? r.json() : []).catch(() => []),
-        fetch('/api/courses').then(r => r.ok ? r.json() : []).catch(() => []),
-        fetch('/api/term-upgrades').then(r => r.ok ? r.json() : []).catch(() => []),
+        fetchList('/api/students'),
+        fetchList('/api/teachers'),
+        fetchList('/api/rooms'),
+        fetchList('/api/courses'),
+        fetchList('/api/term-upgrades'),
       ]);
 
       const activeRooms = Array.isArray(roomsRes)
@@ -71,6 +87,7 @@ export default function DashboardOverview({ onMenuChange }: DashboardOverviewPro
       });
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load dashboard data');
     } finally {
       setLoading(false);
     }
@@ -105,6 +122,11 @@ export default function DashboardOverview({ onMenuChange }: DashboardOverviewPro
 
   return (
     <div className="space-y-6">
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+          Could not load department data: {error}. Refresh the page or sign in again.
+        </div>
+      )}
       {/* Welcome Header */}
       <div className="bg-slate-800 rounded-lg p-5 text-white relative">
         <div className="flex items-center justify-between">
@@ -142,7 +164,7 @@ export default function DashboardOverview({ onMenuChange }: DashboardOverviewPro
                 {loading ? (
                   <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
                 ) : (
-                  <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                  <p className="text-2xl font-bold text-gray-900">{error ? '—' : stat.value}</p>
                 )}
                 <p className="text-xs text-gray-500 font-medium mt-0.5">{stat.label}</p>
               </div>
@@ -245,7 +267,7 @@ export default function DashboardOverview({ onMenuChange }: DashboardOverviewPro
                         <Icon className={`w-4 h-4 ${item.color}`} />
                         <span className="text-sm text-gray-900">{item.label}</span>
                       </div>
-                      <span className="text-sm font-bold text-gray-900">{item.value}</span>
+                      <span className="text-sm font-bold text-gray-900">{error ? '—' : item.value}</span>
                     </div>
                   </div>
                 );

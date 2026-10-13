@@ -95,6 +95,9 @@ export interface CmsTvDevice {
   updated_at: string;
 }
 
+const TV_DEVICE_PUBLIC_COLUMNS =
+  'id,name,label,location,is_active,show_room_schedule,created_at,updated_at';
+
 export interface CmsTvAnnouncement {
   id: string;
   title: string;
@@ -267,7 +270,7 @@ export async function fetchActiveDevices(): Promise<CmsTvDevice[]> {
   if (!isCmsSupabaseConfigured) throw new Error('CMS Supabase is not configured.');
   const { data, error } = await supabase
     .from('cms_tv_devices')
-    .select('*')
+    .select(TV_DEVICE_PUBLIC_COLUMNS)
     .eq('is_active', true)
     .order('name', { ascending: true });
   if (error) throw new Error(error.message || 'Failed to fetch active TV devices');
@@ -281,7 +284,7 @@ export async function fetchDeviceByName(name: string): Promise<CmsTvDevice | nul
   if (!isCmsSupabaseConfigured) throw new Error('CMS Supabase is not configured.');
   const { data, error } = await supabase
     .from('cms_tv_devices')
-    .select('*')
+    .select(TV_DEVICE_PUBLIC_COLUMNS)
     .eq('name', name)
     .single();
 

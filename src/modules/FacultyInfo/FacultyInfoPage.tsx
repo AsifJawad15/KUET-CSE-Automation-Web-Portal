@@ -2,7 +2,7 @@
 
 import SpotlightCard from '@/components/ui/SpotlightCard';
 import { TeacherDesignation, TeacherWithAuth } from '@/lib/supabase';
-import { addTeacher, getAllTeachers, deleteTeacher, resetTeacherPassword, updateTeacherProfile, toggleTeacherLeave } from '@/services/teacherService';
+import { addTeacher, getAllTeachersResult, deleteTeacher, resetTeacherPassword, updateTeacherProfile, toggleTeacherLeave } from '@/services/teacherService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, UserCog, Loader2, AlertCircle, X, Check, Key, Upload, UserX } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -37,8 +37,14 @@ export default function FacultyInfoPage() {
 
   const loadTeachers = async () => {
     setLoading(true);
-    const data = await getAllTeachers();
-    setTeachers(data);
+    setError(null);
+    const result = await getAllTeachersResult();
+    if (result.success && result.data) {
+      setTeachers(result.data);
+    } else {
+      setTeachers([]);
+      setError(result.error || 'Failed to load faculty records');
+    }
     setLoading(false);
   };
 
@@ -276,7 +282,7 @@ export default function FacultyInfoPage() {
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-indigo-500 dark:text-red-600" />
             </div>
-          ) : filteredTeachers.length === 0 ? (
+          ) : error ? null : filteredTeachers.length === 0 ? (
             <div className="text-center py-12 text-gray-400 dark:text-[#b1a7a6]">
               No teachers found. {filterDesignation !== 'all' || searchTerm ? 'Try adjusting your filters.' : 'Add your first teacher to get started.'}
             </div>

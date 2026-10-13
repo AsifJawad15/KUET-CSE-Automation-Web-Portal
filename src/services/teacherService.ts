@@ -44,6 +44,11 @@ export async function getAllTeachers(): Promise<TeacherWithAuth[]> {
   return apiClient.getList<TeacherWithAuth>(ENDPOINT);
 }
 
+/** Fetch teachers while preserving an API error for management screens. */
+export async function getAllTeachersResult(): Promise<ServiceResult<TeacherWithAuth[]>> {
+  return apiClient.get<TeacherWithAuth[]>(ENDPOINT);
+}
+
 /** Soft-delete (deactivate) a teacher. */
 export async function deleteTeacher(userId: string): Promise<ServiceResult<void>> {
   return apiClient.delete(ENDPOINT, { userId });

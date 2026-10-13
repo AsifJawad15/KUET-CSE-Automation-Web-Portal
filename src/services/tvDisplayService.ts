@@ -21,6 +21,9 @@ import {
   type TvSnapshotV2,
 } from '../../shared/tv-display/domain';
 
+const TV_DEVICE_PUBLIC_COLUMNS =
+  'id,name,label,location,is_active,show_room_schedule,created_at,updated_at';
+
 // ── Fetch (used by both admin + public TV page) ────────
 
 export async function fetchTvSnapshotForTarget(
@@ -151,10 +154,11 @@ export async function fetchTvDisplayDataForTarget(target: TvTarget): Promise<TvD
  * Fetch ALL announcements (active + inactive) for admin management.
  */
 export async function fetchAllAnnouncements(): Promise<CmsTvAnnouncement[]> {
-  const { data } = await cmsSupabase
+  const { data, error } = await cmsSupabase
     .from('cms_tv_announcements')
     .select('*')
     .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message || 'Failed to fetch TV announcements');
   return (data as CmsTvAnnouncement[]) || [];
 }
 
@@ -162,10 +166,11 @@ export async function fetchAllAnnouncements(): Promise<CmsTvAnnouncement[]> {
  * Fetch ALL ticker items (active + inactive) for admin management.
  */
 export async function fetchAllTicker(): Promise<CmsTvTicker[]> {
-  const { data } = await cmsSupabase
+  const { data, error } = await cmsSupabase
     .from('cms_tv_ticker')
     .select('*')
     .order('sort_order', { ascending: true });
+  if (error) throw new Error(error.message || 'Failed to fetch TV ticker items');
   return (data as CmsTvTicker[]) || [];
 }
 
@@ -173,7 +178,8 @@ export async function fetchAllTicker(): Promise<CmsTvTicker[]> {
  * Fetch all settings as key-value map.
  */
 export async function fetchTvSettings(): Promise<Record<string, string>> {
-  const { data } = await cmsSupabase.from('cms_tv_settings').select('*');
+  const { data, error } = await cmsSupabase.from('cms_tv_settings').select('*');
+  if (error) throw new Error(error.message || 'Failed to fetch TV settings');
   const map: Record<string, string> = {};
   (data as CmsTvSetting[] | null)?.forEach((row) => {
     map[row.key] = row.value;
@@ -368,10 +374,11 @@ export async function upsertLayoutSettings(
 // ── Event CRUD ─────────────────────────────────────────
 
 export async function fetchAllEvents(): Promise<CmsTvEvent[]> {
-  const { data } = await cmsSupabase
+  const { data, error } = await cmsSupabase
     .from('cms_tv_events')
     .select('*')
     .order('display_order', { ascending: true });
+  if (error) throw new Error(error.message || 'Failed to fetch TV events');
   return (data as CmsTvEvent[]) || [];
 }
 
@@ -421,19 +428,21 @@ export async function toggleEvent(
 // ── TV Device CRUD ─────────────────────────────────────
 
 export async function fetchAllDevices(): Promise<CmsTvDevice[]> {
-  const { data } = await cmsSupabase
+  const { data, error } = await cmsSupabase
     .from('cms_tv_devices')
-    .select('*')
+    .select(TV_DEVICE_PUBLIC_COLUMNS)
     .order('name', { ascending: true });
+  if (error) throw new Error(error.message || 'Failed to fetch TV devices');
   return (data as CmsTvDevice[]) || [];
 }
 
 export async function fetchActiveDevices(): Promise<CmsTvDevice[]> {
-  const { data } = await cmsSupabase
+  const { data, error } = await cmsSupabase
     .from('cms_tv_devices')
-    .select('*')
+    .select(TV_DEVICE_PUBLIC_COLUMNS)
     .eq('is_active', true)
     .order('name', { ascending: true });
+  if (error) throw new Error(error.message || 'Failed to fetch active TV devices');
   return (data as CmsTvDevice[]) || [];
 }
 

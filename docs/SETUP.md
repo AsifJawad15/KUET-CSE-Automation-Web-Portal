@@ -19,6 +19,14 @@ npm run build
 
 The tests use PGlite and a separate local PostgreSQL instance with synthetic data. They do not need production credentials. The web fonts are bundled, including their license, so compilation does not download Google Fonts. Copy `.env.example` to `.env.local` for a running development service and supply your own project configuration. A random `AUTH_SESSION_SECRET` is required even in development; generate one with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` and store it privately.
 
+When the CMS uses a separate Supabase project, the web administration routes
+also require `CMS_SUPABASE_SECRET_KEY` from that CMS project. Keep it server-side
+in `.env.local` and the hosting provider's encrypted environment variables. A
+legacy `CMS_SUPABASE_SERVICE_ROLE_KEY` remains supported. Without either server
+key, the TV control center can read public active content, but private device
+records, inactive content and all CMS changes remain unavailable. Never add a
+CMS secret key to `NEXT_PUBLIC_*`, the Electron package, or source control.
+
 ## Database installation
 
 `supabase/migrations/` is the authoritative, ordered migration history for this revision. On a **new, empty local Supabase database**, run `supabase start` followed by `supabase db reset`. This requires the Supabase CLI and Docker; `db reset` replaces the local development database. Alternatively, apply the migration files in filename order to a new isolated Supabase project. The automated database test executes this entire sequence in PGlite.

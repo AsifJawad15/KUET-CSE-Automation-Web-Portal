@@ -12,7 +12,7 @@
 
 <br/><br/>
 
-# 🎓 KUET CSE Automation Web Portal
+# ðŸŽ“ KUET CSE Automation Web Portal
 
 ### **A reusable, role-based department automation platform for academic administration, teaching, student services, and public communication**
 
@@ -20,25 +20,25 @@
 [![GitHub Forks](https://img.shields.io/github/forks/abdullahshahporan/KUET-CSE-Automation-Web-Portal?style=social)](https://github.com/abdullahshahporan/KUET-CSE-Automation-Web-Portal/fork)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-[Key Features](#-features) • [Tech Stack](#-tech-stack) • [Getting Started](#-getting-started) • [Architecture](#-architecture) • [API Reference](#-api-reference) • [Contributing](#-contributing)
+[Key Features](#-features) â€¢ [Tech Stack](#-tech-stack) â€¢ [Getting Started](#-getting-started) â€¢ [Architecture](#-architecture) â€¢ [API Reference](#-api-reference) â€¢ [Contributing](#-contributing)
 
 </div>
 
 ---
 
-## 📖 Overview
+## ðŸ“– Overview
 
 The **KUET CSE Automation Web Portal** is the administrative backbone of a multi-channel department automation system. Built with **Next.js 16 App Router** and **Supabase**, it provides role-aware workflows for department heads, administrators, staff, and teachers, while sharing its backend with the companion Flutter student/teacher application and the TV display channel.
 
 The portal connects directly to the same PostgreSQL database as the companion Flutter mobile app, ensuring data consistency across every touchpoint: from room booking and schedule management to geo-attendance, exam results, term upgrades, and push notifications.
 
-> 📺 **TV Display Mode:** The portal also ships with a **TV Display mode** — a real-time, full-screen room schedule displayed on department monitors — and a standalone **Electron-based TV Player app** for dedicated display hardware.
+> ðŸ“º **TV Display Mode:** The portal also ships with a **TV Display mode** â€” a real-time, full-screen room schedule displayed on department monitors â€” and a standalone **Electron-based TV Player app** for dedicated display hardware.
 
-> ℹ️ **Named implementation:** “KUET CSE Automation” identifies the current reference deployment only. The data model, role system, scheduling workflows, CMS, mobile client, and TV Player can be configured and rebranded for other academic departments or institutions.
+> â„¹ï¸ **Named implementation:** â€œKUET CSE Automationâ€ identifies the current reference deployment only. The data model, role system, scheduling workflows, CMS, mobile client, and TV Player can be configured and rebranded for other academic departments or institutions.
 
 ---
 
-## ⚡ Quick Demo & Visuals
+## âš¡ Quick Demo & Visuals
 
 Here is a quick walkthrough of the web portal showing the main interface, animations, and the interactive features running locally:
 
@@ -48,13 +48,13 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 
 <br/>
 
-### 📸 Portal Screenshots
+### ðŸ“¸ Portal Screenshots
 
 <div align="center">
   <table border="0">
     <tr>
-      <td align="center"><strong>🏠 Public Landing Page</strong></td>
-      <td align="center"><strong>🔐 Sign In Portal</strong></td>
+      <td align="center"><strong>ðŸ  Public Landing Page</strong></td>
+      <td align="center"><strong>ðŸ” Sign In Portal</strong></td>
     </tr>
     <tr>
       <td><img src="public/assets/landing_page.png" alt="Landing Page" width="100%" style="border-radius: 6px; border: 1px solid #ddd;" /></td>
@@ -65,9 +65,9 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 
 ---
 
-## ✨ Features
+## âœ¨ Features
 
-### 🖥 Public Website
+### ðŸ–¥ Public Website
 
 | Module | Highlights |
 |---|---|
@@ -82,7 +82,7 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 
 ---
 
-### 🔐 Authentication & Access Control
+### ðŸ” Authentication & Access Control
 
 - Email and password sign-in with **bcrypt** password hashing  
 - Role-based dashboards: **Admin**, **Teacher**, **Student**  
@@ -91,10 +91,10 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 
 ---
 
-### 👨‍💼 Admin Portal
+### ðŸ‘¨â€ðŸ’¼ Admin Portal
 
 <details>
-<summary><strong>👨‍🎓 Student Management</strong></summary>
+<summary><strong>ðŸ‘¨â€ðŸŽ“ Student Management</strong></summary>
 
 - Add individual students or bulk-import via CSV  
 - View and edit student profiles (roll number, batch, year, term, section)  
@@ -104,7 +104,7 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 </details>
 
 <details>
-<summary><strong>👨‍🏫 Faculty Management</strong></summary>
+<summary><strong>ðŸ‘¨â€ðŸ« Faculty Management</strong></summary>
 
 - Add teachers with designation, employee ID, and office room  
 - View and edit teacher profiles  
@@ -114,7 +114,7 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 </details>
 
 <details>
-<summary><strong>📚 Course & Curriculum Management</strong></summary>
+<summary><strong>ðŸ“š Course & Curriculum Management</strong></summary>
 
 - Create and manage the course catalog (code, title, credits, type)  
 - Build 4-year curriculum by year and term  
@@ -124,7 +124,7 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 </details>
 
 <details>
-<summary><strong>🗓 Class Routine</strong></summary>
+<summary><strong>ðŸ—“ Class Routine</strong></summary>
 
 - Build the weekly class routine using a visual period grid  
 - Assign rooms, teachers, and sections per slot  
@@ -137,7 +137,7 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 </details>
 
 <details>
-<summary><strong>🏢 Room Allocation & Management</strong></summary>
+<summary><strong>ðŸ¢ Room Allocation & Management</strong></summary>
 
 - CRUD operations on the full room inventory  
 - Room attributes: building, capacity, type (theory / lab / seminar), facilities  
@@ -149,7 +149,7 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 </details>
 
 <details>
-<summary><strong>📝 Examination & Assessment Data</strong></summary>
+<summary><strong>ðŸ“ Examination & Assessment Data</strong></summary>
 
 - Maintain examination records used by mobile schedules, countdowns, and reminders
 - Support CR-authorized creation, updating, and removal of cohort examination entries
@@ -159,7 +159,7 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 </details>
 
 <details>
-<summary><strong>📢 Notice Board</strong></summary>
+<summary><strong>ðŸ“¢ Notice Board</strong></summary>
 
 - Create targeted department-wide notices  
 - Priority levels: Normal, Important, Urgent  
@@ -170,7 +170,7 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 </details>
 
 <details>
-<summary><strong>🔄 Term Upgrade</strong></summary>
+<summary><strong>ðŸ”„ Term Upgrade</strong></summary>
 
 - Review student term-upgrade requests  
 - Batch approve or reject with remarks  
@@ -179,7 +179,7 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 </details>
 
 <details>
-<summary><strong>🌐 Website CMS</strong></summary>
+<summary><strong>ðŸŒ Website CMS</strong></summary>
 
 - Manage all public-facing content through an admin CMS  
 - Manage hero slides, department information, HOD messages, statistics, news, research, laboratories, clubs, galleries, navigation, page sections, and programs
@@ -189,10 +189,10 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 
 ---
 
-### 👨‍🏫 Teacher Portal
+### ðŸ‘¨â€ðŸ« Teacher Portal
 
 <details>
-<summary><strong>📍 Geo-Attendance Management</strong></summary>
+<summary><strong>ðŸ“ Geo-Attendance Management</strong></summary>
 
 - Open a live geo-attendance room with one click  
 - Auto-closes previous active sessions for the same course offering  
@@ -202,7 +202,7 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 </details>
 
 <details>
-<summary><strong>📅 Schedule View</strong></summary>
+<summary><strong>ðŸ“… Schedule View</strong></summary>
 
 - Personal weekly timetable pulled from routine slots  
 - Today's classes highlighted  
@@ -211,7 +211,7 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 </details>
 
 <details>
-<summary><strong>📊 Attendance Records</strong></summary>
+<summary><strong>ðŸ“Š Attendance Records</strong></summary>
 
 - View course-wise and date-wise attendance summaries  
 - Per-student attendance breakdown  
@@ -219,7 +219,7 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 </details>
 
 <details>
-<summary><strong>📢 Announcements</strong></summary>
+<summary><strong>ðŸ“¢ Announcements</strong></summary>
 
 - Create course-specific or department-wide announcements  
 - Push notification delivery to enrolled students via server-side FCM  
@@ -228,10 +228,10 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 
 ---
 
-### 👨‍🎓 Student and CR Integration
+### ðŸ‘¨â€ðŸŽ“ Student and CR Integration
 
 <details>
-<summary><strong>📍 Geo-Attendance Submission</strong></summary>
+<summary><strong>ðŸ“ Geo-Attendance Submission</strong></summary>
 
 - View currently open attendance sessions filtered by term and section  
 - Submit GPS-verified attendance within the teacher-configured radius
@@ -241,7 +241,7 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 </details>
 
 <details>
-<summary><strong>📅 Personal Schedule</strong></summary>
+<summary><strong>ðŸ“… Personal Schedule</strong></summary>
 
 - Course-wise class timetable  
 - Upcoming exam schedule with countdown  
@@ -249,7 +249,7 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 </details>
 
 <details>
-<summary><strong>📚 Curriculum & Results</strong></summary>
+<summary><strong>ðŸ“š Curriculum & Results</strong></summary>
 
 - Browse the complete 4-year curriculum  
 - Browse optional-course allocation and academic information
@@ -258,7 +258,7 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 </details>
 
 <details>
-<summary><strong>🏫 CR Room Requests</strong></summary>
+<summary><strong>ðŸ« CR Room Requests</strong></summary>
 
 - Class Representatives submit room booking requests  
 - FCFS auto-approval with live conflict checking  
@@ -268,7 +268,7 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 
 ---
 
-### 📺 TV Display Mode
+### ðŸ“º TV Display Mode
 
 - Real-time full-screen schedules, current/upcoming periods, events, announcements, tickers, and breaking news
 - Per-display content targeting, section visibility, rotation intervals, and layout configuration
@@ -278,7 +278,7 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 
 ---
 
-### 🔔 Notification Pipeline
+### ðŸ”” Notification Pipeline
 
 | Channel | Mechanism |
 |---|---|
@@ -289,7 +289,7 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 
 ---
 
-## 🛠 Tech Stack
+## ðŸ›  Tech Stack
 
 ### Frontend
 
@@ -325,7 +325,7 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 
 ---
 
-## 🚀 Getting Started
+## ðŸš€ Getting Started
 
 This fork preserves the original project's history and incorporates upstream
 revision [`000011befda70d0db5cdf68b0519b9b7f6e81e6a`](https://github.com/abdullahshahporan/KUET-CSE-Automation-Web-Portal/commit/000011befda70d0db5cdf68b0519b9b7f6e81e6a).
@@ -336,61 +336,61 @@ before treating a source download as a complete installation capsule.
 
 | Requirement | Version |
 |---|---|
-| **Node.js** | 22–24; tested on 24.19.0 |
+| **Node.js** | 22â€“24; tested on 24.19.0 |
 | **npm** | 10 or higher |
 | **Git** | Latest |
 | **Supabase account** | [supabase.com](https://supabase.com) |
 
-### 1 — Clone the Repository
+### 1 â€” Clone the Repository
 
 ```bash
 git clone https://github.com/AsifJawad15/KUET-CSE-Automation-Web-Portal.git
 cd KUET-CSE-Automation-Web-Portal
 ```
 
-### 2 — Install Dependencies
+### 2 â€” Install Dependencies
 
 ```bash
 npm ci
 ```
 
-### 3 — Configure Environment Variables
+### 3 â€” Configure Environment Variables
 
 Create a `.env.local` file in the project root:
 
 ```env
-# ── Supabase ──────────────────────────────────────────────────────
+# â”€â”€ Supabase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 SUPABASE_JWT_SECRET=your_project_accepted_HS256_signing_secret
 
-# ── Application ───────────────────────────────────────────────────
+# â”€â”€ Application â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 AUTH_SESSION_SECRET=generate_a_long_random_secret
 NODE_ENV=development
 
-# ── Push Notifications (FCM HTTP v1) ──────────────────────────────
+# â”€â”€ Push Notifications (FCM HTTP v1) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 FCM_PROJECT_ID=your_firebase_project_id
 FCM_CLIENT_EMAIL=your_firebase_service_account_email
 FCM_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 NOTIFICATION_DISPATCH_KEY=required_private_shared_secret_if_push_is_enabled
 ```
 
-> ⚠️ **The `SUPABASE_SERVICE_ROLE_KEY` has elevated privileges. Never expose it in client-side code.**
+> âš ï¸ **The `SUPABASE_SERVICE_ROLE_KEY` has elevated privileges. Never expose it in client-side code.**
 
-### 4 — Set Up the Database
+### 4 â€” Set Up the Database
 
 Use the ordered files in `supabase/migrations/` for a new empty database. See [database installation and existing-deployment migration](docs/SETUP.md#database-installation) before applying anything to an existing project. Root-level SQL snapshots and old permissive-policy scripts are historical references. Never rerun them after the security boundary migrations.
 
-Release 0.2.0 supplies eleven academic migrations plus a separate CMS baseline
+Release 0.2.0 supplies twelve academic migrations plus a separate CMS baseline
 and security boundary. These are reconstructed and newly tested October files,
 not recovered copies of the unavailable September SQL. Run
 `npm run check:migrations` before installation; apply the ordered academic
 sequence to a fresh academic project and the CMS files to a fresh separate CMS
 project. See [correction evidence](docs/SUBMISSION_CORRECTIONS.md).
 
-### 5 — Deploy the Push Edge Function
+### 5 â€” Deploy the Push Edge Function
 
 Deploy the Supabase Edge Function after setting the project secrets:
 
@@ -412,7 +412,7 @@ FCM_PRIVATE_KEY
 
 > Set `NOTIFICATION_DISPATCH_KEY` only on trusted servers. The dispatcher rejects requests when its key is missing; mobile clients never receive it.
 
-### 6 — Start the Development Server
+### 6 â€” Start the Development Server
 
 ```bash
 npm run dev
@@ -435,115 +435,115 @@ npm run reproduce:paper # Deterministic synthetic fixture
 
 ---
 
-## 📁 Project Structure
+## ðŸ“ Project Structure
 
 ```
 kuet-cse-automation-web/
-│
-├── database/
-│   ├── main_db.sql                  ← Full PostgreSQL schema
-│   └── cms_table.sql                ← CMS content tables
-│
-├── public/                          ← Static assets & Screenshots
-│   └── assets/                      ← README demo screenshots & walkthrough
-│
-├── src/
-│   ├── app/                         ← Next.js App Router
-│   │   ├── layout.tsx               ← Root layout (fonts, providers)
-│   │   ├── page.tsx                 ← Public landing page
-│   │   ├── globals.css
-│   │   ├── about/ │ contact/ │ faculty/ │ gallery/
-│   │   ├── news/ │ notices/ │ programs/ │ research/
-│   │   ├── auth/                    ← Sign In / Sign Up pages
-│   │   ├── dashboard/               ← Role-based dashboard shell
-│   │   ├── tv-display/              ← Public TV schedule page
-│   │   └── api/                     ← API route handlers
-│   │       ├── auth/
-│   │       ├── courses/
-│   │       ├── course-offerings/
-│   │       ├── cr-room-requests/
-│   │       ├── exams/
-│   │       ├── geo-room-locations/
-│   │       ├── notifications/
-│   │       ├── optional-course-assignments/
-│   │       ├── rooms/
-│   │       ├── routine-slots/
-│   │       ├── student/             ← Student-facing endpoints
-│   │       ├── students/
-│   │       ├── teacher-portal/      ← Teacher-facing endpoints
-│   │       ├── teachers/
-│   │       ├── term-upgrades/
-│   │       └── upload/
-│   │
-│   ├── Auth/                        ← Auth UI components
-│   │   ├── AuthCard.tsx
-│   │   ├── SignIn.tsx
-│   │   └── SignUp.tsx
-│   │
-│   ├── components/                  ← Reusable UI components
-│   │   ├── ui/                      ← Primitives (Button, Card, Modal…)
-│   │   ├── HeroLanding.tsx
-│   │   ├── Sidebar.tsx
-│   │   └── ThemeToggle.tsx
-│   │
-│   ├── contexts/                    ← React context providers
-│   │
-│   ├── modules/                     ← Feature modules
-│   │   ├── AddFaculty/
-│   │   ├── AddStudent/
-│   │   ├── ClassRoutine/            ← Routine builder + conflict checker
-│   │   ├── CourseAllocation/
-│   │   ├── CourseInfo/
-│   │   ├── CRManagement/            ← CR designation management
-│   │   ├── Dashboard/
-│   │   ├── ExamSchedule/
-│   │   ├── FacultyInfo/
-│   │   ├── GeoRoomManagement/       ← Geo-attendance admin view
-│   │   ├── OptionalCourseAllocation/
-│   │   ├── Result/
-│   │   ├── RoomAllocation/
-│   │   ├── Schedule/
-│   │   ├── Settings/
-│   │   ├── StudentInfo/
-│   │   ├── TeacherPortal/           ← Geo-attendance teacher UI
-│   │   ├── TermUpgrade/
-│   │   ├── TVDisplay/               ← Real-time TV schedule view
-│   │   └── WebsiteCMS/              ← CMS content manager
-│   │
-│   ├── services/                    ← Client-side service wrappers
-│   │   ├── cmsService.ts
-│   │   ├── roomService.ts
-│   │   ├── routineService.ts
-│   │   ├── studentService.ts
-│   │   ├── teacherService.ts
-│   │   └── termUpgradeService.ts
-│   │
-│   ├── lib/
-│   │   ├── supabase.ts              ← Supabase client (anon + service)
-│   │   ├── notifications.ts         ← Notification helpers
-│   │   └── pushDispatch.ts          ← FCM push dispatcher
-│   │
-│   ├── styles/                      ← Additional global styles
-│   │
-│   └── types/                       ← TypeScript type definitions
-│       ├── index.ts
-│       └── cms.ts
-│
-├── tv-player-app/                   ← Standalone Electron TV player
-│   ├── electron/
-│   ├── src/
-│   └── package.json
-│
-├── next.config.ts
-├── tailwind.config.ts
-├── tsconfig.json
-├── supabase_bootstrap_first_admin.sql
-└── package.json
+â”‚
+â”œâ”€â”€ database/
+â”‚   â”œâ”€â”€ main_db.sql                  â† Full PostgreSQL schema
+â”‚   â””â”€â”€ cms_table.sql                â† CMS content tables
+â”‚
+â”œâ”€â”€ public/                          â† Static assets & Screenshots
+â”‚   â””â”€â”€ assets/                      â† README demo screenshots & walkthrough
+â”‚
+â”œâ”€â”€ src/
+â”‚   â”œâ”€â”€ app/                         â† Next.js App Router
+â”‚   â”‚   â”œâ”€â”€ layout.tsx               â† Root layout (fonts, providers)
+â”‚   â”‚   â”œâ”€â”€ page.tsx                 â† Public landing page
+â”‚   â”‚   â”œâ”€â”€ globals.css
+â”‚   â”‚   â”œâ”€â”€ about/ â”‚ contact/ â”‚ faculty/ â”‚ gallery/
+â”‚   â”‚   â”œâ”€â”€ news/ â”‚ notices/ â”‚ programs/ â”‚ research/
+â”‚   â”‚   â”œâ”€â”€ auth/                    â† Sign In / Sign Up pages
+â”‚   â”‚   â”œâ”€â”€ dashboard/               â† Role-based dashboard shell
+â”‚   â”‚   â”œâ”€â”€ tv-display/              â† Public TV schedule page
+â”‚   â”‚   â””â”€â”€ api/                     â† API route handlers
+â”‚   â”‚       â”œâ”€â”€ auth/
+â”‚   â”‚       â”œâ”€â”€ courses/
+â”‚   â”‚       â”œâ”€â”€ course-offerings/
+â”‚   â”‚       â”œâ”€â”€ cr-room-requests/
+â”‚   â”‚       â”œâ”€â”€ exams/
+â”‚   â”‚       â”œâ”€â”€ geo-room-locations/
+â”‚   â”‚       â”œâ”€â”€ notifications/
+â”‚   â”‚       â”œâ”€â”€ optional-course-assignments/
+â”‚   â”‚       â”œâ”€â”€ rooms/
+â”‚   â”‚       â”œâ”€â”€ routine-slots/
+â”‚   â”‚       â”œâ”€â”€ student/             â† Student-facing endpoints
+â”‚   â”‚       â”œâ”€â”€ students/
+â”‚   â”‚       â”œâ”€â”€ teacher-portal/      â† Teacher-facing endpoints
+â”‚   â”‚       â”œâ”€â”€ teachers/
+â”‚   â”‚       â”œâ”€â”€ term-upgrades/
+â”‚   â”‚       â””â”€â”€ upload/
+â”‚   â”‚
+â”‚   â”œâ”€â”€ Auth/                        â† Auth UI components
+â”‚   â”‚   â”œâ”€â”€ AuthCard.tsx
+â”‚   â”‚   â”œâ”€â”€ SignIn.tsx
+â”‚   â”‚   â””â”€â”€ SignUp.tsx
+â”‚   â”‚
+â”‚   â”œâ”€â”€ components/                  â† Reusable UI components
+â”‚   â”‚   â”œâ”€â”€ ui/                      â† Primitives (Button, Card, Modalâ€¦)
+â”‚   â”‚   â”œâ”€â”€ HeroLanding.tsx
+â”‚   â”‚   â”œâ”€â”€ Sidebar.tsx
+â”‚   â”‚   â””â”€â”€ ThemeToggle.tsx
+â”‚   â”‚
+â”‚   â”œâ”€â”€ contexts/                    â† React context providers
+â”‚   â”‚
+â”‚   â”œâ”€â”€ modules/                     â† Feature modules
+â”‚   â”‚   â”œâ”€â”€ AddFaculty/
+â”‚   â”‚   â”œâ”€â”€ AddStudent/
+â”‚   â”‚   â”œâ”€â”€ ClassRoutine/            â† Routine builder + conflict checker
+â”‚   â”‚   â”œâ”€â”€ CourseAllocation/
+â”‚   â”‚   â”œâ”€â”€ CourseInfo/
+â”‚   â”‚   â”œâ”€â”€ CRManagement/            â† CR designation management
+â”‚   â”‚   â”œâ”€â”€ Dashboard/
+â”‚   â”‚   â”œâ”€â”€ ExamSchedule/
+â”‚   â”‚   â”œâ”€â”€ FacultyInfo/
+â”‚   â”‚   â”œâ”€â”€ GeoRoomManagement/       â† Geo-attendance admin view
+â”‚   â”‚   â”œâ”€â”€ OptionalCourseAllocation/
+â”‚   â”‚   â”œâ”€â”€ Result/
+â”‚   â”‚   â”œâ”€â”€ RoomAllocation/
+â”‚   â”‚   â”œâ”€â”€ Schedule/
+â”‚   â”‚   â”œâ”€â”€ Settings/
+â”‚   â”‚   â”œâ”€â”€ StudentInfo/
+â”‚   â”‚   â”œâ”€â”€ TeacherPortal/           â† Geo-attendance teacher UI
+â”‚   â”‚   â”œâ”€â”€ TermUpgrade/
+â”‚   â”‚   â”œâ”€â”€ TVDisplay/               â† Real-time TV schedule view
+â”‚   â”‚   â””â”€â”€ WebsiteCMS/              â† CMS content manager
+â”‚   â”‚
+â”‚   â”œâ”€â”€ services/                    â† Client-side service wrappers
+â”‚   â”‚   â”œâ”€â”€ cmsService.ts
+â”‚   â”‚   â”œâ”€â”€ roomService.ts
+â”‚   â”‚   â”œâ”€â”€ routineService.ts
+â”‚   â”‚   â”œâ”€â”€ studentService.ts
+â”‚   â”‚   â”œâ”€â”€ teacherService.ts
+â”‚   â”‚   â””â”€â”€ termUpgradeService.ts
+â”‚   â”‚
+â”‚   â”œâ”€â”€ lib/
+â”‚   â”‚   â”œâ”€â”€ supabase.ts              â† Supabase client (anon + service)
+â”‚   â”‚   â”œâ”€â”€ notifications.ts         â† Notification helpers
+â”‚   â”‚   â””â”€â”€ pushDispatch.ts          â† FCM push dispatcher
+â”‚   â”‚
+â”‚   â”œâ”€â”€ styles/                      â† Additional global styles
+â”‚   â”‚
+â”‚   â””â”€â”€ types/                       â† TypeScript type definitions
+â”‚       â”œâ”€â”€ index.ts
+â”‚       â””â”€â”€ cms.ts
+â”‚
+â”œâ”€â”€ tv-player-app/                   â† Standalone Electron TV player
+â”‚   â”œâ”€â”€ electron/
+â”‚   â”œâ”€â”€ src/
+â”‚   â””â”€â”€ package.json
+â”‚
+â”œâ”€â”€ next.config.ts
+â”œâ”€â”€ tailwind.config.ts
+â”œâ”€â”€ tsconfig.json
+â”œâ”€â”€ supabase_bootstrap_first_admin.sql
+â””â”€â”€ package.json
 ```
 
 ---
 
-## 🔌 API Reference
+## ðŸ”Œ API Reference
 
 All API routes live under `/src/app/api/`. Each folder maps to a Next.js Route Handler.
 
@@ -600,7 +600,7 @@ All API routes live under `/src/app/api/`. Each folder maps to a Next.js Route H
 
 ---
 
-## 🗄 Database Schema
+## ðŸ—„ Database Schema
 
 ### User & Profile Tables
 
@@ -616,7 +616,7 @@ All API routes live under `/src/app/api/`. Each folder maps to a Next.js Route H
 | Table | Key Columns |
 |---|---|
 | `courses` | `id`, `code`, `title`, `credits`, `course_type` |
-| `curriculum` | Maps course → year/term |
+| `curriculum` | Maps course â†’ year/term |
 | `course_offerings` | `id`, `course_id`, `teacher_user_id`, `term`, `session` |
 | `enrollments` | `student_user_id`, `offering_id` |
 
@@ -625,7 +625,7 @@ All API routes live under `/src/app/api/`. Each folder maps to a Next.js Route H
 | Table | Key Columns |
 |---|---|
 | `rooms` | `room_number`, `building`, `capacity`, `room_type`, `latitude`, `longitude` |
-| `routine_slots` | `offering_id`, `room_number`, `day_of_week` (0–4), `start_time`, `end_time` |
+| `routine_slots` | `offering_id`, `room_number`, `day_of_week` (0â€“4), `start_time`, `end_time` |
 | `room_booking_requests` | `teacher_user_id`, `room_number`, `start_period`, `end_period`, `status` |
 | `cr_room_requests` | `student_user_id`, `room_number`, `day_of_week`, `start_time`, `end_time`, `status` |
 
@@ -650,19 +650,19 @@ All API routes live under `/src/app/api/`. Each folder maps to a Next.js Route H
 
 ---
 
-## 🎨 UI / UX Highlights
+## ðŸŽ¨ UI / UX Highlights
 
-- 📱 **Fully Responsive** — Desktop, tablet, and mobile layouts  
-- 🌓 **Dark Mode** — Integrated theme toggle persisted via context  
-- ⚡ **Smooth Animations** — Framer Motion page transitions + GSAP scroll effects  
-- 🔄 **Updates** — TV Display uses configured Realtime subscriptions and polling; the private mobile inbox uses authenticated requests and FCM
-- 📄 **PDF Export** — Class routine and result sheets exportable as PDF  
-- 📊 **CSV Import** — Bulk student addition via CSV upload (PapaParse)  
-- 🔍 **OCR Support** — Scanned document text extraction (Tesseract via API)  
+- ðŸ“± **Fully Responsive** â€” Desktop, tablet, and mobile layouts  
+- ðŸŒ“ **Dark Mode** â€” Integrated theme toggle persisted via context  
+- âš¡ **Smooth Animations** â€” Framer Motion page transitions + GSAP scroll effects  
+- ðŸ”„ **Updates** â€” TV Display uses configured Realtime subscriptions and polling; the private mobile inbox uses authenticated requests and FCM
+- ðŸ“„ **PDF Export** â€” Class routine and result sheets exportable as PDF  
+- ðŸ“Š **CSV Import** â€” Bulk student addition via CSV upload (PapaParse)  
+- ðŸ” **OCR Support** â€” Scanned document text extraction (Tesseract via API)  
 
 ---
 
-## 🔐 Security
+## ðŸ” Security
 
 | Measure | Implementation |
 |---|---|
@@ -676,7 +676,7 @@ All API routes live under `/src/app/api/`. Each folder maps to a Next.js Route H
 
 ---
 
-## 🧪 Testing
+## ðŸ§ª Testing
 
 ```bash
 # Install locked dependencies (Node.js 22-24; tested on 24.19.0)
@@ -700,7 +700,7 @@ and `npm run build` commands in `tv-player-app/`.
 
 ---
 
-## 🖥 TV Player App
+## ðŸ–¥ TV Player App
 
 A standalone **Electron** signage application with its own hardened renderer,
 control panel, versioned offline snapshots, media cache, and dynamic monitor
@@ -714,10 +714,10 @@ for the evaluated 1.1.0 source or a synchronized web/mobile publication release.
 
 ```
 tv-player-app/
-├── electron/               ← Main process (Electron)
-├── src/                    ← Renderer (React + Vite)
-├── vite.config.ts
-└── package.json
+â”œâ”€â”€ electron/               â† Main process (Electron)
+â”œâ”€â”€ src/                    â† Renderer (React + Vite)
+â”œâ”€â”€ vite.config.ts
+â””â”€â”€ package.json
 ```
 
 ```bash
@@ -730,14 +730,14 @@ npm run package     # Build the Windows NSIS installer
 
 ---
 
-## 🚢 Deployment
+## ðŸš¢ Deployment
 
 ### Vercel (Recommended)
 
 1. Push the repository to GitHub.  
 2. Import the project in [Vercel](https://vercel.com).  
 3. Add all environment variables from `.env.local` in the Vercel dashboard.  
-4. Deploy — Vercel auto-detects Next.js and configures edge functions.  
+4. Deploy â€” Vercel auto-detects Next.js and configures edge functions.  
 
 Vercel hosts the web application; it does not need the Windows `.exe` in the
 deployment bundle. Publish packaged TV Player installers as GitHub Release
@@ -745,7 +745,7 @@ assets instead.
 
 ---
 
-## 🤝 Contributing
+## ðŸ¤ Contributing
 
 We welcome contributions! Please follow these steps:
 
@@ -766,15 +766,15 @@ We welcome contributions! Please follow these steps:
 
 ### Coding Standards
 
-- Use TypeScript strict mode — avoid `any`  
+- Use TypeScript strict mode â€” avoid `any`  
 - Follow the existing module structure (`modules/` for features, `services/` for data-fetching)  
 - Use Tailwind utility classes; avoid inline `style` props  
 - All API routes must use the **service role client** for write operations  
-- Use `await` for all notification calls — never fire-and-forget in serverless handlers  
+- Use `await` for all notification calls â€” never fire-and-forget in serverless handlers  
 
 ---
 
-## 🐛 Bug Reports
+## ðŸ› Bug Reports
 
 Found a bug? Please [open an issue](https://github.com/abdullahshahporan/KUET-CSE-Automation-Web-Portal/issues) with:
 
@@ -786,7 +786,7 @@ Found a bug? Please [open an issue](https://github.com/abdullahshahporan/KUET-CS
 
 ---
 
-## 📄 Documentation
+## ðŸ“„ Documentation
 
 | Document | Description |
 |---|---|
@@ -800,13 +800,13 @@ Found a bug? Please [open an issue](https://github.com/abdullahshahporan/KUET-CS
 
 ---
 
-## 📄 License
+## ðŸ“„ License
 
 Distributed under the **MIT License**. See [`LICENSE.txt`](./LICENSE.txt) for details.
 
 ---
 
-## 👥 Authors
+## ðŸ‘¥ Authors
 
 **Abdullah Shah Poran** 
 
@@ -822,6 +822,6 @@ Distributed under the **MIT License**. See [`LICENSE.txt`](./LICENSE.txt) for de
 
 <div align="center">
 
-**[⬆ Back to Top](#-kuet-cse-automation-web-portal)**
+**[â¬† Back to Top](#-kuet-cse-automation-web-portal)**
 
 </div>

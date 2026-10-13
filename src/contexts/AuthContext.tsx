@@ -63,6 +63,43 @@ function clearPersistedUser(): void {
   localStorage.removeItem(STORAGE_KEY);
 }
 
+function isWebUserRole(role: unknown): role is Exclude<UserRole, null> {
+  return role === 'admin' || role === 'teacher' || role === 'head';
+}
+
+async function restoreVerifiedUser(): Promise<User | null> {
+  const persistedUser = loadPersistedUser();
+
+  try {
+    const response = await fetch('/api/auth/session', {
+      method: 'POST',
+      credentials: 'same-origin',
+      cache: 'no-store',
+    });
+    const payload = await response.json().catch(() => null);
+    const sessionUser = payload?.success ? payload.data : null;
+
+    if (!response.ok || !sessionUser || !isWebUserRole(sessionUser.role)) {
+      clearPersistedUser();
+      return null;
+    }
+
+    const verifiedUser: User = {
+      ...(persistedUser?.id === sessionUser.id ? persistedUser : {}),
+      id: sessionUser.id,
+      email: sessionUser.email,
+      name: sessionUser.name,
+      role: sessionUser.role,
+      permissions: sessionUser.permissions ?? null,
+    };
+    persistUser(verifiedUser);
+    return verifiedUser;
+  } catch {
+    clearPersistedUser();
+    return null;
+  }
+}
+
 // ── Database Authentication ────────────────────────────
 
 async function authenticateViaAPI(email: string, password: string): Promise<LoginResult & { user?: User }> {
@@ -70,6 +107,7 @@ async function authenticateViaAPI(email: string, password: string): Promise<Logi
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
       body: JSON.stringify({ email, password }),
     });
 
@@ -105,10 +143,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Restore session on mount
+  // Restore browser display state only after the signed server session is valid.
+  // localStorage alone is not proof that the HttpOnly session still exists.
   useEffect(() => {
-    setUser(loadPersistedUser());
-    setIsLoading(false);
+    let active = true;
+
+    void restoreVerifiedUser().then((verifiedUser) => {
+      if (!active) return;
+      setUser(verifiedUser);
+      setIsLoading(false);
+    });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const login = useCallback(async (email: string, password: string): Promise<LoginResult> => {

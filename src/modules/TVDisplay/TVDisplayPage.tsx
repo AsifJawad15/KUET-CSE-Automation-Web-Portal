@@ -173,11 +173,17 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
       if (evtData.status === 'fulfilled') setEventItems(evtData.value);
       if (devData.status === 'fulfilled') setDevices(devData.value);
 
-      const failed = results.filter((result) => result.status === 'rejected').length;
-      const succeeded = results.length - failed;
+      const sourceNames = ['Announcements', 'Ticker items', 'Display settings', 'Events', 'TV devices'];
+      const failures = results.flatMap((result, index) => {
+        if (result.status === 'fulfilled') return [];
+        const reason = result.reason instanceof Error ? result.reason.message : 'request failed';
+        return [`${sourceNames[index]}: ${reason}`];
+      });
+      const failed = failures.length;
+      const succeeded = results.length - failures.length;
       setLoadError(
         failed > 0
-          ? `${failed} data ${failed === 1 ? 'source is' : 'sources are'} temporarily unavailable. Last-known data is preserved.`
+          ? `${failures.join(' · ')}. Available content has still been loaded.`
           : null,
       );
       if (succeeded > 0) setLastUpdated(new Date());
@@ -189,7 +195,15 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
     }
   }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => { void loadData(); }, [loadData]);
+
+  // Recover automatically when credentials or a temporarily unavailable CMS
+  // service becomes usable again. A successful refresh clears the warning.
+  useEffect(() => {
+    if (!loadError) return;
+    const retryTimer = window.setTimeout(() => { void loadData(); }, 5000);
+    return () => window.clearTimeout(retryTimer);
+  }, [loadData, loadError]);
 
   // ── Announcement CRUD ──
   const handleSubmit = async (e: React.FormEvent) => {
@@ -665,12 +679,16 @@ export default function TVDisplayPage({ onMenuChange }: { onMenuChange?: (id: st
                   Publish department updates, coordinate screen-specific content and keep every display ready for unattended operation.
                 </p>
                 <div className="mt-4 flex flex-wrap items-center gap-2.5">
-                  <span className="inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-xs font-semibold text-emerald-100">
+                  <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                    loadError
+                      ? 'border-amber-300/25 bg-amber-300/10 text-amber-100'
+                      : 'border-emerald-300/20 bg-emerald-300/10 text-emerald-100'
+                  }`}>
                     <span className="relative flex h-2 w-2">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-50" />
-                      <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-300" />
+                      {!loadError && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-50" />}
+                      <span className={`relative inline-flex h-2 w-2 rounded-full ${loadError ? 'bg-amber-300' : 'bg-emerald-300'}`} />
                     </span>
-                    Data services connected
+                    {loadError ? 'Limited CMS access' : 'Data services connected'}
                   </span>
                   <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-slate-200">
                     <ClockIcon className="h-3.5 w-3.5" />
