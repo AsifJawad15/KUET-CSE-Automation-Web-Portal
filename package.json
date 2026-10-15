@@ -1,6 +1,6 @@
 {
   "name": "kuet-cse-automation-web",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -11,9 +11,10 @@
     "test": "node --require ./tests/register.cjs --test tests/*.test.cjs",
     "check:migrations": "node scripts/check-migrations.cjs",
     "test:database": "npm run check:migrations && node --require ./tests/register.cjs --test tests/database.test.cjs",
-    "verify:release": "npm run check:migrations && npm run verify",
+    "verify:release": "npm run check:migrations && npm run verify && npm run test:postgres",
     "reproduce:paper": "node scripts/reproduce.cjs",
-    "verify": "npm run lint && npm run typecheck && npm test && npm run build"
+    "verify": "npm run lint && npm run typecheck && npm test && npm run build",
+    "test:postgres": "npm run check:migrations && node --require ./tests/register.cjs --test tests/routine-postgres.integration.cjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.95.3",

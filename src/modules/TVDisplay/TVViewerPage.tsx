@@ -508,7 +508,7 @@ function TVPreview({ target, showRoomSchedule }: { target: string; showRoomSched
         setWasOffline(true);
         return;
       }
-      
+
       // Try to load from cache on error
       const cachedData = getCachedTvDisplayData(target);
       if (cachedData) {
@@ -633,7 +633,7 @@ function TVPreview({ target, showRoomSchedule }: { target: string; showRoomSched
     if (allExpires && new Date(allExpires).getTime() > Date.now()) return true;
     return false;
   })();
-  
+
   const breakingNewsText = (() => {
     const deviceExpires = settings[`breaking_news_expires_at_${target}`];
     if (deviceExpires && new Date(deviceExpires).getTime() > Date.now()) {

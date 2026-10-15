@@ -325,11 +325,11 @@ Here is a quick walkthrough of the web portal showing the main interface, animat
 
 ## 🚀 Getting Started
 
-See the [verification coverage and release requirements](docs/REVISION_VERIFICATION.md)
-before treating a source download as a complete installation capsule. The SQL set
-used for the reported 24-test local run is distributed separately; a public clone
-skips the database test and cannot pass `npm run verify:release` until the
-manifest-matched SQL files are restored.
+See [setup and verification requirements](docs/SETUP.md) before installation.
+The reviewed SQL upgrade package is managed separately from GitHub source.
+A public clone skips SQL-dependent integration cases and cannot pass
+`npm run verify:release` until the manifest-matched package is supplied through
+`DEPTFLOW_SQL_DIR`. Source CI success alone is not database release verification.
 
 ### Prerequisites
 
@@ -382,14 +382,14 @@ NOTIFICATION_DISPATCH_KEY=required_private_shared_secret_if_push_is_enabled
 
 Use the ordered files in `supabase/migrations/` for a new empty database. See [database installation and existing-deployment migration](docs/SETUP.md#database-installation) before applying anything to an existing project. Root-level SQL snapshots and old permissive-policy scripts are historical references. Never rerun them after the security boundary migrations.
 
-**The public clone is incomplete for database installation:** only two of the ten
-academic migrations are tracked, and the separate CMS security boundary is also
-absent. Obtain the exact nine missing files listed in
-[the manifest](docs/migration-manifest.json) from the maintainers, then run
-`npm run check:migrations` before installation. In particular, the sequence
-includes `20260905005000_manual_attendance.sql` and
-`20260905006000_solver_run_evidence.sql`; do not omit either. Historical duplicate
-schema files cannot substitute for the missing baseline or security migrations.
+**The source checkout is not a database installer.** Obtain the separate reviewed
+package matching the twelve academic migrations and two CMS files in
+[the manifest](docs/migration-manifest.json), set `DEPTFLOW_SQL_DIR` to its root,
+and run `npm run check:migrations`. This newly tested reconstructed package is
+not represented as recovery of the original evaluated SQL bytes. The matching
+backend requires activity IDs, `get_routine_revision`, and the service-only
+`commit_routine_draft` transaction before editing or publishing drafts. Existing
+deployments need a reviewed upgrade; historical schema snapshots are not substitutes.
 
 ### 5 — Deploy the Push Edge Function
 

@@ -68,3 +68,9 @@ eng.traineddata
 # Local database migrations (distributed separately)
 /supabase/migrations/*.sql
 /database/cms_security_boundary.sql
+/database/cms_baseline.sql
+
+# Local submission and verification artifacts
+/codeocean/
+/docs/evidence/
+*.log

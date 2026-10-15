@@ -16,5 +16,15 @@
         { "key": "X-Frame-Options", "value": "DENY" }
       ]
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/notifications/push-dispatch?batch=100",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/notifications/exam-reminders?lead_minutes=120",
+      "schedule": "*/10 * * * *"
+    }
   ]
 }

@@ -7,7 +7,7 @@ import { getRoutineSlots, addRoutineSlot, deleteRoutineSlot } from '@/services/r
 import { getAllTeachers } from '@/services/teacherService';
 import type { TeacherWithAuth } from '@/types/database';
 import { motion } from 'framer-motion';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Loader2, Plus, Printer, Trash2, Upload, X } from 'lucide-react';
 import AddRoutineSlot from './AddRoutineSlot';
 import RoutineFilters from './RoutineFilters';
@@ -31,6 +31,7 @@ export default function ClassRoutinePage() {
   const [selectedSession, setSelectedSession] = useState('2023-2024');
   const [selectedSection, setSelectedSection] = useState('A');
   const [rawSlots, setRawSlots] = useState<DBRoutineSlotWithDetails[]>([]);
+  const routineRequest = useRef(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -52,15 +53,25 @@ export default function ClassRoutinePage() {
   }, [rawSlots]);
 
   const loadRoutine = useCallback(async () => {
+    const requestVersion = ++routineRequest.current;
     setLoading(true);
     setError(null);
-    const data = await getRoutineSlots(selectedTerm, selectedSession, selectedSection);
-    setRawSlots(data);
-    setLoading(false);
+    try {
+      const data = await getRoutineSlots(selectedTerm, selectedSession, selectedSection);
+      if (requestVersion === routineRequest.current) setRawSlots(data);
+    } catch (cause) {
+      if (requestVersion === routineRequest.current) {
+        setRawSlots([]);
+        setError(cause instanceof Error ? cause.message : 'Failed to fetch routine slots');
+      }
+    } finally {
+      if (requestVersion === routineRequest.current) setLoading(false);
+    }
   }, [selectedTerm, selectedSession, selectedSection]);
 
   useEffect(() => {
     loadRoutine();
+    return () => { routineRequest.current += 1; };
   }, [loadRoutine]);
 
   useEffect(() => {
@@ -228,7 +239,7 @@ export default function ClassRoutinePage() {
           )}
 
           {/* Empty state */}
-          {!loading && displaySlots.length === 0 && (
+          {!loading && !error && displaySlots.length === 0 && (
             <div className="text-center py-12">
               <p className="text-gray-400 dark:text-[#b1a7a6]">No routine slots found for this selection.</p>
               <p className="text-sm text-gray-400 dark:text-[#b1a7a6]/70 mt-1">Click &quot;Add Slot&quot; to create the first entry.</p>

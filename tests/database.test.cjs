@@ -2,19 +2,16 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const { PGlite } = require('@electric-sql/pglite');
-test('database migrations enforce grants, row ownership, session revocation and atomic attendance', {
-  skip: !fs.existsSync('supabase/migrations/20260905006000_solver_run_evidence.sql') ||
-    !fs.existsSync('supabase/migrations/20260101000000_baseline.sql')
-    ? 'Local SQL migrations are distributed separately; restore them to run database verification.' : false,
-}, async () => {
+const {sqlFile,databaseTestOptions}=require('./database-files.cjs');
+test('database migrations enforce grants, row ownership, session revocation and atomic attendance', databaseTestOptions, async () => {
   const db = new PGlite();
   try {
     await db.exec(`create role anon; create role authenticated; create role service_role bypassrls;
       create schema auth;
       create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
       grant usage on schema public,auth to anon,authenticated,service_role;`);
-    for (const file of fs.readdirSync('supabase/migrations').filter(f => f.endsWith('.sql')).sort()) {
-      await db.exec(fs.readFileSync(`supabase/migrations/${file}`, 'utf8'));
+    for (const file of fs.readdirSync(sqlFile('supabase/migrations')).filter(f => f.endsWith('.sql')).sort()) {
+      await db.exec(fs.readFileSync(sqlFile(`supabase/migrations/${file}`), 'utf8'));
     }
     const protectedTables = ['profiles','students','notifications','device_push_tokens','geo_attendance_logs','password_recovery_tokens'];
     const rls = await db.query(`select c.relname, c.relrowsecurity from pg_class c

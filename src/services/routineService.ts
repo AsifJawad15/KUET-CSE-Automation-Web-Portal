@@ -36,7 +36,9 @@ export async function getRoutineSlots(
   if (section) params.section = section;
   if (date) params.date = date;
 
-  return apiClient.getList<DBRoutineSlotWithDetails>(ENDPOINT, params);
+  const result = await apiClient.get<DBRoutineSlotWithDetails[]>(ENDPOINT, params);
+  if (!result.success) throw new Error(result.error || 'Failed to fetch routine slots');
+  return result.data || [];
 }
 
 export async function addRoutineSlot(input: AddRoutineSlotInput): Promise<RoutineSlotResponse> {

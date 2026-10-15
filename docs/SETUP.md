@@ -1,12 +1,12 @@
 # Dept Flow development and deployment
 
-SQL migration files added during this review are intentionally Git-ignored and distributed separately. Restore the complete local migration set before database installation or verification. Fresh clones and CI explicitly skip the database test when those files are absent; a passing CI run alone therefore does not verify database policies. Previously tracked migration files remain in Git history.
+The GitHub source excludes the separately managed SQL upgrade package, Code Ocean files and generated verification logs. Obtain the reviewed database package before installation or full release verification. A source checkout runs code checks and explicitly skips SQL-dependent integration cases when that package is absent; a passing source CI run does not certify database behavior. Previously tracked upstream SQL files are historical references, not a complete installation package.
 
 Use Node 24.19.0 (see `.nvmrc`), npm 10 or newer, and the committed lockfiles. The declared runtime range is Node 22–24. The web and TV packages have separate dependency installations.
 
 ```sh
 npm ci
-npm run verify:release
+npm run verify
 npm run reproduce:paper
 cd tv-player-app
 npm ci
@@ -15,7 +15,9 @@ npm run typecheck
 npm run build
 ```
 
-The tests use an isolated PostgreSQL engine (PGlite) and synthetic data. They do not need production credentials. The web fonts are bundled, including their license, so compilation does not download Google Fonts. Copy `.env.example` to `.env.local` for a running development service and supply your own project configuration. A random `AUTH_SESSION_SECRET` is required even in development; generate one with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` and store it privately.
+Database integration tests use PGlite and a separate local PostgreSQL server with synthetic data. Set `DEPTFLOW_SQL_DIR` to the reviewed package root containing `supabase/migrations/` and `database/`. The twelve academic migrations and two CMS files must match `docs/migration-manifest.json`. Then set `TEST_DATABASE_URL` to an isolated PostgreSQL server on localhost and run `npm run verify:release`. The PostgreSQL account needs CREATE DATABASE permission; tests create and remove only a randomly named `deptflow_test_...` database. Direct database/release commands fail if the package is missing or modified; they do not silently skip required verification.
+
+The web fonts are bundled, including their license, so compilation does not download Google Fonts. Copy `.env.example` to `.env.local` for a running development service and supply your own project configuration. A random `AUTH_SESSION_SECRET` is required even in development; generate one with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` and store it privately.
 
 When the CMS uses a separate Supabase project, the web administration routes
 also require `CMS_SUPABASE_SECRET_KEY` from that CMS project. Keep it server-side
@@ -49,9 +51,11 @@ The ordered academic sequence is:
 8. `20260905004000_student_requests.sql`
 9. `20260905005000_manual_attendance.sql`
 10. `20260905006000_solver_run_evidence.sql`
+11. `20261012162115_atomic_routine_operations.sql`
+12. `20261013063223_routine_enum_role_compatibility.sql`
 
-Apply `database/cms_security_boundary.sql` only to the separate CMS project,
-after its existing CMS schema. The sequence above is for the academic project.
+For a fresh CMS project, apply the reviewed package's `database/cms_baseline.sql`,
+then `database/cms_security_boundary.sql`. The sequence above is for the academic project.
 The historical April and June root-level migrations are not extra steps after
 this consolidated baseline. Do not mix the two installation paths.
 

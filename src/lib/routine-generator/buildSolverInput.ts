@@ -43,15 +43,21 @@ export async function buildSolverInput(
     .select(`
       id, course_id, teacher_user_id, term, session, batch, section,
       courses (id, code, title, credit, course_type),
-      teachers (user_id, full_name, teacher_uid)
+      teachers (user_id, full_name, teacher_uid, is_on_leave, profiles (is_active, role))
     `)
     .eq('session', session)
     .eq('term', targetTermStr)
     .in('section', ['A', 'B'])
-    .eq('is_active', true);
+    .eq('is_active', true)
+    .order('id');
 
   if (offError) throw offError;
   const validOfferings = offerings || [];
+  if (validOfferings.some(off => {
+    const teacher = off.teachers as any;
+    return teacher?.is_on_leave || !teacher?.profiles?.is_active ||
+      !['TEACHER', 'HEAD'].includes(String(teacher?.profiles?.role).toUpperCase());
+  })) throw new Error('An assigned teacher is inactive or on leave. Review the current course allocation.');
 
   // 2. Fetch Rooms
   const { data: dbRooms, error: roomError } = await supabase

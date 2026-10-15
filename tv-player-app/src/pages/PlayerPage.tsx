@@ -232,15 +232,15 @@ export default function PlayerPage() {
       setEvents(data.events);
       setSettings(data.settings);
       setError(null);
-      
+
       // Cache the fetched data
       cacheTvDisplayData(target, data);
-      
+
       // If we were offline, mark that we're online now
       setWasOffline(false);
     } catch (err) {
       console.error(`[${target}] Content fetch error:`, err);
-      
+
       // Try to load from cache on error
       if (controller.signal.aborted) return;
       const diskSnapshot = await window.electronAPI?.loadTvSnapshot(target);
@@ -442,7 +442,7 @@ export default function PlayerPage() {
   const prevEvents = () => setEventPage((p) => (p <= 0 ? maxPage : p - 1));
   const nextEvents = () => setEventPage((p) => (p >= maxPage ? 0 : p + 1));
 
-  // Breaking News (check device-specific first, then 'all', then offline status)
+  // Editorial breaking news remains separate from connectivity status.
   const breakingNewsActive = (() => {
     const deviceExpires = settings[`breaking_news_expires_at_${target}`];
     if (deviceExpires && new Date(deviceExpires).getTime() > Date.now()) return true;
@@ -450,7 +450,7 @@ export default function PlayerPage() {
     if (allExpires && new Date(allExpires).getTime() > Date.now()) return true;
     return false;
   })();
-  
+
   const breakingNewsText = (() => {
     const deviceExpires = settings[`breaking_news_expires_at_${target}`];
     if (deviceExpires && new Date(deviceExpires).getTime() > Date.now()) {

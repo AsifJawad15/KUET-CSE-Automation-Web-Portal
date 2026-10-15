@@ -1,0 +1,3 @@
+codeocean/run text eol=lf
+*.sql text eol=lf
+docs/evidence/*.log text eol=lf
